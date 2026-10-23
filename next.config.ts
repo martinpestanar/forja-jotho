@@ -1,17 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
-  partialPrefetching: true,
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
-
+  // Desactivar features experimentales que causan cuelgues en el worker de Turbopack en CI/Vercel
   // Headers obligatorios para SharedArrayBuffer (mGBA-wasm pthreads)
   async headers() {
     return [
