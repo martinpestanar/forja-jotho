@@ -179,15 +179,15 @@ export const StudentAuthModal: React.FC<StudentAuthModalProps> = ({
 
         const userId = authData.user?.id;
         if (userId) {
-          // 2. Crear o verificar perfil inicial en public.profiles
-          const { error: profileError } = await supabase.from('profiles').upsert({
+          // 2. Crear o verificar perfil inicial en public.profiles y public.valdr_profiles
+          await supabase.from('profiles').upsert({
             id: userId,
             trainer_name: username.trim(),
             starter_pokemon: 'cyndaquil',
             nature_role: 'fuego_ui',
             parent_whatsapp: phoneValidation.e164,
             pokedollars: 150,
-            battery_minutes: 45,
+            battery_minutes: 0,
             streak_days: 1,
             egg_steps: 0,
             current_level: 1,
@@ -195,9 +195,19 @@ export const StudentAuthModal: React.FC<StudentAuthModalProps> = ({
             is_admin: false,
           });
 
-          if (profileError) {
-            console.warn('[StudentAuthModal] Perfil warning:', profileError.message);
-          }
+          await supabase.from('valdr_profiles').upsert({
+            id: userId,
+            leader_name: username.trim(),
+            guide_totem: 'oso',
+            sovereignty_gold: 150,
+            battery_minutes: 0,
+            streak_fire_days: 1,
+            temperance_status: 'invictus',
+            temperance_streak_days: 1,
+            business_regime: 'cazador_informal',
+            credit_score: 'B',
+            is_admin: false,
+          });
         }
 
         soundFx.playLevelUp();
