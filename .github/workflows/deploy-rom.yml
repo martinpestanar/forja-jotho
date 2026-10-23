@@ -1,0 +1,47 @@
+name: Build and Deploy Johto ROM
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-rom:
+    name: Compile GBA C Code & Deploy to Supabase
+    runs-on: ubuntu-latest
+    container: devkitpro/toolchain-gba:latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Compile pokemonHnS ROM (Modern Emerald Engine)
+        run: |
+          make -j$(nproc) modern
+
+      - name: Locate Compiled Binary
+        run: |
+          if [ -f "pokemonHnS.gba" ]; then
+            echo "ROM_FILE=pokemonHnS.gba" >> $GITHUB_ENV
+          elif [ -f "pokeemerald.gba" ]; then
+            echo "ROM_FILE=pokeemerald.gba" >> $GITHUB_ENV
+          else
+            echo "Searching for compiled .gba..."
+            FOUND_ROM=$(find . -maxdepth 2 -name "*.gba" | head -n 1)
+            echo "ROM_FILE=${FOUND_ROM}" >> $GITHUB_ENV
+          fi
+
+      - name: Upload ROM to Supabase Storage (Bucket: roms)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "Deploying ${ROM_FILE} to Supabase Storage..."
+          curl -f -s -X POST "${SUPABASE_URL}/storage/v1/object/roms/pokemonHnS.gba" \
+            -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+            -H "Content-Type: application/octet-stream" \
+            -H "x-upsert: true" \
+            --data-binary "@${ROM_FILE}"
+          echo "ROM successfully deployed to ${SUPABASE_URL}/storage/v1/object/public/roms/pokemonHnS.gba"

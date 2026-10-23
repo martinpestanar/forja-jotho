@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    /* Paleta Oficial VALDR: FORJA JOHTO */
+    --color-abyss: #0B0C0E;        /* Fondo base profundo */
+    --color-volcanic: #14171C;     /* Tarjetas táctiles y paneles */
+    --color-bronze: #C5A059;       /* Acentos rúnicos y CTAs */
+    --color-blood: #D93829;        /* Alertas y peaje de la bestia */
+    --color-glacial: #4E9F9F;      /* Templanza y escudos limpios */
+    --color-silver: #E2E8F0;       /* Tipografía principal */
+    --color-ash: #64748B;          /* Descripciones secundarias */
+
+    --bg-main: var(--color-abyss);
+    --text-main: var(--color-silver);
+  }
+
+  body {
+    background-color: var(--color-abyss);
+    color: var(--color-silver);
+    font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Tarjeta Táctica de la Forja */
+.valdr-card {
+  background-color: #14171C;
+  border: 1px solid rgba(197, 160, 89, 0.2);
+  border-radius: 0.75rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.valdr-card:hover {
+  border-color: rgba(197, 160, 89, 0.45);
+}
+
+/* Botón Rúnico */
+.valdr-button-bronze {
+  background: linear-gradient(180deg, #D4AF37 0%, #A67C1E 100%);
+  color: #0B0C0E;
+  font-weight: 700;
+  border: 1px solid #E5C158;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.valdr-button-bronze:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* Bordes Glaciales de Templanza */
+.valdr-glacial-glow {
+  border-color: rgba(78, 159, 159, 0.4);
+  box-shadow: 0 0 15px rgba(78, 159, 159, 0.15);
+}
+
+/* Alerta de Asedio / Fuego Sangre */
+.valdr-blood-pulse {
+  border-color: rgba(217, 56, 41, 0.6);
+  animation: pulse-blood 2s infinite ease-in-out;
+}
+
+@keyframes pulse-blood {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(217, 56, 41, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(217, 56, 41, 0.6);
+  }
+}
