@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Desactivar features experimentales que causan cuelgues en el worker de Turbopack en CI/Vercel
+  // Turbopack config para silenciar la colisión con webpack en Next.js 16
+  turbopack: {},
+
   // Headers obligatorios para SharedArrayBuffer (mGBA-wasm pthreads)
   async headers() {
     return [
