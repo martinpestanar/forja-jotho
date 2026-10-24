@@ -36,7 +36,7 @@ export function OracleForgeModal({
 
   if (!isOpen) return null;
 
-  // Consultar y Forjar a través del Cerebro del Oráculo
+  // Consultar y Forjar a través del Cerebro del Oráculo (Gemini 2.5 Flash + Supabase)
   const handleConsultAndForge = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -45,21 +45,63 @@ export function OracleForgeModal({
     soundFx.playClick();
 
     try {
-      const { data, error } = await supabase.rpc('rpc_valdr_oracle_forge_habit', {
-        p_title: title.trim(),
-        p_description: description.trim() || 'Hábito consagrado ante la Forja',
-        p_category: category,
-        p_estimated_minutes: durationMinutes,
+      // 1. Obtener contexto del usuario desde Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      let userContext = {};
+      if (user) {
+        const { data: prof } = await supabase
+          .from('valdr_profiles')
+          .select('leader_name, guide_totem, sovereignty_gold, battery_minutes, streak_fire_days, temperance_streak_days')
+          .eq('id', user.id)
+          .single();
+        if (prof) userContext = prof;
+      }
+
+      // 2. Tasación en tiempo real con Gemini 2.5 Flash
+      const aiResponse = await fetch('/api/ai-companion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'evaluate_habit',
+          habitData: {
+            title: title.trim(),
+            description: description.trim(),
+            category,
+            durationMinutes,
+          },
+          userContext,
+        }),
       });
 
-      if (error) {
-        soundFx.playDamage();
-        setErrorMessage(error.message);
-      } else if (data) {
-        soundFx.playLevelUp();
-        setErrorMessage(null);
-        setOracleResult(data);
+      const aiData = await aiResponse.json();
+      const evaluation = aiData?.data || {
+        gold_reward: category === 'negocio' ? 100 : category === 'fisico' ? 70 : 40,
+        battery_reward: category === 'negocio' ? 30 : category === 'fisico' ? 45 : 15,
+        requires_proof: category === 'negocio',
+        oracle_judgment: `El Tótem ${totemName} aprueba tu voto rúnico.`,
+      };
+
+      // 3. Registrar el hábito evaluado en Supabase
+      if (user) {
+        const habitId = `custom_${Date.now()}`;
+        await supabase.from('valdr_habits_catalog').insert({
+          id: habitId,
+          user_id: user.id,
+          front_type: 'vigor',
+          title: title.trim(),
+          subtitle: description.trim() || 'Hábito sellado ante el Oráculo',
+          duration_minutes: durationMinutes,
+          gold_reward: evaluation.gold_reward,
+          game_battery_reward: evaluation.battery_reward,
+          requires_proof: evaluation.requires_proof,
+          is_custom: true,
+          sort_order: 99,
+        });
       }
+
+      soundFx.playLevelUp();
+      setErrorMessage(null);
+      setOracleResult(evaluation);
     } catch (err: any) {
       soundFx.playDamage();
       setErrorMessage(err.message || 'El Oráculo no pudo conectar con la Forja.');

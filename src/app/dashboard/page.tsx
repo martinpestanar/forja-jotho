@@ -10,6 +10,7 @@ import { MobileTopHud } from '@/components/dashboard/MobileTopHud';
 import { RunicHabitCard } from '@/components/dashboard/RunicHabitCard';
 import { MobileFloatingDock, MobileTab } from '@/components/dashboard/MobileFloatingDock';
 import { OracleForgeModal } from '@/components/dashboard/OracleForgeModal';
+import { OracleConsultWidget } from '@/components/dashboard/OracleConsultWidget';
 import { VigorHeaderSummary } from '@/components/dashboard/VigorHeaderSummary';
 import { NintendoNoticeModal, NoticeType } from '@/components/dashboard/NintendoNoticeModal';
 import {
@@ -881,6 +882,9 @@ export default function DashboardPage() {
         type={noticeModal.type}
         onClose={() => setNoticeModal((prev) => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Widget Interactivo del Oráculo de Johto (Gemini 2.5 Flash + Supabase) */}
+      <OracleConsultWidget profileData={profileData} />
 
       {/* Consola mGBA en background */}
       <ArcadeRoomTheater />
