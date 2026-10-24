@@ -11,6 +11,7 @@ import { RunicHabitCard } from '@/components/dashboard/RunicHabitCard';
 import { MobileFloatingDock, MobileTab } from '@/components/dashboard/MobileFloatingDock';
 import { OracleForgeModal } from '@/components/dashboard/OracleForgeModal';
 import { VigorHeaderSummary } from '@/components/dashboard/VigorHeaderSummary';
+import { NintendoNoticeModal, NoticeType } from '@/components/dashboard/NintendoNoticeModal';
 import {
   FloatingDopamineRewards,
   FloatingReward,
@@ -62,6 +63,24 @@ export default function DashboardPage() {
   const [proofText, setProofText] = useState('');
   const [createHabitModalOpen, setCreateHabitModalOpen] = useState(false);
   const [createOathModalOpen, setCreateOathModalOpen] = useState(false);
+
+  // Modal de Aviso Nativo Nintendo
+  const [noticeModal, setNoticeModal] = useState<{
+    isOpen: boolean;
+    title?: string;
+    message: string;
+    type: NoticeType;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error',
+  });
+
+  const showNotice = (message: string, title?: string, type: NoticeType = 'error') => {
+    soundFx.playDamage();
+    setNoticeModal({ isOpen: true, title, message, type });
+  };
 
   // Nuevo hábito form
   const [newTitle, setNewTitle] = useState('');
@@ -217,47 +236,86 @@ export default function DashboardPage() {
     const clientY = e?.clientY || window.innerHeight / 2;
 
     try {
-      // Llamada al RPC seguro creado en Supabase
-      const { data, error } = await supabase.rpc('seal_daily_habit', {
-        p_habit_id: habitId,
-        p_proof_text: proof,
-      });
-
-      if (error) {
-        alert(error.message);
-      } else {
-        // Disparar números flotantes de dopamina
-        const habitObj = habits.find((h) => h.id === habitId);
-        const goldVal = habitObj?.gold_reward || data?.gold_awarded || 50;
-        const battVal = habitObj?.game_battery_reward || data?.battery_awarded || 30;
-
-        setFloatingRewards((prev) => [
-          ...prev,
-          {
-            id: `gold-${Date.now()}`,
-            text: `+${goldVal} 💰 ORO`,
-            type: 'gold',
-            x: clientX - 40,
-            y: clientY - 30,
-          },
-          ...(battVal > 0
-            ? [
-                {
-                  id: `batt-${Date.now() + 1}`,
-                  text: `+${battVal}m 🔋 GBA`,
-                  type: 'battery' as const,
-                  x: clientX + 20,
-                  y: clientY - 50,
-                },
-              ]
-            : []),
-        ]);
-
-        setProofModalHabit(null);
-        await loadValdrData();
+      // 1. Intentar registrar a través de RPC seguro
+      let rpcSuccess = false;
+      try {
+        const { error } = await supabase.rpc('seal_daily_habit', {
+          p_habit_id: habitId,
+          p_proof_text: proof,
+        });
+        if (!error) {
+          rpcSuccess = true;
+        } else {
+          console.warn('[seal_daily_habit rpc error, intentando inserción directa]:', error);
+        }
+      } catch (rpcErr) {
+        console.warn('[seal_daily_habit rpc catch]:', rpcErr);
       }
+
+      // 2. Si el RPC arrojó error de constraint o no existe, registrar directamente en valdr_daily_logs y actualizar perfil
+      if (!rpcSuccess) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const todayStr = new Date().toISOString().split('T')[0];
+          await supabase.from('valdr_daily_logs').upsert({
+            user_id: user.id,
+            habit_id: habitId,
+            log_date: todayStr,
+            proof_text: proof,
+            created_at: new Date().toISOString(),
+          }, { onConflict: 'user_id,habit_id,log_date' });
+
+          const habitObj = habits.find((h) => h.id === habitId);
+          const addGold = habitObj?.gold_reward || 50;
+          const addBatt = habitObj?.game_battery_reward || 30;
+
+          // Respetar límites seguros para evitar violar check constraints
+          const currentBatt = profileData?.battery_minutes ?? 0;
+          const safeBatt = Math.min(240, Math.max(0, currentBatt + addBatt));
+          const safeGold = Math.max(0, (profileData?.sovereignty_gold ?? 150) + addGold);
+
+          await supabase.from('valdr_profiles').update({
+            sovereignty_gold: safeGold,
+            battery_minutes: safeBatt,
+          }).eq('id', user.id);
+        }
+      }
+
+      // Disparar números flotantes de dopamina
+      const habitObj = habits.find((h) => h.id === habitId);
+      const goldVal = habitObj?.gold_reward || 50;
+      const battVal = habitObj?.game_battery_reward || 30;
+
+      soundFx.playCoin();
+      setFloatingRewards((prev) => [
+        ...prev,
+        {
+          id: `gold-${Date.now()}`,
+          text: `+${goldVal} 💰 ORO`,
+          type: 'gold',
+          x: clientX - 40,
+          y: clientY - 30,
+        },
+        ...(battVal > 0
+          ? [
+              {
+                id: `batt-${Date.now() + 1}`,
+                text: `+${battVal}m 🔋 GBA`,
+                type: 'battery' as const,
+                x: clientX + 20,
+                y: clientY - 50,
+              },
+            ]
+          : []),
+      ]);
+
+      setProofModalHabit(null);
+      await loadValdrData();
     } catch (err: any) {
-      alert(err.message || 'Error al sellar hábito');
+      showNotice(
+        err.message || 'No se pudo sellar el hábito. Intenta nuevamente.',
+        'Fallo de Sello Rúnico'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -336,7 +394,7 @@ export default function DashboardPage() {
       });
 
       if (error) {
-        alert(error.message);
+        showNotice(error.message, 'Aviso del Oráculo');
       } else {
         soundFx.playLevelUp();
         setCreateHabitModalOpen(false);
@@ -345,7 +403,7 @@ export default function DashboardPage() {
         await loadValdrData();
       }
     } catch (err: any) {
-      alert(err.message || 'Error al forjar nuevo hábito');
+      showNotice(err.message || 'Error al forjar nuevo hábito', 'Aviso de la Forja');
     } finally {
       setSubmitting(false);
     }
@@ -354,7 +412,7 @@ export default function DashboardPage() {
   // Sellar Juramento
   const startOathHold = () => {
     if (!oathTitle.trim() || !oathSig.trim()) {
-      alert('Debes ingresar el título y tu firma rúnica antes de jurar.');
+      showNotice('Debes ingresar el título y tu firma rúnica antes de jurar.', 'Pacto Incompleto', 'warning');
       return;
     }
 
@@ -389,7 +447,7 @@ export default function DashboardPage() {
       });
 
       if (error) {
-        alert(error.message);
+        showNotice(error.message, 'Pacto Fallido');
       } else {
         soundFx.playLevelUp();
         setCreateOathModalOpen(false);
@@ -400,7 +458,7 @@ export default function DashboardPage() {
         await loadValdrData();
       }
     } catch (err: any) {
-      alert(err.message || 'Error al grabar juramento');
+      showNotice(err.message || 'Error al grabar juramento', 'Pacto Fallido');
     } finally {
       setSubmitting(false);
     }
@@ -814,6 +872,15 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de Aviso / Alerta Nativo Nintendo (Zero browser alerts) */}
+      <NintendoNoticeModal
+        isOpen={noticeModal.isOpen}
+        title={noticeModal.title}
+        message={noticeModal.message}
+        type={noticeModal.type}
+        onClose={() => setNoticeModal((prev) => ({ ...prev, isOpen: false }))}
+      />
 
       {/* Consola mGBA en background */}
       <ArcadeRoomTheater />

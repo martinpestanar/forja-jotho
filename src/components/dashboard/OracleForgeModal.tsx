@@ -32,6 +32,8 @@ export function OracleForgeModal({
     oracle_judgment: string;
   } | null>(null);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   if (!isOpen) return null;
 
   // Consultar y Forjar a través del Cerebro del Oráculo
@@ -51,13 +53,16 @@ export function OracleForgeModal({
       });
 
       if (error) {
-        alert(error.message);
+        soundFx.playDamage();
+        setErrorMessage(error.message);
       } else if (data) {
         soundFx.playLevelUp();
+        setErrorMessage(null);
         setOracleResult(data);
       }
     } catch (err: any) {
-      alert(err.message || 'El Oráculo no pudo conectar con la Forja.');
+      soundFx.playDamage();
+      setErrorMessage(err.message || 'El Oráculo no pudo conectar con la Forja.');
     } finally {
       setEvaluating(false);
     }
@@ -101,6 +106,19 @@ export function OracleForgeModal({
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Mensaje de error / aviso nativo */}
+        {errorMessage && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/40 text-xs text-rose-300 flex items-center justify-between gap-2">
+            <span>{errorMessage}</span>
+            <button 
+              onClick={() => setErrorMessage(null)} 
+              className="text-rose-400 hover:text-rose-200 cursor-pointer font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* DIÁLOGO RPG O RESULTADO DEL ORÁCULO */}
         {oracleResult ? (
