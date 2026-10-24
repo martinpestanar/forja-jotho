@@ -432,7 +432,7 @@ export const ArcadeRoomTheater: React.FC = () => {
                 : 'bg-[#121214] border-2 border-emerald-500/40 shadow-[0_0_30px_rgba(34,197,94,0.15)]'
             }`}
           >
-            <GbaPanel />
+            {isArcadeOpen && <GbaPanel />}
           </div>
         </section>
 

@@ -6,32 +6,32 @@ import { supabase } from '@/lib/supabase';
 import { ArcadeRoomTheater } from '@/components/arcade/ArcadeRoomTheater';
 import { PartyPcManager } from '@/components/dashboard/PartyPcManager';
 import { PokedexBagViewer } from '@/components/dashboard/PokedexBagViewer';
+import { MobileTopHud } from '@/components/dashboard/MobileTopHud';
+import { RunicHabitCard } from '@/components/dashboard/RunicHabitCard';
+import { MobileFloatingDock, MobileTab } from '@/components/dashboard/MobileFloatingDock';
+import { OracleForgeModal } from '@/components/dashboard/OracleForgeModal';
+import { VigorHeaderSummary } from '@/components/dashboard/VigorHeaderSummary';
+import {
+  FloatingDopamineRewards,
+  FloatingReward,
+} from '@/components/dashboard/FloatingDopamineRewards';
 import { 
-  Flame, 
-  Coins, 
-  BatteryCharging, 
+  Plus, 
+  Scroll, 
+  X, 
+  Gamepad2, 
   ShieldCheck, 
-  Clock, 
-  CheckCircle2, 
-  Gamepad2,
-  ChevronRight,
-  Zap,
-  Plus,
-  Scroll,
-  X,
   AlertTriangle,
-  Award
+  Zap
 } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
-
-type ValdrTab = 'vigor' | 'templanza' | 'oaths' | 'vault' | 'game';
 
 interface HabitItem {
   id: string;
   front_type: 'vigor' | 'templanza' | 'expansion';
   title: string;
   subtitle: string;
-  duration_minutes: number;
+  duration_minutes?: number;
   gold_reward: number;
   game_battery_reward: number;
   requires_proof: boolean;
@@ -51,18 +51,19 @@ interface OathItem {
 }
 
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState<ValdrTab>('vigor');
+  const [activeTab, setActiveTab] = useState<MobileTab>('vigor');
   const [habits, setHabits] = useState<HabitItem[]>([]);
   const [oaths, setOaths] = useState<OathItem[]>([]);
   const [profileData, setProfileData] = useState<any>(null);
-  
+  const [floatingRewards, setFloatingRewards] = useState<FloatingReward[]>([]);
+
   // Modales
   const [proofModalHabit, setProofModalHabit] = useState<HabitItem | null>(null);
   const [proofText, setProofText] = useState('');
   const [createHabitModalOpen, setCreateHabitModalOpen] = useState(false);
   const [createOathModalOpen, setCreateOathModalOpen] = useState(false);
-  
-  // Estado para nuevo hábito
+
+  // Nuevo hábito form
   const [newTitle, setNewTitle] = useState('');
   const [newSubtitle, setNewSubtitle] = useState('');
   const [newFrontType, setNewFrontType] = useState<'vigor' | 'expansion'>('vigor');
@@ -70,7 +71,7 @@ export default function DashboardPage() {
   const [newBatteryReward, setNewBatteryReward] = useState(30);
   const [newRequiresProof, setNewRequiresProof] = useState(false);
 
-  // Estado para nuevo juramento
+  // Nuevo juramento form
   const [oathTitle, setOathTitle] = useState('');
   const [oathDays, setOathDays] = useState<number>(7);
   const [oathVow, setOathVow] = useState('');
@@ -83,7 +84,7 @@ export default function DashboardPage() {
 
   const openArcadeRoom = useTrainerStore((s) => s.openArcadeRoom);
 
-  // Contador de Asedio (Medianoche)
+  // 1. Contador de Asedio (Medianoche)
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
@@ -93,19 +94,25 @@ export default function DashboardPage() {
       const hours = Math.floor(diffMs / (1000 * 60 * 60));
       const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
       const secs = Math.floor((diffMs % (1000 * 60)) / 1000);
-      setTimeUntilMidnight(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
+      setTimeUntilMidnight(
+        `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs
+          .toString()
+          .padStart(2, '0')}`
+      );
     };
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Cargar Perfil, Hábitos y Juramentos
+  // 2. Cargar Perfil, Hábitos y Juramentos
   const loadValdrData = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
-    // 1. Perfil
+    // Perfil
     const { data: prof } = await supabase
       .from('valdr_profiles')
       .select('*')
@@ -114,7 +121,7 @@ export default function DashboardPage() {
 
     if (prof) setProfileData(prof);
 
-    // 2. Hábitos
+    // Catálogo y logs
     const { data: catalog } = await supabase
       .from('valdr_habits_catalog')
       .select('*')
@@ -130,13 +137,15 @@ export default function DashboardPage() {
     const completedIds = new Set((logs || []).map((l: any) => l.habit_id));
 
     if (catalog) {
-      setHabits(catalog.map((h: any) => ({
-        ...h,
-        completed: completedIds.has(h.id)
-      })));
+      setHabits(
+        catalog.map((h: any) => ({
+          ...h,
+          completed: completedIds.has(h.id),
+        }))
+      );
     }
 
-    // 3. Juramentos
+    // Juramentos
     const { data: oathsData } = await supabase
       .from('valdr_oaths')
       .select('*')
@@ -148,31 +157,93 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadValdrData();
+
+    // 3. Suscripción Supabase Realtime para Valdr Profiles
+    const channel = supabase
+      .channel('valdr-profile-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'valdr_profiles' },
+        (payload) => {
+          if (payload.new) {
+            setProfileData(payload.new);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Sellar Hábito
-  const handleHabitClick = (habit: HabitItem) => {
+  // Calcular porcentaje de cumplimiento diario
+  const activeHabitsList = habits.filter(
+    (h) => h.front_type === 'vigor' || h.front_type === 'expansion'
+  );
+  const completedHabitsCount = activeHabitsList.filter((h) => h.completed).length;
+  const completionPercent =
+    activeHabitsList.length > 0
+      ? Math.round((completedHabitsCount / activeHabitsList.length) * 100)
+      : 100;
+
+  // Sellar Hábito con Stored Procedure RPC Atómico
+  const handleHabitSeal = (habit: HabitItem, e: React.MouseEvent) => {
     if (habit.completed) return;
     if (habit.requires_proof) {
       setProofModalHabit(habit);
       setProofText('');
     } else {
-      executeHabitSubmit(habit.id, null);
+      executeHabitSubmit(habit.id, null, e);
     }
   };
 
-  const executeHabitSubmit = async (habitId: string, proof: string | null) => {
+  const executeHabitSubmit = async (
+    habitId: string,
+    proof: string | null,
+    e?: React.MouseEvent
+  ) => {
     setSubmitting(true);
+    const clientX = e?.clientX || window.innerWidth / 2;
+    const clientY = e?.clientY || window.innerHeight / 2;
+
     try {
-      const { error } = await supabase.rpc('rpc_valdr_submit_habit_check', {
+      // Llamada al RPC seguro creado en Supabase
+      const { data, error } = await supabase.rpc('seal_daily_habit', {
         p_habit_id: habitId,
-        p_proof: proof
+        p_proof_text: proof,
       });
 
       if (error) {
         alert(error.message);
       } else {
-        soundFx.playCoin();
+        // Disparar números flotantes de dopamina
+        const habitObj = habits.find((h) => h.id === habitId);
+        const goldVal = habitObj?.gold_reward || data?.gold_awarded || 50;
+        const battVal = habitObj?.game_battery_reward || data?.battery_awarded || 30;
+
+        setFloatingRewards((prev) => [
+          ...prev,
+          {
+            id: `gold-${Date.now()}`,
+            text: `+${goldVal} 💰 ORO`,
+            type: 'gold',
+            x: clientX - 40,
+            y: clientY - 30,
+          },
+          ...(battVal > 0
+            ? [
+                {
+                  id: `batt-${Date.now() + 1}`,
+                  text: `+${battVal}m 🔋 GBA`,
+                  type: 'battery' as const,
+                  x: clientX + 20,
+                  y: clientY - 50,
+                },
+              ]
+            : []),
+        ]);
+
         setProofModalHabit(null);
         await loadValdrData();
       }
@@ -181,6 +252,10 @@ export default function DashboardPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const removeFloatingReward = (id: string) => {
+    setFloatingRewards((prev) => prev.filter((r) => r.id !== id));
   };
 
   // Crear Nuevo Hábito
@@ -196,7 +271,7 @@ export default function DashboardPage() {
         p_front_type: newFrontType,
         p_gold_reward: Number(newGoldReward),
         p_battery_reward: Number(newBatteryReward),
-        p_requires_proof: newRequiresProof
+        p_requires_proof: newRequiresProof,
       });
 
       if (error) {
@@ -215,7 +290,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Mantener presionado para sellar Juramento (3 segundos)
+  // Sellar Juramento
   const startOathHold = () => {
     if (!oathTitle.trim() || !oathSig.trim()) {
       alert('Debes ingresar el título y tu firma rúnica antes de jurar.');
@@ -249,7 +324,7 @@ export default function DashboardPage() {
         p_title: oathTitle.trim(),
         p_duration_days: oathDays,
         p_front_vow: oathVow.trim() || 'Pacto de autodominio y disciplina inquebrantable',
-        p_runic_signature: oathSig.trim()
+        p_runic_signature: oathSig.trim(),
       });
 
       if (error) {
@@ -271,178 +346,42 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0C0E] text-[#E2E8F0] flex flex-col font-sans select-none pb-20">
-      {/* 1. Header Táctico de Forja Johto */}
-      <header className="sticky top-0 z-40 bg-[#14171C]/95 backdrop-blur-md border-b border-[#C5A059]/30 px-4 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#C5A059]/10 border border-[#C5A059]/40 flex items-center justify-center text-[#C5A059]">
-            <Zap className="w-4 h-4 fill-current" />
-          </div>
-          <div>
-            <span className="text-xs font-black tracking-widest text-[#E2E8F0] uppercase block">
-              FORJA JOHTO
-            </span>
-            <span className="text-[10px] text-[#C5A059] block -mt-0.5">
-              {profileData?.leader_name || 'Guerrero'} // {profileData?.guide_totem?.toUpperCase() || 'OSO'}
-            </span>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#0B0C0E] text-[#E2E8F0] flex flex-col font-sans select-none pb-28">
+      {/* 1. Top HUD Móvil de Alto Impacto */}
+      <MobileTopHud
+        profileData={profileData}
+        timeUntilMidnight={timeUntilMidnight}
+        completionPercent={completionPercent}
+      />
 
-        {/* Telemetría: Oro, Batería GBA y Racha de Fuego */}
-        <div className="flex items-center gap-2.5 text-xs font-mono">
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-[#C5A059]">
-            <Coins className="w-3.5 h-3.5" />
-            <span className="font-bold">{profileData?.sovereignty_gold ?? 0}</span>
-          </div>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
-            <BatteryCharging className="w-3.5 h-3.5" />
-            <span className="font-bold">{profileData?.battery_minutes ?? 0}m</span>
-          </div>
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400">
-            <Flame className="w-3.5 h-3.5 fill-current" />
-            <span className="font-bold">{profileData?.streak_fire_days ?? 0}d</span>
-          </div>
-        </div>
-      </header>
-
-      {/* 2. Barra de Asedio & Cuenta Regresiva a Medianoche */}
-      <div className="bg-[#0B0C0E] border-b border-white/5 px-4 py-1.5 flex items-center justify-between text-[11px] font-mono">
-        <div className="flex items-center gap-1.5 text-[#64748B]">
-          <Clock className="w-3.5 h-3.5 text-[#C5A059]" />
-          <span>ASIEDO:</span>
-          <span className="text-amber-400 font-bold">{timeUntilMidnight}</span>
-        </div>
-        <div className="text-[10px] text-[#64748B]">
-          ESTATUS: <span className="text-emerald-400 font-bold">INVICTUS</span>
-        </div>
-      </div>
-
-      {/* 3. Navegación Táctil Móvil */}
-      <nav className="bg-[#14171C] border-b border-white/5 px-2 flex items-center gap-1 overflow-x-auto text-xs font-semibold py-1">
-        <button
-          onClick={() => setActiveTab('vigor')}
-          className={`px-3 py-2 rounded-md whitespace-nowrap cursor-pointer transition-all ${
-            activeTab === 'vigor'
-              ? 'bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/40'
-              : 'text-[#64748B] hover:text-[#E2E8F0]'
-          }`}
-        >
-          Frente Vigor
-        </button>
-        <button
-          onClick={() => setActiveTab('templanza')}
-          className={`px-3 py-2 rounded-md whitespace-nowrap cursor-pointer transition-all ${
-            activeTab === 'templanza'
-              ? 'bg-[#4E9F9F]/15 text-[#4E9F9F] border border-[#4E9F9F]/40'
-              : 'text-[#64748B] hover:text-[#E2E8F0]'
-          }`}
-        >
-          Templanza (30d)
-        </button>
-        <button
-          onClick={() => setActiveTab('oaths')}
-          className={`px-3 py-2 rounded-md whitespace-nowrap cursor-pointer transition-all ${
-            activeTab === 'oaths'
-              ? 'bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/40'
-              : 'text-[#64748B] hover:text-[#E2E8F0]'
-          }`}
-        >
-          Juramentos
-        </button>
-        <button
-          onClick={() => setActiveTab('vault')}
-          className={`px-3 py-2 rounded-md whitespace-nowrap cursor-pointer transition-all ${
-            activeTab === 'vault'
-              ? 'bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/40'
-              : 'text-[#64748B] hover:text-[#E2E8F0]'
-          }`}
-        >
-          Bóveda .SAV
-        </button>
-        <button
-          onClick={() => setActiveTab('game')}
-          className={`px-3 py-2 rounded-md whitespace-nowrap cursor-pointer transition-all ${
-            activeTab === 'game'
-              ? 'bg-[#C5A059]/15 text-[#C5A059] border border-[#C5A059]/40'
-              : 'text-[#64748B] hover:text-[#E2E8F0]'
-          }`}
-        >
-          Cartucho GBA
-        </button>
-      </nav>
-
-      {/* 4. Contenedor Principal (Mobile-First / max-w-lg) */}
-      <main className="flex-1 max-w-lg w-full mx-auto p-4 space-y-4">
+      {/* 2. Contenedor Principal (Mobile-First / max-w-md centrado) */}
+      <main className="flex-1 max-w-md w-full mx-auto p-4 space-y-4">
         {/* PESTAÑA 1: FRENTE DE VIGOR */}
         {activeTab === 'vigor' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-l-2 border-[#C5A059] pl-3 py-1">
-              <div>
-                <h2 className="text-sm font-bold text-[#E2E8F0] uppercase tracking-wider">
-                  Frente del Vigor
-                </h2>
-                <p className="text-xs text-[#64748B]">
-                  Gana Oro y Batería de Cartucho en la vida real.
-                </p>
-              </div>
+          <div className="space-y-3.5">
+            {/* Altar de Resumen Visual de Batalla */}
+            <VigorHeaderSummary
+              totalCount={activeHabitsList.length}
+              completedCount={completedHabitsCount}
+              earnedGoldToday={activeHabitsList
+                .filter((h) => h.completed)
+                .reduce((acc, curr) => acc + (curr.gold_reward || 0), 0)}
+              earnedBatteryToday={activeHabitsList
+                .filter((h) => h.completed)
+                .reduce((acc, curr) => acc + (curr.game_battery_reward || 0), 0)}
+              onOpenOracle={() => setCreateHabitModalOpen(true)}
+            />
 
-              <button
-                onClick={() => setCreateHabitModalOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#C5A059]/20 hover:bg-[#C5A059]/30 text-[#C5A059] border border-[#C5A059]/40 text-xs font-bold cursor-pointer transition-all"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Nuevo</span>
-              </button>
-            </div>
-
+            {/* Listado Bento de Hábitos con Micro-interacciones */}
             <div className="space-y-2.5">
               {habits
                 .filter((h) => h.front_type === 'vigor' || h.front_type === 'expansion')
                 .map((h) => (
-                  <div
+                  <RunicHabitCard
                     key={h.id}
-                    onClick={() => handleHabitClick(h)}
-                    className={`valdr-card p-3.5 flex items-center justify-between cursor-pointer transition-all ${
-                      h.completed
-                        ? 'opacity-60 bg-[#10141a] border-emerald-500/30'
-                        : 'hover:border-[#C5A059]/60'
-                    }`}
-                  >
-                    <div className="space-y-1 pr-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-[#E2E8F0]">{h.title}</span>
-                        {h.is_custom && (
-                          <span className="text-[9px] px-1.5 py-0.2 bg-[#C5A059]/10 border border-[#C5A059]/30 rounded text-[#C5A059] font-mono">
-                            Personal
-                          </span>
-                        )}
-                        {h.requires_proof && !h.completed && (
-                          <span className="text-[10px] px-1.5 py-0.2 bg-white/5 border border-white/10 rounded text-[#C5A059]">
-                            Comprobante
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-[#64748B] leading-tight">{h.subtitle}</p>
-                      <div className="flex items-center gap-3 pt-1 text-[11px] font-mono text-[#C5A059]">
-                        <span>+{h.gold_reward} Oro</span>
-                        {h.game_battery_reward > 0 && (
-                          <span className="text-cyan-400">+{h.game_battery_reward}m GBA</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="shrink-0">
-                      {h.completed ? (
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400">
-                          <CheckCircle2 className="w-5 h-5" />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-[#64748B] hover:text-[#C5A059] hover:border-[#C5A059]">
-                          <ChevronRight className="w-4 h-4" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                    habit={h}
+                    onSeal={(habitObj, e) => handleHabitSeal(habitObj, e)}
+                  />
                 ))}
             </div>
           </div>
@@ -452,21 +391,21 @@ export default function DashboardPage() {
         {activeTab === 'templanza' && (
           <div className="space-y-4">
             <div className="border-l-2 border-[#4E9F9F] pl-3 py-1">
-              <h2 className="text-sm font-bold text-[#4E9F9F] uppercase tracking-wider">
-                Santuario Mayor de Templanza
+              <h2 className="text-sm font-black text-[#4E9F9F] uppercase tracking-wider">
+                Santuario de Templanza
               </h2>
               <p className="text-xs text-[#64748B]">
-                Voto Inviolable: 30 Días de Retención Seminal y Cero Vicios.
+                Voto Inviolable: 30 Días de Retención y Cero Vicios.
               </p>
             </div>
 
-            <div className="valdr-card valdr-glacial-glow p-5 text-center space-y-3">
-              <div className="w-16 h-16 mx-auto rounded-full bg-[#4E9F9F]/10 border border-[#4E9F9F]/40 flex items-center justify-center text-[#4E9F9F]">
-                <ShieldCheck className="w-8 h-8" />
+            <div className="rounded-2xl bg-[#14171C] border border-[#4E9F9F]/40 p-6 text-center space-y-4 shadow-[0_4px_0_0_#000]">
+              <div className="w-20 h-20 mx-auto rounded-full bg-[#4E9F9F]/10 border-2 border-[#4E9F9F]/50 flex items-center justify-center text-[#4E9F9F] shadow-[0_0_20px_rgba(78,159,159,0.3)] animate-pulse">
+                <ShieldCheck className="w-10 h-10" />
               </div>
 
               <div>
-                <span className="text-3xl font-black text-[#E2E8F0] font-mono block">
+                <span className="text-4xl font-black text-[#E2E8F0] font-mono block">
                   {profileData?.temperance_streak_days ?? 0} / 30
                 </span>
                 <span className="text-xs text-[#4E9F9F] font-bold uppercase tracking-widest">
@@ -474,19 +413,19 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              <p className="text-xs text-[#64748B] leading-relaxed max-w-sm mx-auto">
-                Recompensa al Día 30: Huevo Místico eclosionado con Pokémon Shiny de 6 IVs perfectos inyectado al cartucho.
-              </p>
+              <div className="p-3 rounded-xl bg-[#0B0C0E] border border-white/5 text-xs text-[#64748B] leading-relaxed">
+                ✨ Recompensa al Día 30: Huevo Místico con Pokémon Shiny de 6 IVs perfectos inyectado al cartucho.
+              </div>
             </div>
           </div>
         )}
 
         {/* PESTAÑA 3: JURAMENTOS SAGRADOS */}
         {activeTab === 'oaths' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between border-l-2 border-[#C5A059] pl-3 py-1">
+          <div className="space-y-3.5">
+            <div className="flex items-center justify-between border-l-2 border-[#F59E0B] pl-3 py-1">
               <div>
-                <h2 className="text-sm font-bold text-[#E2E8F0] uppercase tracking-wider">
+                <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
                   Juramentos Sagrados
                 </h2>
                 <p className="text-xs text-[#64748B]">
@@ -496,34 +435,37 @@ export default function DashboardPage() {
 
               <button
                 onClick={() => setCreateOathModalOpen(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#C5A059]/20 hover:bg-[#C5A059]/30 text-[#C5A059] border border-[#C5A059]/40 text-xs font-bold cursor-pointer transition-all"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-black cursor-pointer shadow-[0_2px_0_0_#000] active:translate-y-0.5"
               >
-                <Scroll className="w-3.5 h-3.5" />
+                <Scroll className="w-4 h-4" />
                 <span>Jurar</span>
               </button>
             </div>
 
             {oaths.length === 0 ? (
-              <div className="valdr-card p-6 text-center space-y-2 text-[#64748B]">
-                <Scroll className="w-8 h-8 mx-auto opacity-40 text-[#C5A059]" />
+              <div className="rounded-2xl bg-[#14171C] border border-[#C5A059]/20 p-8 text-center space-y-3 text-[#64748B]">
+                <Scroll className="w-10 h-10 mx-auto opacity-40 text-[#C5A059]" />
                 <p className="text-xs">No tienes juramentos activos.</p>
                 <button
                   onClick={() => setCreateOathModalOpen(true)}
-                  className="px-3 py-1.5 valdr-button-bronze text-xs font-bold rounded-lg cursor-pointer inline-flex items-center gap-1"
+                  className="px-4 py-2 bg-[#C5A059] text-black font-black text-xs rounded-xl shadow-[0_3px_0_0_#000] active:translate-y-0.5 cursor-pointer inline-flex items-center gap-1.5"
                 >
-                  <Plus className="w-3.5 h-3.5" />
+                  <Plus className="w-4 h-4" />
                   <span>Sellar mi primer juramento</span>
                 </button>
               </div>
             ) : (
               <div className="space-y-2.5">
                 {oaths.map((o) => (
-                  <div key={o.id} className="valdr-card p-4 space-y-2 border-[#C5A059]/30">
+                  <div
+                    key={o.id}
+                    className="rounded-2xl bg-[#14171C] border border-[#C5A059]/30 p-4 space-y-2 shadow-[0_3px_0_0_#000]"
+                  >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#E2E8F0] uppercase tracking-wide">
+                      <span className="text-xs font-black text-[#E2E8F0] uppercase tracking-wide">
                         {o.title}
                       </span>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-400">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400">
                         {o.status.toUpperCase()} ({o.duration_days} DÍAS)
                       </span>
                     </div>
@@ -532,7 +474,7 @@ export default function DashboardPage() {
 
                     <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px] font-mono text-[#64748B]">
                       <span>Hasta: {o.end_date}</span>
-                      <span className="text-[#C5A059]">Firma: {o.runic_signature}</span>
+                      <span className="text-[#C5A059] font-bold">Firma: {o.runic_signature}</span>
                     </div>
                   </div>
                 ))}
@@ -541,11 +483,11 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* PESTAÑA 4: BÓVEDA ANCESTRAL & EQUIPO GBA */}
+        {/* PESTAÑA 4: BÓVEDA ANCESTRAL */}
         {activeTab === 'vault' && (
           <div className="space-y-4">
-            <div className="border-l-2 border-[#C5A059] pl-3 py-1">
-              <h2 className="text-sm font-bold text-[#E2E8F0] uppercase tracking-wider">
+            <div className="border-l-2 border-[#8B5CF6] pl-3 py-1">
+              <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
                 Bóveda Ancestral & Inyección .SAV
               </h2>
               <p className="text-xs text-[#64748B]">
@@ -553,11 +495,11 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="valdr-card p-3 overflow-x-auto">
+            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-3 overflow-x-auto shadow-[0_3px_0_0_#000]">
               <PartyPcManager />
             </div>
 
-            <div className="valdr-card p-3">
+            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-3 shadow-[0_3px_0_0_#000]">
               <PokedexBagViewer />
             </div>
           </div>
@@ -566,27 +508,27 @@ export default function DashboardPage() {
         {/* PESTAÑA 5: EMULADOR GBA */}
         {activeTab === 'game' && (
           <div className="space-y-4">
-            <div className="border-l-2 border-[#C5A059] pl-3 py-1">
-              <h2 className="text-sm font-bold text-[#E2E8F0] uppercase tracking-wider">
-                Cartucho Ancestral (mGBA WebAssembly)
+            <div className="border-l-2 border-emerald-500 pl-3 py-1">
+              <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
+                Cartucho Ancestral (mGBA)
               </h2>
               <p className="text-xs text-[#64748B]">
-                Batería disponible: {profileData?.battery_minutes ?? 0} minutos de juego.
+                Batería disponible: {profileData?.battery_minutes ?? 0} minutos.
               </p>
             </div>
 
-            <div className="valdr-card p-6 text-center space-y-4">
-              <Gamepad2 className="w-12 h-12 text-[#C5A059] mx-auto opacity-80" />
+            <div className="rounded-2xl bg-[#14171C] border border-emerald-500/30 p-6 text-center space-y-4 shadow-[0_4px_0_0_#000]">
+              <Gamepad2 className="w-14 h-14 text-emerald-400 mx-auto opacity-90 animate-bounce" />
               <div>
-                <h3 className="text-base font-bold text-[#E2E8F0]">Pokémon Heart & Soul</h3>
+                <h3 className="text-base font-black text-[#E2E8F0]">Pokémon Heart & Soul</h3>
                 <p className="text-xs text-[#64748B] mt-1">
-                  El juego se apagará automáticamente si la batería llega a 0m. Cumple tus hábitos reales para desbloquear tiempo de juego.
+                  El juego se pausará automáticamente al llegar a 0m de batería. Cumple hábitos en la vida real para ganar más tiempo.
                 </p>
               </div>
 
               <button
                 onClick={openArcadeRoom}
-                className="w-full py-3 valdr-button-bronze text-sm font-bold flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-black rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_0_0_#000] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
               >
                 <Zap className="w-4 h-4 fill-current" />
                 <span>Encender Cartucho Ancestral</span>
@@ -596,126 +538,45 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {/* Modal 1: Crear Hábito Personalizado */}
-      {createHabitModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="valdr-card max-w-sm w-full p-5 space-y-4 border-[#C5A059]/60">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#E2E8F0] uppercase">
-                Forjar Hábito Personalizado
-              </h3>
-              <button 
-                onClick={() => setCreateHabitModalOpen(false)}
-                className="text-[#64748B] hover:text-[#E2E8F0] cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* 3. Dock Táctil Flotante Inferior */}
+      <MobileFloatingDock activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab)} />
 
-            <form onSubmit={handleCreateCustomHabit} className="space-y-3">
-              <div>
-                <label className="text-[11px] text-[#64748B] block mb-1">Nombre del Hábito:</label>
-                <input
-                  type="text"
-                  required
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="Ej. Lectura 20 mins, Ducha fría..."
-                  className="w-full bg-[#0B0C0E] border border-white/10 rounded-lg p-2 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
-                />
-              </div>
+      {/* 4. Feedback de Números Flotantes Dopamínicos */}
+      <FloatingDopamineRewards
+        rewards={floatingRewards}
+        onComplete={removeFloatingReward}
+      />
 
-              <div>
-                <label className="text-[11px] text-[#64748B] block mb-1">Descripción / Regla:</label>
-                <input
-                  type="text"
-                  value={newSubtitle}
-                  onChange={(e) => setNewSubtitle(e.target.value)}
-                  placeholder="Ej. Cero distracciones, enfoque total"
-                  className="w-full bg-[#0B0C0E] border border-white/10 rounded-lg p-2 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
-                />
-              </div>
+      {/* Modales */}
+      {/* Modal 1: El Oráculo Rúnico de Johto */}
+      <OracleForgeModal
+        isOpen={createHabitModalOpen}
+        onClose={() => setCreateHabitModalOpen(false)}
+        onForged={loadValdrData}
+        totemName={profileData?.guide_totem?.toUpperCase() || 'OSO'}
+      />
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[11px] text-[#64748B] block mb-1">Oro (+):</label>
-                  <input
-                    type="number"
-                    min="10"
-                    max="150"
-                    value={newGoldReward}
-                    onChange={(e) => setNewGoldReward(Number(e.target.value))}
-                    className="w-full bg-[#0B0C0E] border border-white/10 rounded-lg p-2 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] text-[#64748B] block mb-1">Batería GBA (+m):</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="60"
-                    value={newBatteryReward}
-                    onChange={(e) => setNewBatteryReward(Number(e.target.value))}
-                    className="w-full bg-[#0B0C0E] border border-white/10 rounded-lg p-2 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="requiresProofCheck"
-                  checked={newRequiresProof}
-                  onChange={(e) => setNewRequiresProof(e.target.checked)}
-                  className="rounded border-white/20"
-                />
-                <label htmlFor="requiresProofCheck" className="text-xs text-[#E2E8F0] cursor-pointer">
-                  Exigir prueba / evidencia para sellar
-                </label>
-              </div>
-
-              <div className="pt-2 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCreateHabitModalOpen(false)}
-                  className="w-1/2 py-2 border border-white/20 rounded-lg text-xs font-semibold text-[#64748B] cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting || !newTitle.trim()}
-                  className="w-1/2 py-2 valdr-button-bronze rounded-lg text-xs font-bold disabled:opacity-50 cursor-pointer"
-                >
-                  {submitting ? 'Forjando...' : 'Crear Hábito'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal 2: Sellar Juramento Sagrado con Presión Mantenida (3s) */}
+      {/* Modal 2: Juramento */}
       {createOathModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
-          <div className="valdr-card max-w-sm w-full p-5 space-y-4 border-[#C5A059]/70">
+          <div className="rounded-2xl bg-[#14171C] max-w-sm w-full p-5 space-y-4 border border-[#C5A059]/70 shadow-[0_8px_25px_rgba(0,0,0,0.8)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Scroll className="w-4 h-4 text-[#C5A059]" />
-                <h3 className="text-sm font-bold text-[#E2E8F0] uppercase">
-                  Pacto Inviolable (Juramento)
+                <Scroll className="w-5 h-5 text-[#C5A059]" />
+                <h3 className="text-sm font-black text-[#E2E8F0] uppercase">
+                  Pacto Inviolable
                 </h3>
               </div>
-              <button 
+              <button
                 onClick={() => setCreateOathModalOpen(false)}
                 className="text-[#64748B] hover:text-[#E2E8F0] cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <p className="text-[11px] text-[#64748B] leading-tight">
-              Una vez sellado con tu firma rúnica, no podrá ser pausado, editado ni eliminado. Romperlo marcará tu perfil como desertor.
+              Una vez sellado con tu firma rúnica, no podrá ser cancelado ni editado. Romperlo marcará tu perfil con deshonor.
             </p>
 
             <div className="space-y-3">
@@ -727,7 +588,7 @@ export default function DashboardPage() {
                   value={oathTitle}
                   onChange={(e) => setOathTitle(e.target.value)}
                   placeholder="Ej. Pacto de Hierro: Cero Procrastinación"
-                  className="w-full bg-[#0B0C0E] border border-white/10 rounded-lg p-2 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
+                  className="w-full bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
                 />
               </div>
 
@@ -739,9 +600,9 @@ export default function DashboardPage() {
                       key={d}
                       type="button"
                       onClick={() => setOathDays(d)}
-                      className={`py-1.5 rounded text-xs font-mono font-bold cursor-pointer transition-all ${
+                      className={`py-2 rounded-xl text-xs font-mono font-black cursor-pointer transition-all ${
                         oathDays === d
-                          ? 'bg-[#C5A059] text-black font-black'
+                          ? 'bg-[#C5A059] text-black shadow-[0_2px_0_0_#000]'
                           : 'bg-white/5 border border-white/10 text-[#64748B]'
                       }`}
                     >
@@ -756,8 +617,8 @@ export default function DashboardPage() {
                 <textarea
                   value={oathVow}
                   onChange={(e) => setOathVow(e.target.value)}
-                  placeholder="Ej. Si fallo un solo día de entrenamiento o retención, acepto el peaje del 50% de oro y el silencio del clan..."
-                  className="w-full h-18 bg-[#0B0C0E] border border-white/10 rounded-lg p-2 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
+                  placeholder="Si fallo un solo día, acepto la penalización..."
+                  className="w-full h-20 bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
                 />
               </div>
 
@@ -768,12 +629,11 @@ export default function DashboardPage() {
                   required
                   value={oathSig}
                   onChange={(e) => setOathSig(e.target.value)}
-                  placeholder="Escribe tu nombre o alias de líder"
-                  className="w-full bg-[#0B0C0E] border border-white/10 rounded-lg p-2 text-xs font-mono text-[#C5A059] focus:outline-none focus:border-[#C5A059]"
+                  placeholder="Escribe tu alias de líder"
+                  className="w-full bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs font-mono text-[#C5A059] focus:outline-none focus:border-[#C5A059]"
                 />
               </div>
 
-              {/* Botón de Presión Sostenida (3s) */}
               <div className="pt-2">
                 <button
                   type="button"
@@ -782,7 +642,7 @@ export default function DashboardPage() {
                   onMouseLeave={cancelOathHold}
                   onTouchStart={startOathHold}
                   onTouchEnd={cancelOathHold}
-                  className="w-full relative overflow-hidden py-3 bg-[#14171C] border border-[#C5A059] text-[#C5A059] text-xs font-bold rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition-all"
+                  className="w-full relative overflow-hidden py-3.5 bg-[#14171C] border-2 border-[#C5A059] text-[#C5A059] text-xs font-black rounded-xl uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-[0_4px_0_0_#000]"
                 >
                   <div
                     className="absolute inset-0 bg-[#C5A059]/30 transition-all duration-150"
@@ -798,15 +658,15 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Modal 3: Comprobante de Hábito */}
+      {/* Modal 3: Comprobante Proof-of-Work */}
       {proofModalHabit && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="valdr-card max-w-sm w-full p-5 space-y-4 border-[#C5A059]/60">
+        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
+          <div className="rounded-2xl bg-[#14171C] max-w-sm w-full p-5 space-y-4 border border-[#C5A059]/60 shadow-[0_8px_25px_rgba(0,0,0,0.8)]">
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-[#E2E8F0] uppercase">
+              <h3 className="text-sm font-black text-[#E2E8F0] uppercase">
                 Registro de Conquista
               </h3>
-              <p className="text-xs text-[#C5A059]">
+              <p className="text-xs text-[#C5A059] font-bold">
                 {proofModalHabit.title}
               </p>
               <p className="text-[11px] text-[#64748B]">
@@ -817,21 +677,21 @@ export default function DashboardPage() {
             <textarea
               value={proofText}
               onChange={(e) => setProofText(e.target.value)}
-              placeholder="Ej. Video TikTok subido día 53 + 4 leads respondidos..."
-              className="w-full h-24 bg-[#0B0C0E] border border-white/10 rounded-lg p-2.5 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
+              placeholder="Ej. Video TikTok subido día 53 + 4 leads contactados..."
+              className="w-full h-24 bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
             />
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setProofModalHabit(null)}
-                className="w-1/2 py-2 border border-white/20 rounded-lg text-xs font-semibold text-[#64748B] cursor-pointer"
+                className="w-1/2 py-2.5 border border-white/20 rounded-xl text-xs font-semibold text-[#64748B] cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 disabled={submitting || !proofText.trim()}
-                onClick={() => executeHabitSubmit(proofModalHabit.id, proofText)}
-                className="w-1/2 py-2 valdr-button-bronze rounded-lg text-xs font-bold disabled:opacity-50 cursor-pointer"
+                onClick={(e) => executeHabitSubmit(proofModalHabit.id, proofText, e)}
+                className="w-1/2 py-2.5 bg-[#C5A059] text-black rounded-xl text-xs font-black disabled:opacity-50 cursor-pointer shadow-[0_2px_0_0_#000]"
               >
                 {submitting ? 'Sellando...' : 'Sellar Runa'}
               </button>
@@ -840,7 +700,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Consola mGBA permanente en background */}
+      {/* Consola mGBA en background */}
       <ArcadeRoomTheater />
     </div>
   );
