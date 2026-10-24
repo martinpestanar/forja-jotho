@@ -79,6 +79,9 @@ export default function DashboardPage() {
   const [holdProgress, setHoldProgress] = useState(0);
   const holdIntervalRef = useRef<any>(null);
 
+  // Estado para marcar victoria diaria de Templanza
+  const [temperanceConfirmedToday, setTemperanceConfirmedToday] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [timeUntilMidnight, setTimeUntilMidnight] = useState('');
 
@@ -119,7 +122,13 @@ export default function DashboardPage() {
       .eq('id', user.id)
       .single();
 
-    if (prof) setProfileData(prof);
+    if (prof) {
+      setProfileData(prof);
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (prof.temperance_last_date === todayStr) {
+        setTemperanceConfirmedToday(true);
+      }
+    }
 
     // Catálogo y logs
     const { data: catalog } = await supabase
@@ -249,6 +258,58 @@ export default function DashboardPage() {
       }
     } catch (err: any) {
       alert(err.message || 'Error al sellar hábito');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmTemperance = async (e: React.MouseEvent) => {
+    if (temperanceConfirmedToday || submitting) return;
+    setSubmitting(true);
+    soundFx.playLevelUp();
+
+    const clientX = e.clientX || window.innerWidth / 2;
+    const clientY = e.clientY || window.innerHeight / 2;
+
+    const currentStreak = profileData?.temperance_streak_days ?? 0;
+    const newStreak = currentStreak + 1;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('valdr_profiles')
+          .update({
+            temperance_streak_days: newStreak,
+            temperance_last_date: todayStr,
+            sovereignty_gold: (profileData?.sovereignty_gold ?? 150) + 100,
+          })
+          .eq('id', user.id);
+      }
+
+      setTemperanceConfirmedToday(true);
+      setProfileData((prev: any) => ({
+        ...prev,
+        temperance_streak_days: newStreak,
+        temperance_last_date: todayStr,
+        sovereignty_gold: (prev?.sovereignty_gold ?? 150) + 100,
+      }));
+
+      // Dopamina visual
+      setFloatingRewards((prev) => [
+        ...prev,
+        {
+          id: `temp-${Date.now()}`,
+          text: `+1 DÍA INVICTO 🛡️ (+100 💰)`,
+          type: 'gold',
+          x: clientX - 60,
+          y: clientY - 40,
+        },
+      ]);
+    } catch (err: any) {
+      console.warn('Error al confirmar templanza:', err);
+      setTemperanceConfirmedToday(true);
     } finally {
       setSubmitting(false);
     }
@@ -395,7 +456,7 @@ export default function DashboardPage() {
                 Santuario de Templanza
               </h2>
               <p className="text-xs text-[#64748B]">
-                Voto Inviolable: 30 Días de Retención y Cero Vicios.
+                Registro de Victoria Diaria: Cero Dopamina Barata & Retención.
               </p>
             </div>
 
@@ -413,6 +474,42 @@ export default function DashboardPage() {
                 </span>
               </div>
 
+              {/* Barra de Progreso Visual hacia el Día 30 */}
+              <div className="space-y-1.5 text-left">
+                <div className="flex justify-between text-[11px] font-mono text-[#64748B]">
+                  <span>Progreso de Purificación</span>
+                  <span className="text-[#4E9F9F] font-bold">
+                    {Math.min(100, Math.round(((profileData?.temperance_streak_days ?? 0) / 30) * 100))}%
+                  </span>
+                </div>
+                <div className="h-2.5 w-full bg-[#0B0C0E] border border-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#4E9F9F] to-emerald-400 transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, Math.round(((profileData?.temperance_streak_days ?? 0) / 30) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Botón táctil para marcar la victoria de hoy */}
+              <button
+                disabled={temperanceConfirmedToday || submitting}
+                onClick={handleConfirmTemperance}
+                className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all border-2 shadow-[0_4px_0_0_#000] active:translate-y-1 active:shadow-none ${
+                  temperanceConfirmedToday
+                    ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/50 cursor-default shadow-none'
+                    : 'bg-[#4E9F9F] hover:bg-[#3d8383] text-black border-black hover:shadow-[0_4px_12px_rgba(78,159,159,0.5)]'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 fill-current" />
+                <span>
+                  {temperanceConfirmedToday
+                    ? '✓ ¡Hoy Permaneciste Invicto!'
+                    : 'Marcar Victoria: Hoy no caí en la compulsión (+100 💰)'}
+                </span>
+              </button>
+
               <div className="p-3 rounded-xl bg-[#0B0C0E] border border-white/5 text-xs text-[#64748B] leading-relaxed">
                 ✨ Recompensa al Día 30: Huevo Místico con Pokémon Shiny de 6 IVs perfectos inyectado al cartucho.
               </div>
@@ -426,20 +523,38 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between border-l-2 border-[#F59E0B] pl-3 py-1">
               <div>
                 <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
-                  Juramentos Sagrados
+                  Pactos & Juramentos Sagrados
                 </h2>
                 <p className="text-xs text-[#64748B]">
-                  Pactos inviolables sellados con firma rúnica.
+                  Contratos de honor a mediano plazo (7 a 90 días) sellados con firma rúnica.
                 </p>
               </div>
 
               <button
                 onClick={() => setCreateOathModalOpen(true)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-black cursor-pointer shadow-[0_2px_0_0_#000] active:translate-y-0.5"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-black cursor-pointer shadow-[0_2px_0_0_#000] active:translate-y-0.5"
               >
                 <Scroll className="w-4 h-4" />
-                <span>Jurar</span>
+                <span>Nuevo Pacto</span>
               </button>
+            </div>
+
+            {/* Guía Visual Explicativa estilo Nintendo */}
+            <div className="rounded-xl bg-[#14171C] border border-[#F59E0B]/20 p-3.5 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-black text-amber-400 uppercase tracking-wide">
+                <Scroll className="w-4 h-4 text-amber-400" />
+                <span>¿Qué es este módulo?</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#94A3B8]">
+                <div className="p-2 rounded-lg bg-[#0B0C0E] border border-white/5 flex items-start gap-2">
+                  <span className="text-amber-400 font-bold">📜</span>
+                  <span><strong>Elige tu desafío:</strong> Comprométete a una regla no negociable (ej. cero alcohol, 1 hora de estudio).</span>
+                </div>
+                <div className="p-2 rounded-lg bg-[#0B0C0E] border border-white/5 flex items-start gap-2">
+                  <span className="text-amber-400 font-bold">⚡</span>
+                  <span><strong>Sello Rúnico:</strong> Firma con tu alias y mantén presionado 3s para sellar. Una vez activo, es inviolable.</span>
+                </div>
+              </div>
             </div>
 
             {oaths.length === 0 ? (
@@ -451,7 +566,7 @@ export default function DashboardPage() {
                   className="px-4 py-2 bg-[#C5A059] text-black font-black text-xs rounded-xl shadow-[0_3px_0_0_#000] active:translate-y-0.5 cursor-pointer inline-flex items-center gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Sellar mi primer juramento</span>
+                  <span>Sellar mi primer pacto</span>
                 </button>
               </div>
             ) : (
@@ -495,7 +610,7 @@ export default function DashboardPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-3 overflow-x-auto shadow-[0_3px_0_0_#000]">
+            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-3 shadow-[0_3px_0_0_#000]">
               <PartyPcManager />
             </div>
 

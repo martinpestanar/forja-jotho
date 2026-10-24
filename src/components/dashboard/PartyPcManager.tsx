@@ -232,36 +232,36 @@ export const PartyPcManager: React.FC = () => {
                             : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 flex items-center justify-center shrink-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-11 h-11 flex items-center justify-center shrink-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={POKEMON_ASSETS.getAnimatedSprite(mon.speciesId, mon.isShiny)}
                             alt={mon.name}
-                            className="max-h-12 object-contain"
+                            className="max-h-11 object-contain"
                           />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-black text-sm">{mon.name}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-black text-sm text-[#E2E8F0] tracking-tight">{mon.name}</span>
                             {mon.isShiny && (
-                              <span className="px-1 py-0.5 bg-amber-400 text-slate-950 text-[9px] font-black rounded flex items-center gap-0.5">
+                              <span className="px-1 py-0.5 bg-amber-400 text-slate-950 text-[9px] font-black rounded flex items-center gap-0.5 shrink-0">
                                 <Sparkles className="w-2.5 h-2.5" /> SHINY
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                            <span className="font-bold text-amber-500">Nv. {mon.level}</span>
+                          <div className="text-[11px] text-slate-400 flex items-center gap-1.5 font-mono">
+                            <span className="font-bold text-amber-400">Nv. {mon.level}</span>
                             <span>·</span>
-                            <span>{mon.types.join(' / ')}</span>
+                            <span className="text-slate-300">{mon.types.join(' / ')}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="text-right space-y-1">
-                        <div className="text-[10px] text-slate-400 font-bold">
-                          HP: {mon.hp}/{mon.maxHp}
+                      <div className="text-right space-y-1 shrink-0 pl-2">
+                        <div className="text-[10px] text-slate-400 font-bold font-mono">
+                          HP: <span className="text-emerald-400">{mon.hp}</span>/{mon.maxHp}
                         </div>
-                        <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                        <div className="w-16 sm:w-20 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700 ml-auto">
                           <div
                             className={`h-full ${hpPct > 50 ? 'bg-emerald-500' : hpPct > 20 ? 'bg-amber-500' : 'bg-rose-500'}`}
                             style={{ width: `${hpPct}%` }}
@@ -269,7 +269,7 @@ export const PartyPcManager: React.FC = () => {
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDepositOrWithdraw('party', idx); }}
-                          className="text-[10px] text-slate-400 hover:text-amber-400 underline font-bold"
+                          className="text-[10px] text-amber-400/90 hover:text-amber-300 font-bold underline cursor-pointer block ml-auto pt-0.5"
                         >
                           Depositar en PC →
                         </button>
@@ -288,7 +288,7 @@ export const PartyPcManager: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 pb-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 pb-2">
                 {pcBox.map((slotMon, idx) => {
                   const isSelected = selectedSlot === idx;
                   return (
@@ -296,7 +296,7 @@ export const PartyPcManager: React.FC = () => {
                       key={idx}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => { soundFx.playClick(); setSelectedSlot(idx); }}
-                      className={`min-h-[82px] rounded-2xl border-2 flex flex-col items-center justify-center p-2 cursor-pointer transition-all relative select-none shadow-[0_3px_0_0_#000] active:translate-y-0.5 active:shadow-none ${
+                      className={`min-h-[92px] rounded-2xl border-2 flex flex-col items-center justify-between p-2 cursor-pointer transition-all relative select-none shadow-[0_3px_0_0_#000] active:translate-y-0.5 active:shadow-none ${
                         isSelected
                           ? isLight
                             ? 'bg-amber-200 border-black ring-2 ring-[#C5A059]'
@@ -312,26 +312,34 @@ export const PartyPcManager: React.FC = () => {
                     >
                       {slotMon ? (
                         <>
-                          <div className="w-10 h-10 flex items-center justify-center relative">
+                          <div className="w-full flex items-center justify-between text-[9px] font-mono text-slate-400">
+                            <span>#{idx + 1}</span>
+                            {slotMon.isShiny && (
+                              <span className="text-amber-400 font-bold drop-shadow-[0_0_4px_rgba(245,158,11,0.8)]">★</span>
+                            )}
+                          </div>
+                          <div className="w-9 h-9 flex items-center justify-center my-0.5">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={POKEMON_ASSETS.getBoxIcon(slotMon.speciesId)}
                               alt={slotMon.name}
-                              className="w-10 h-10 object-contain [image-rendering:pixelated]"
+                              className="w-9 h-9 object-contain [image-rendering:pixelated]"
                             />
-                            {slotMon.isShiny && (
-                              <span className="absolute -top-1 -right-1 text-[10px] text-amber-400 drop-shadow-[0_0_4px_rgba(245,158,11,0.8)]">★</span>
-                            )}
                           </div>
-                          <span className="text-[11px] font-black tracking-tight text-[#E2E8F0] truncate max-w-full mt-1">
-                            {slotMon.name}
-                          </span>
-                          <span className="text-[9px] font-mono font-bold text-[#C5A059]">
-                            Nv.{slotMon.level}
-                          </span>
+                          <div className="w-full text-center">
+                            <span 
+                              className="text-[11px] font-black tracking-tight text-[#E2E8F0] block truncate w-full"
+                              title={slotMon.name}
+                            >
+                              {slotMon.name}
+                            </span>
+                            <span className="text-[9px] font-mono font-bold text-[#C5A059] block -mt-0.5">
+                              Nv.{slotMon.level}
+                            </span>
+                          </div>
                         </>
                       ) : (
-                        <div className="flex flex-col items-center justify-center py-2 text-slate-600">
+                        <div className="h-full flex flex-col items-center justify-center py-2 text-slate-600">
                           <span className="text-[11px] font-mono font-black">#{idx + 1}</span>
                           <span className="text-[8px] font-mono uppercase tracking-wider text-slate-700">VACÍO</span>
                         </div>
@@ -354,19 +362,19 @@ export const PartyPcManager: React.FC = () => {
             {currentSelectedMon ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-black/15">
-                  <div>
-                    <h3 className="font-black text-lg flex items-center gap-2">
-                      <span>{currentSelectedMon.name}</span>
+                  <div className="min-w-0 pr-2">
+                    <h3 className="font-black text-lg flex items-center gap-2 flex-wrap">
+                      <span className="truncate">{currentSelectedMon.name}</span>
                       {currentSelectedMon.isShiny && (
-                        <span className="text-xs px-1.5 py-0.5 bg-amber-400 text-black font-black rounded">★ SHINY</span>
+                        <span className="text-xs px-1.5 py-0.5 bg-amber-400 text-black font-black rounded shrink-0">★ SHINY</span>
                       )}
                     </h3>
                     <p className="text-xs text-amber-500 font-bold">
                       Nivel {currentSelectedMon.level} · {currentSelectedMon.types.join(' / ')}
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-slate-400">
-                    {activeSection === 'party' ? `Slot #${(selectedSlot ?? 0) + 1}` : `PC Slot #${(selectedSlot ?? 0) + 1}`}
+                  <span className="text-xs font-bold text-slate-400 shrink-0">
+                    {activeSection === 'party' ? `Slot #${(selectedSlot ?? 0) + 1}` : `PC #${(selectedSlot ?? 0) + 1}`}
                   </span>
                 </div>
                 <div className="flex items-center justify-center p-6 bg-slate-950/40 rounded-xl border border-slate-800">

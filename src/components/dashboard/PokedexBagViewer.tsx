@@ -119,19 +119,19 @@ export const PokedexBagViewer: React.FC = () => {
 
       {/* Sub-Header con Pestañas de Navegación Visual */}
       <div
-        className={`p-2.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
+        className={`p-2.5 rounded-xl border flex flex-col gap-2.5 ${
           isLight
             ? 'bg-[#FFFFFF] border-2 border-black shadow-[3px_3px_0_#000]'
             : 'bg-[#121214] border-slate-800'
         }`}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => {
               soundFx.playClick();
               setActiveSection('party');
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
               activeSection === 'party'
                 ? isLight
                   ? 'bg-[#E60012] text-white border-2 border-black shadow-[2px_2px_0_#000]'
@@ -141,7 +141,7 @@ export const PokedexBagViewer: React.FC = () => {
                 : 'bg-slate-900 text-slate-400 hover:text-white'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
+            <ShieldCheck className="w-3.5 h-3.5" />
             <span>MI EQUIPO ({party.length}/6)</span>
           </button>
 
@@ -150,7 +150,7 @@ export const PokedexBagViewer: React.FC = () => {
               soundFx.playClick();
               setActiveSection('pokedex');
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
               activeSection === 'pokedex'
                 ? isLight
                   ? 'bg-[#2563EB] text-white border-2 border-black shadow-[2px_2px_0_#000]'
@@ -160,7 +160,7 @@ export const PokedexBagViewer: React.FC = () => {
                 : 'bg-slate-900 text-slate-400 hover:text-white'
             }`}
           >
-            <Eye className="w-4 h-4" />
+            <Eye className="w-3.5 h-3.5" />
             <span>POKÉDEX 3D</span>
           </button>
 
@@ -169,7 +169,7 @@ export const PokedexBagViewer: React.FC = () => {
               soundFx.playClick();
               setActiveSection('bag');
             }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
               activeSection === 'bag'
                 ? isLight
                   ? 'bg-[#F59E0B] text-black border-2 border-black shadow-[2px_2px_0_#000]'
@@ -179,21 +179,21 @@ export const PokedexBagViewer: React.FC = () => {
                 : 'bg-slate-900 text-slate-400 hover:text-white'
             }`}
           >
-            <Package className="w-4 h-4" />
+            <Package className="w-3.5 h-3.5" />
             <span>MOCHILA GBA</span>
           </button>
         </div>
 
         {/* Buscador Rápido */}
         {activeSection !== 'party' && (
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative w-full">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
             <input
               type="text"
               placeholder="Buscar por nombre o tipo..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full pl-8 pr-3 py-1 text-xs rounded-lg border outline-none font-sans ${
+              className={`w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border outline-none font-sans ${
                 isLight
                   ? 'bg-slate-50 border-black/30 text-slate-900 focus:border-black'
                   : 'bg-slate-900 border-slate-700 text-slate-100 focus:border-emerald-500'
@@ -291,7 +291,7 @@ export const PokedexBagViewer: React.FC = () => {
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden">
           {/* Lista de Pokémon (7 columnas) */}
           <div className="lg:col-span-7 overflow-y-auto space-y-2 pr-1">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pb-2">
               {filteredPokemon.map((pkmn) => {
                 const isSelected = selectedPokemon.id === pkmn.id;
                 return (
@@ -301,7 +301,7 @@ export const PokedexBagViewer: React.FC = () => {
                       soundFx.playClick();
                       setSelectedPokemon(pkmn);
                     }}
-                    className={`p-2 rounded-xl border text-left flex flex-col items-center justify-between transition-all cursor-pointer ${
+                    className={`min-h-[110px] p-2.5 rounded-xl border text-left flex flex-col items-center justify-between transition-all cursor-pointer shadow-[0_2px_0_0_#000] active:translate-y-0.5 ${
                       isSelected
                         ? isLight
                           ? 'bg-amber-100 border-2 border-black shadow-[3px_3px_0_#000]'
@@ -311,16 +311,16 @@ export const PokedexBagViewer: React.FC = () => {
                         : 'bg-[#18181b]/90 border-slate-800 hover:border-slate-700'
                     }`}
                   >
-                    <div className="w-full flex items-center justify-between text-[10px] font-bold">
+                    <div className="w-full flex items-center justify-between text-[10px] font-bold font-mono">
                       <span className="text-slate-400">#{pkmn.id.toString().padStart(3, '0')}</span>
-                      <span className="text-[9px] px-1 py-0.2 rounded bg-black/10">Gen {pkmn.generation}</span>
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-black/20 text-slate-300">Gen {pkmn.generation}</span>
                     </div>
 
-                    <div className="w-14 h-14 flex items-center justify-center my-1">
+                    <div className="w-12 h-12 flex items-center justify-center my-1">
                       <img
                         src={POKEMON_ASSETS.getPixelSprite(pkmn.id)}
                         alt={pkmn.name}
-                        className="w-12 h-12 object-contain filter drop-shadow-sm transition-transform hover:scale-110"
+                        className="w-11 h-11 object-contain filter drop-shadow-sm transition-transform hover:scale-110"
                         loading="lazy"
                         onError={(e) => {
                           // Fallback automático al box icon si falla
@@ -329,9 +329,14 @@ export const PokedexBagViewer: React.FC = () => {
                       />
                     </div>
 
-                    <span className="font-black text-xs text-center w-full tracking-wide">
-                      {pkmn.name}
-                    </span>
+                    <div className="w-full text-center px-0.5">
+                      <span 
+                        className="font-black text-xs text-[#E2E8F0] block truncate w-full tracking-wide"
+                        title={pkmn.name}
+                      >
+                        {pkmn.name}
+                      </span>
+                    </div>
                   </button>
                 );
               })}
