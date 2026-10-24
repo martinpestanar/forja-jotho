@@ -288,45 +288,55 @@ export const PartyPcManager: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5 pb-2">
                 {pcBox.map((slotMon, idx) => {
                   const isSelected = selectedSlot === idx;
                   return (
-                    <div
+                    <motion.div
                       key={idx}
+                      whileTap={{ scale: 0.95 }}
                       onClick={() => { soundFx.playClick(); setSelectedSlot(idx); }}
-                      className={`aspect-square rounded-xl border-2 flex flex-col items-center justify-center p-1 cursor-pointer transition-all relative ${
+                      className={`min-h-[82px] rounded-2xl border-2 flex flex-col items-center justify-center p-2 cursor-pointer transition-all relative select-none shadow-[0_3px_0_0_#000] active:translate-y-0.5 active:shadow-none ${
                         isSelected
                           ? isLight
-                            ? 'bg-amber-200 border-black shadow-[2px_2px_0_#000]'
-                            : 'bg-amber-500/30 border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.3)]'
+                            ? 'bg-amber-200 border-black ring-2 ring-[#C5A059]'
+                            : 'bg-gradient-to-b from-[#C5A059]/25 to-[#14171C] border-[#C5A059] shadow-[0_0_15px_rgba(197,160,89,0.4)] ring-1 ring-[#C5A059]'
                           : slotMon
                             ? isLight
-                              ? 'bg-white border-black/30 hover:border-black'
-                              : 'bg-slate-900 border-slate-700 hover:border-slate-500'
+                              ? 'bg-white border-black/40 hover:border-black'
+                              : 'bg-[#14171C] border-white/10 hover:border-[#C5A059]/60'
                             : isLight
-                              ? 'bg-slate-100 border-slate-300 opacity-60'
-                              : 'bg-slate-950/60 border-slate-800/60 opacity-40'
+                              ? 'bg-slate-100 border-dashed border-slate-300 opacity-60'
+                              : 'bg-[#0B0C0E]/70 border-dashed border-white/5 opacity-40 hover:opacity-70'
                       }`}
                     >
                       {slotMon ? (
                         <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={POKEMON_ASSETS.getBoxIcon(slotMon.speciesId)}
-                            alt={slotMon.name}
-                            className="w-8 h-8 object-contain"
-                          />
-                          <span className="text-[9px] font-bold truncate max-w-full">{slotMon.name}</span>
-                          <span className="text-[8px] text-amber-500">Nv.{slotMon.level}</span>
-                          {slotMon.isShiny && (
-                            <span className="absolute top-1 right-1 text-[8px] text-amber-400">★</span>
-                          )}
+                          <div className="w-10 h-10 flex items-center justify-center relative">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={POKEMON_ASSETS.getBoxIcon(slotMon.speciesId)}
+                              alt={slotMon.name}
+                              className="w-10 h-10 object-contain [image-rendering:pixelated]"
+                            />
+                            {slotMon.isShiny && (
+                              <span className="absolute -top-1 -right-1 text-[10px] text-amber-400 drop-shadow-[0_0_4px_rgba(245,158,11,0.8)]">★</span>
+                            )}
+                          </div>
+                          <span className="text-[11px] font-black tracking-tight text-[#E2E8F0] truncate max-w-full mt-1">
+                            {slotMon.name}
+                          </span>
+                          <span className="text-[9px] font-mono font-bold text-[#C5A059]">
+                            Nv.{slotMon.level}
+                          </span>
                         </>
                       ) : (
-                        <span className="text-[10px] text-slate-600">#{idx + 1}</span>
+                        <div className="flex flex-col items-center justify-center py-2 text-slate-600">
+                          <span className="text-[11px] font-mono font-black">#{idx + 1}</span>
+                          <span className="text-[8px] font-mono uppercase tracking-wider text-slate-700">VACÍO</span>
+                        </div>
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
