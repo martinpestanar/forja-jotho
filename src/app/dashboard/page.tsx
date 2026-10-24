@@ -12,6 +12,7 @@ import { MobileFloatingDock, MobileTab } from '@/components/dashboard/MobileFloa
 import { OracleForgeModal } from '@/components/dashboard/OracleForgeModal';
 import { OracleConsultWidget } from '@/components/dashboard/OracleConsultWidget';
 import { JourneyStartModal } from '@/components/dashboard/JourneyStartModal';
+import { LootBoxModal, LootBoxData } from '@/components/dashboard/LootBoxModal';
 import { VigorHeaderSummary } from '@/components/dashboard/VigorHeaderSummary';
 import { NintendoNoticeModal, NoticeType } from '@/components/dashboard/NintendoNoticeModal';
 import {
@@ -66,6 +67,10 @@ export default function DashboardPage() {
   const [createHabitModalOpen, setCreateHabitModalOpen] = useState(false);
   const [createOathModalOpen, setCreateOathModalOpen] = useState(false);
   const [journeyModalOpen, setJourneyModalOpen] = useState(false);
+
+  // Estado del Cofre Rúnico de Recompensas
+  const [activeLootBox, setActiveLootBox] = useState<LootBoxData | null>(null);
+  const [lootBoxModalOpen, setLootBoxModalOpen] = useState(false);
 
   // Modal de Aviso Nativo Nintendo
   const [noticeModal, setNoticeModal] = useState<{
@@ -184,6 +189,20 @@ export default function DashboardPage() {
       .order('created_at', { ascending: false });
 
     if (oathsData) setOaths(oathsData);
+
+    // Cofres Rúnicos Disponibles (ej. Drop 12:01 AM)
+    const { data: boxes } = await supabase
+      .from('valdr_loot_boxes')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_opened', false)
+      .lte('available_at', new Date().toISOString())
+      .order('created_at', { ascending: false });
+
+    if (boxes && boxes.length > 0) {
+      setActiveLootBox(boxes[0] as LootBoxData);
+      setLootBoxModalOpen(true);
+    }
   };
 
   useEffect(() => {
@@ -896,6 +915,18 @@ export default function DashboardPage() {
           setProfileData((prev: any) => ({ ...prev, journey_start_date: newDate }));
         }}
       />
+
+      {/* Modal del Cofre Rúnico de Recompensas */}
+      {activeLootBox && (
+        <LootBoxModal
+          box={activeLootBox}
+          isOpen={lootBoxModalOpen}
+          onClose={() => setLootBoxModalOpen(false)}
+          onOpened={() => {
+            loadValdrData();
+          }}
+        />
+      )}
 
       {/* Widget Interactivo del Oráculo de Johto (Gemini 2.5 Flash + Supabase) */}
       <OracleConsultWidget profileData={profileData} />
