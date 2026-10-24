@@ -46,12 +46,11 @@ export const PartyPcManager: React.FC = () => {
   const [bagSearch, setBagSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<ItemAssetMetadata>(HNS_ITEMS_CATALOG[0]);
 
-  // Obtener equipo real del perfil o fallback interactivo
+  // Obtener equipo real del perfil: starter nivel 5 si está recién creada
   const rawParty = profile?.gba_party_json && profile.gba_party_json.length > 0
     ? profile.gba_party_json
     : [
-        { name: 'Cyndaquil', speciesId: 155, level: 14, hp: 38, maxHp: 38, isShiny: false },
-        { name: 'Pikachu', speciesId: 25, level: 16, hp: 42, maxHp: 42, isShiny: true },
+        { name: 'Cyndaquil', speciesId: 155, level: 5, hp: 20, maxHp: 20, isShiny: false },
       ];
 
   // Formatear party a estructura homogénea
@@ -61,22 +60,18 @@ export const PartyPcManager: React.FC = () => {
       slot: idx,
       speciesId: p.speciesId || meta?.id || 155,
       name: p.name || meta?.name || 'POKÉMON',
-      level: p.level || 10,
-      hp: p.hp || 35,
-      maxHp: p.maxHp || 35,
+      level: p.level || 5,
+      hp: p.hp || 20,
+      maxHp: p.maxHp || 20,
       isShiny: !!p.isShiny,
       types: meta?.types || ['Fuego'],
     };
   });
 
-  // Mock reactivo de PC Box 1 (30 slots)
-  const [pcBox, setPcBox] = useState<(BoxedPokemon | null)[]>([
-    { slot: 0, speciesId: 158, name: 'Totodile', level: 12, hp: 36, maxHp: 36, isShiny: false, types: ['Agua'] },
-    { slot: 1, speciesId: 175, name: 'Togepi', level: 5, hp: 20, maxHp: 20, isShiny: false, types: ['Hada'] },
-    { slot: 2, speciesId: 179, name: 'Mareep', level: 9, hp: 28, maxHp: 28, isShiny: false, types: ['Eléctrico'] },
-    { slot: 3, speciesId: 137, name: 'Porygon', level: 15, hp: 45, maxHp: 45, isShiny: true, types: ['Normal'] },
-    ...Array(26).fill(null),
-  ]);
+  // PC Box 1 (30 slots) comienza limpio en producción
+  const [pcBox, setPcBox] = useState<(BoxedPokemon | null)[]>(
+    Array(30).fill(null)
+  );
 
   const showToast = (msg: string) => {
     setNotification(msg);

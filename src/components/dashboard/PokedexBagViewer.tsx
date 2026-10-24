@@ -43,8 +43,7 @@ export const PokedexBagViewer: React.FC = () => {
   const party = profile?.gba_party_json && profile.gba_party_json.length > 0
     ? profile.gba_party_json
     : [
-        { name: 'Cyndaquil', speciesId: 155, level: 12, hp: 35, maxHp: 35, isShiny: false },
-        { name: 'Pikachu', speciesId: 25, level: 14, hp: 38, maxHp: 38, isShiny: true },
+        { name: 'Cyndaquil', speciesId: 155, level: 5, hp: 20, maxHp: 20, isShiny: false },
       ];
 
   const filteredPokemon = JOHTO_POKEDEX_CATALOG.filter((p) =>

@@ -11,6 +11,7 @@ import { RunicHabitCard } from '@/components/dashboard/RunicHabitCard';
 import { MobileFloatingDock, MobileTab } from '@/components/dashboard/MobileFloatingDock';
 import { OracleForgeModal } from '@/components/dashboard/OracleForgeModal';
 import { OracleConsultWidget } from '@/components/dashboard/OracleConsultWidget';
+import { JourneyStartModal } from '@/components/dashboard/JourneyStartModal';
 import { VigorHeaderSummary } from '@/components/dashboard/VigorHeaderSummary';
 import { NintendoNoticeModal, NoticeType } from '@/components/dashboard/NintendoNoticeModal';
 import {
@@ -64,6 +65,7 @@ export default function DashboardPage() {
   const [proofText, setProofText] = useState('');
   const [createHabitModalOpen, setCreateHabitModalOpen] = useState(false);
   const [createOathModalOpen, setCreateOathModalOpen] = useState(false);
+  const [journeyModalOpen, setJourneyModalOpen] = useState(false);
 
   // Modal de Aviso Nativo Nintendo
   const [noticeModal, setNoticeModal] = useState<{
@@ -489,7 +491,9 @@ export default function DashboardPage() {
               earnedBatteryToday={activeHabitsList
                 .filter((h) => h.completed)
                 .reduce((acc, curr) => acc + (curr.game_battery_reward || 0), 0)}
+              journeyStartDate={profileData?.journey_start_date}
               onOpenOracle={() => setCreateHabitModalOpen(true)}
+              onOpenDatePicker={() => setJourneyModalOpen(true)}
             />
 
             {/* Listado Bento de Hábitos con Micro-interacciones */}
@@ -881,6 +885,16 @@ export default function DashboardPage() {
         message={noticeModal.message}
         type={noticeModal.type}
         onClose={() => setNoticeModal((prev) => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Modal de Apertura / Fecha de Consagración */}
+      <JourneyStartModal
+        isOpen={journeyModalOpen}
+        currentStartDate={profileData?.journey_start_date}
+        onClose={() => setJourneyModalOpen(false)}
+        onUpdated={(newDate) => {
+          setProfileData((prev: any) => ({ ...prev, journey_start_date: newDate }));
+        }}
       />
 
       {/* Widget Interactivo del Oráculo de Johto (Gemini 2.5 Flash + Supabase) */}
