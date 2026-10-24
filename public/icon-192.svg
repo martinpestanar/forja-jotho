@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="shieldGrad192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="50%" stop-color="#C5A059"/>
+      <stop offset="100%" stop-color="#845314"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="192" height="192" rx="42" fill="#0B0C0E"/>
+  <rect x="6" y="6" width="180" height="180" rx="36" fill="#14171C" stroke="#C5A059" stroke-width="4"/>
+
+  <!-- Escudo Rúnico -->
+  <path d="M96 26 L146 52 V101 C146 135 120 157 96 168 C72 157 46 135 46 101 V52 Z" 
+        fill="url(#shieldGrad192)" stroke="#000000" stroke-width="5"/>
+
+  <!-- Pokebola interior -->
+  <circle cx="96" cy="92" r="28" fill="#0B0C0E" stroke="#000000" stroke-width="4"/>
+  <path d="M68 92 A28 28 0 0 1 124 92 Z" fill="#E60012"/>
+  <path d="M68 92 A28 28 0 0 0 124 92 Z" fill="#F4F1EA"/>
+  <line x1="68" y1="92" x2="124" y2="92" stroke="#000000" stroke-width="4"/>
+  <circle cx="96" cy="92" r="10" fill="#FFFFFF" stroke="#000000" stroke-width="3"/>
+  <circle cx="96" cy="92" r="4" fill="#C5A059"/>
+</svg>
