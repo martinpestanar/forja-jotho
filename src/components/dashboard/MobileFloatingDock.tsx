@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Zap, ShieldCheck, Scroll, Archive, Gamepad2, BookOpen } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
 
-export type MobileTab = 'vigor' | 'templanza' | 'oaths' | 'vault' | 'game' | 'grimoire';
+export type MobileTab = 'vigor' | 'templanza' | 'oaths' | 'vault' | 'game';
 
 interface MobileFloatingDockProps {
   activeTab: MobileTab;
@@ -13,12 +13,11 @@ interface MobileFloatingDockProps {
   onOpenGrimoire?: () => void;
 }
 
-export function MobileFloatingDock({ activeTab, onTabChange, onOpenGrimoire }: MobileFloatingDockProps) {
+export function MobileFloatingDock({ activeTab, onTabChange }: MobileFloatingDockProps) {
   const tabs = [
     { id: 'vigor' as MobileTab, label: 'Vigor', icon: Zap, color: '#C5A059' },
     { id: 'templanza' as MobileTab, label: 'Templanza', icon: ShieldCheck, color: '#4E9F9F' },
     { id: 'oaths' as MobileTab, label: 'Pactos', icon: Scroll, color: '#F59E0B' },
-    { id: 'grimoire' as MobileTab, label: 'Grimorio', icon: BookOpen, color: '#EC4899', isSpecial: true },
     { id: 'vault' as MobileTab, label: 'Bóveda', icon: Archive, color: '#8B5CF6' },
     { id: 'game' as MobileTab, label: 'GBA', icon: Gamepad2, color: '#22C55E' },
   ];
@@ -28,15 +27,11 @@ export function MobileFloatingDock({ activeTab, onTabChange, onOpenGrimoire }: M
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(20);
     }
-    if (tab === 'grimoire' && onOpenGrimoire) {
-      onOpenGrimoire();
-      return;
-    }
     onTabChange(tab);
   };
 
   return (
-    <nav className="fixed bottom-3 inset-x-3 z-40 max-w-md mx-auto bg-[#14171C]/90 backdrop-blur-lg border border-[#C5A059]/30 rounded-2xl p-1.5 shadow-[0_8px_20px_rgba(0,0,0,0.7)] flex items-center justify-around">
+    <nav className="fixed bottom-3 inset-x-3 z-40 max-w-md mx-auto bg-[#14171C]/95 backdrop-blur-lg border border-[#C5A059]/30 rounded-2xl p-1 shadow-[0_8px_25px_rgba(0,0,0,0.85)] flex items-center justify-between">
       {tabs.map((t) => {
         const Icon = t.icon;
         const isActive = activeTab === t.id;
@@ -45,7 +40,7 @@ export function MobileFloatingDock({ activeTab, onTabChange, onOpenGrimoire }: M
           <button
             key={t.id}
             onClick={() => handleSelect(t.id)}
-            className={`relative flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all select-none cursor-pointer ${
+            className={`flex-1 relative flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all select-none cursor-pointer ${
               isActive
                 ? 'text-[#E2E8F0] font-black'
                 : 'text-[#64748B] hover:text-[#E2E8F0]'
@@ -66,7 +61,7 @@ export function MobileFloatingDock({ activeTab, onTabChange, onOpenGrimoire }: M
               style={{ color: isActive ? t.color : undefined }}
             />
             <span
-              className={`text-[10px] font-mono mt-0.5 relative z-10 ${
+              className={`text-[10px] font-mono mt-0.5 relative z-10 truncate ${
                 isActive ? 'font-bold' : ''
               }`}
               style={{ color: isActive ? t.color : undefined }}
