@@ -15,6 +15,10 @@ import { JourneyStartModal } from '@/components/dashboard/JourneyStartModal';
 import { LootBoxModal, LootBoxData } from '@/components/dashboard/LootBoxModal';
 import { VigorHeaderSummary } from '@/components/dashboard/VigorHeaderSummary';
 import { NintendoNoticeModal, NoticeType } from '@/components/dashboard/NintendoNoticeModal';
+import { GrimoireSovereignModal } from '@/components/dashboard/GrimoireSovereignModal';
+import { FlexibleCompanionBar } from '@/components/dashboard/FlexibleCompanionBar';
+import { MidnightJournalModal } from '@/components/dashboard/MidnightJournalModal';
+import { SovereignTutorialModal } from '@/components/dashboard/SovereignTutorialModal';
 import {
   FloatingDopamineRewards,
   FloatingReward,
@@ -67,6 +71,9 @@ export default function DashboardPage() {
   const [createHabitModalOpen, setCreateHabitModalOpen] = useState(false);
   const [createOathModalOpen, setCreateOathModalOpen] = useState(false);
   const [journeyModalOpen, setJourneyModalOpen] = useState(false);
+  const [grimoireModalOpen, setGrimoireModalOpen] = useState(false);
+  const [midnightJournalModalOpen, setMidnightJournalModalOpen] = useState(false);
+  const [tutorialModalOpen, setTutorialModalOpen] = useState(false);
 
   // Estado del Cofre Rúnico de Recompensas
   const [activeLootBox, setActiveLootBox] = useState<LootBoxData | null>(null);
@@ -500,6 +507,15 @@ export default function DashboardPage() {
         {/* PESTAÑA 1: FRENTE DE VIGOR */}
         {activeTab === 'vigor' && (
           <div className="space-y-3.5">
+            {/* Barra de Acompañamiento Flexible del Jefe Tribal */}
+            <FlexibleCompanionBar
+              completedCount={completedHabitsCount}
+              totalCount={activeHabitsList.length}
+              onOpenGrimoire={() => setGrimoireModalOpen(true)}
+              onOpenJournal={() => setMidnightJournalModalOpen(true)}
+              onOpenTutorial={() => setTutorialModalOpen(true)}
+            />
+
             {/* Altar de Resumen Visual de Batalla */}
             <VigorHeaderSummary
               totalCount={activeHabitsList.length}
@@ -736,7 +752,36 @@ export default function DashboardPage() {
       </main>
 
       {/* 3. Dock Táctil Flotante Inferior */}
-      <MobileFloatingDock activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab)} />
+      <MobileFloatingDock
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab)}
+        onOpenGrimoire={() => setGrimoireModalOpen(true)}
+      />
+
+      {/* Modal del Grimorio del Soberano (Ebook Interactivo & Rescate de Martín) */}
+      <GrimoireSovereignModal
+        isOpen={grimoireModalOpen}
+        onClose={() => setGrimoireModalOpen(false)}
+        leaderName={profileData?.leader_name || 'Martín'}
+      />
+
+      {/* Modal del Diario de Medianoche (Terapia guiada 10 min + RPC Supabase + Gemini 2.5) */}
+      <MidnightJournalModal
+        isOpen={midnightJournalModalOpen}
+        onClose={() => setMidnightJournalModalOpen(false)}
+        userId={profileData?.id}
+        leaderName={profileData?.leader_name || 'Martín'}
+        onJournalSaved={(goldAwarded) => {
+          loadValdrData();
+        }}
+      />
+
+      {/* Modal de Guía Rápida & Tutorial del Soberano */}
+      <SovereignTutorialModal
+        isOpen={tutorialModalOpen}
+        onClose={() => setTutorialModalOpen(false)}
+        leaderName={profileData?.leader_name || 'Martín'}
+      />
 
       {/* 4. Feedback de Números Flotantes Dopamínicos */}
       <FloatingDopamineRewards

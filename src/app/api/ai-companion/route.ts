@@ -15,18 +15,67 @@ export async function POST(req: Request) {
   try {
     const { 
       prompt, 
-      action = 'dialogue', // 'dialogue' | 'evaluate_habit' | 'oracle_advice'
+      action = 'dialogue', // 'dialogue' | 'evaluate_habit' | 'oracle_advice' | 'midnight_journal'
       habitData,
+      journalData,
       userContext = {} as UserContextPayload,
       persona = 'oracle' 
     } = await req.json();
 
     const apiKey = process.env.GEMINI_API_KEY;
-    const totem = userContext.guide_totem?.toUpperCase() || 'OSO';
-    const leader = userContext.leader_name || 'Guerrero';
+    const totem = userContext.guide_totem?.toUpperCase() || 'LOBO';
+    const leader = userContext.leader_name || 'Martín';
     const streak = userContext.streak_fire_days ?? 0;
     const tempDays = userContext.temperance_streak_days ?? 0;
     const battery = userContext.battery_minutes ?? 0;
+
+    // Si la acción es el análisis terapéutico del Diario de Medianoche
+    if (action === 'midnight_journal' && journalData) {
+      const journalPrompt = `Eres "EL ORÁCULO DE JOHTO", sabio mentor estoico y terapeuta personal de ${leader} (Tótem: ${totem}, Racha: ${streak} días, Templanza: ${tempDays}/30 días).
+Contexto de Martín: Es un creador con marca en TikTok (videos diarios de salones), 2 SaaS (Salones y Restaurantes veganos), cuida 10 tomates Río Grande en su terraza con sus gatos, y busca estabilidad financiera y templanza.
+
+ENTRADA DEL DIARIO DE HOY:
+- Victorias cosechadas: "${journalData.victories || 'Ninguna indicada'}"
+- Desahogo / Frustración / Retos: "${journalData.challenges || 'Sin desahogo'}"
+- Foco de mañana al despertar: "${journalData.tomorrow_focus || 'Mantener el rumbo'}"
+- Estado de ánimo: ${journalData.mood_rating || 5}/5
+
+INSTRUCCIÓN ESTRICTA:
+1. Responde como un terapeuta estoico comprensivo pero firme.
+2. Da MÁXIMO 2 a 3 oraciones (menos de 220 caracteres en total).
+3. Valida su esfuerzo, dale perspectiva sobre su frustración y recuérdale que suelte la pantalla y duerma en paz.
+4. Tono cálido, respetuoso y místico.`;
+
+      if (apiKey) {
+        try {
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: journalPrompt }] }],
+              }),
+            }
+          );
+          const data = await geminiRes.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            return NextResponse.json({
+              oracle_feedback: text.trim(),
+              persona: 'oracle'
+            });
+          }
+        } catch (e) {
+          console.warn('[Gemini journal error]:', e);
+        }
+      }
+
+      return NextResponse.json({
+        oracle_feedback: `Has luchado con honor hoy, ${leader}. Tus victorias están sembradas y la tierra reposa de noche. Cierra los ojos y confía en el proceso.`,
+        persona: 'oracle'
+      });
+    }
 
     // Si la acción es tasar y forjar un nuevo hábito con IA viva
     if (action === 'evaluate_habit' && habitData) {

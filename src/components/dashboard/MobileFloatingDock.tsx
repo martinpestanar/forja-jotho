@@ -2,21 +2,23 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, ShieldCheck, Scroll, Archive, Gamepad2 } from 'lucide-react';
+import { Zap, ShieldCheck, Scroll, Archive, Gamepad2, BookOpen } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
 
-export type MobileTab = 'vigor' | 'templanza' | 'oaths' | 'vault' | 'game';
+export type MobileTab = 'vigor' | 'templanza' | 'oaths' | 'vault' | 'game' | 'grimoire';
 
 interface MobileFloatingDockProps {
   activeTab: MobileTab;
   onTabChange: (tab: MobileTab) => void;
+  onOpenGrimoire?: () => void;
 }
 
-export function MobileFloatingDock({ activeTab, onTabChange }: MobileFloatingDockProps) {
+export function MobileFloatingDock({ activeTab, onTabChange, onOpenGrimoire }: MobileFloatingDockProps) {
   const tabs = [
     { id: 'vigor' as MobileTab, label: 'Vigor', icon: Zap, color: '#C5A059' },
     { id: 'templanza' as MobileTab, label: 'Templanza', icon: ShieldCheck, color: '#4E9F9F' },
     { id: 'oaths' as MobileTab, label: 'Pactos', icon: Scroll, color: '#F59E0B' },
+    { id: 'grimoire' as MobileTab, label: 'Grimorio', icon: BookOpen, color: '#EC4899', isSpecial: true },
     { id: 'vault' as MobileTab, label: 'Bóveda', icon: Archive, color: '#8B5CF6' },
     { id: 'game' as MobileTab, label: 'GBA', icon: Gamepad2, color: '#22C55E' },
   ];
@@ -25,6 +27,10 @@ export function MobileFloatingDock({ activeTab, onTabChange }: MobileFloatingDoc
     soundFx.playClick();
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate(20);
+    }
+    if (tab === 'grimoire' && onOpenGrimoire) {
+      onOpenGrimoire();
+      return;
     }
     onTabChange(tab);
   };
