@@ -129,6 +129,18 @@ export function GrimoireSovereignModal({
         'Esa es tu causa sagrada. Cuando te levantes cada día a picar código y a vender, recuerda que tu esfuerzo tiene un eco que trasciende tu propio plato. Peleas por la vida, y por eso eres invencible.'
       ],
       quote: '"La verdadera grandeza del guerrero se mide por la cantidad de vidas que supo proteger."',
+    },
+    {
+      id: 8,
+      title: 'VIII. El Escudo de Oro: El Dinero como Muralla Auténtica',
+      subtitle: 'El capital noble nacido de dar valor real a otros seres humanos',
+      tag: 'SOBERANÍA & PROSPERIDAD',
+      content: [
+        'El dinero no es vanidad ni avaricia hueca; para el líder tribal es la muralla defensiva del clan. El dinero resuelve la incertidumbre, compra medicinas y alimento para tus gatos, respalda a tu familia y te da la libertad de decir "no" a lo que comprometa tu dignidad.',
+        'Pero hay una ley inquebrantable: ese oro debe nacer de tu más pura autenticidad. No se trata de manipular ni engañar por unas monedas, sino de pararte con carácter frente a otro ser humano (el dueño del salón, el restaurantero) y ofrecerle una solución real que mejore su vida y su negocio.',
+        'Cuando interiorizas que cada dólar ganado es un testimonio de valor entregado con tu propia esencia sin vender tu alma, el dinero deja de ser tabú y se convierte en fuego de paz. Quieres riqueza porque quieres proteger, expandir y construir un legado invulnerable.'
+      ],
+      quote: '"El oro del líder no se mendiga ni se roba; se forja entregando valor con honor inquebrantable."',
     }
   ];
 
