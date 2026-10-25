@@ -16,7 +16,11 @@ import {
   Cat,
   Zap,
   Clock,
-  HeartHandshake
+  HeartHandshake,
+  Skull,
+  Mountain,
+  Axe,
+  Waves
 } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
 
@@ -40,69 +44,92 @@ export function GrimoireSovereignModal({
 
   // Estados del Modo Terraza (Temporizador 60m)
   const [terraceActive, setTerraceActive] = useState(false);
-  const [terraceSecondsLeft, setTerraceSecondsLeft] = useState(3600);
 
   const chapters = [
     {
       id: 1,
-      title: 'I. La Muralla del Proveedor',
-      subtitle: 'Por qué cada video y cada lead protegen a tu clan',
-      tag: 'MISIÓN',
+      title: 'I. La Fuerza Involuntaria: El Dios Oculto en tu Sangre',
+      subtitle: 'La energía primordial que hace latir tu corazón sin pedir permiso',
+      tag: 'EL INCONSCIENTE VIVO',
       content: [
-        'No estás creando contenido para alimentar un ego efímero. Cada guion que redactas, cada video que editas y cada mensaje que envías a un salón de belleza es un ladrillo en la muralla que protege tu soberanía.',
-        'La pereza no es un descanso inofensivo; es una brecha abierta por la que entran la incertidumbre y la dependencia. Tu clan, tus proyectos y tu libertad dependen de tu capacidad de sentarte frente a la cámara y ejecutar.',
-        '7,000 personas te siguen porque ven autoridad en ti. Tienes 54 videos como prueba de que eres capaz. La constancia no es magia; es la repetición implacable de lo que funciona.'
+        'El jefe tribal no cree en el pensamiento ansioso ni en los laberintos mentales de la duda. Él observa su pecho y siente algo demoledor: hay una fuerza salvaje e involuntaria que hace latir su corazón 100,000 veces al día sin que él tenga que mover un solo dedo.',
+        'Esa misma energía que mueve las mareas del océano y empuja a los árboles a romper la roca está dentro de tus venas en este mismo instante. La ansiedad moderna no es más que esa tremenda fuerza vital estancada por la inmovilidad y el exceso de pantalla.',
+        'El jefe no analiza la vida: se funde con ella. Deja que esa corriente inconsciente tome el control. Cuando sientes miedo, solo es poder acumulado esperando que lo transformes en acción, en danza, en entrenamiento o en creación pura.'
       ],
-      quote: '"La disciplina del líder es la paz y el sustento de su tribu."',
+      quote: '"No le temas al rugido interno; témale a convertirte en una jaula que lo sofoca."',
     },
     {
       id: 2,
-      title: 'II. La Ilusión de las 2:00 AM',
-      subtitle: 'Cómo neutralizar la trampa de la noche y la complacencia',
-      tag: 'TEMPLANZA',
+      title: 'II. La Expresión del Cuerpo: La Danza del Bárbaro Sabio',
+      subtitle: 'Cómo el jefe tribal disuelve el miedo moviendo su fisonomía',
+      tag: 'VIGOR TRIBAL',
       content: [
-        'En la madrugada, cuando el mundo duerme, la mente fatigada se vuelve vulnerable. Te susurra que mereces un escape barato, una recompensa fácil, una satisfacción vacía que no te costó ningún esfuerzo.',
-        'Es una trampa biológica. Esa gratificación instantánea te roba la energía vital de la mañana siguiente, destruye tu claridad mental y te despierta a las 10:00 AM sintiendo el peso del arrepentimiento.',
-        'Cuando la noche se vuelva densa, recuerda este pacto: transmutar esa energía. Apaga la pantalla, bebe agua, respira hondo y guarda ese fuego para encender la forja del día siguiente.'
+        'Un vikingo de barba espesa y músculos curtidos por el viento no se sienta a rumiar inseguridades. Cuando la tensión aparece, le da expresión inmediata a su cuerpo: golpea el suelo, danza bajo la luna, ríe a carcajadas o levanta peso hasta que sus músculos arden de vida.',
+        'El cuerpo lidera y la mente obedece. Si tu postura es de derrota, tus pensamientos serán de escasez. Si extiendes los brazos, abres el pecho y te mueves con la fiereza de un cazador a las 9:30 PM, la química de tu sangre muta al instante de víctima a soberano.',
+        'Divertirte con tus sentidos es tu derecho ancestral: el sudor fresco, el sabor del agua limpia, el aire de la noche en tu rostro. La disciplina no es un castigo austero; es la celebración animal de estar vivo.'
       ],
-      quote: '"El guerrero que domina su noche despierta como rey de su mañana."',
+      quote: '"La mente tiembla en el silencio quieto; el cuerpo despierta en el fuego del movimiento."',
     },
     {
       id: 3,
-      title: 'III. La Ley de los 10 Tomates Río Grande',
-      subtitle: 'La paciencia orgánica de la tierra aplicada a tus negocios',
-      tag: 'SABIDURÍA',
+      title: 'III. El Reto como Juego: La Vida como Gran Arena',
+      subtitle: 'El jefe tribal no busca la comodidad blanda; busca la emoción del combate',
+      tag: 'EL JUEGO SAGRADO',
       content: [
-        'Miras tus 10 plantas de tomate Río Grande en la terraza. Sabes que no puedes forzarlas a dar frutos mañana tirando de sus tallos. Si lo intentas, las quiebras. Necesitan tierra fértil, baldes de 20 litros, agua justa y sol continuo.',
-        'Tus negocios operan bajo la misma ley biológica. Tu SaaS de salones y tu SaaS de restaurantes veganos necesitan tiempo de enraizamiento. El cliente que te prometió $150 tras 30 días de prueba está observando tu solidez.',
-        'No busques la cosecha apresurada. Enfócate en regar la tierra cada día: 1 video, 1 hora de leads, 1 hora de código. La cosecha vendrá sola por peso natural.'
+        'El hombre domesticado teme a los problemas: se asusta de que un cliente no responda, de que un video no tenga reproducciones o de que el cansancio llegue. El jefe tribal mira esos mismos obstáculos y sonríe con colmillos afilados: "¿Eso es todo lo que tienes para ofrecerme?".',
+        'La existencia no es una sala de espera segura; es una expedición salvaje. Grabar tu video diario, prospectar salones desconocidos y construir tu software vegano no son "obligaciones pesadas", son los monstruos que has elegido cazar para alimentar a tu clan.',
+        'Abraza el peligro y la incertidumbre con la curiosidad de un niño y la fuerza de un gigante. Cuando dejas de huir de la dificultad y la encaras como una partida épica, la ansiedad se evapora y se convierte en entusiasmo feroz.'
       ],
-      quote: '"Quien cuida la raíz no tiene por qué temer a la sequía."',
+      quote: '"Quien busca la paz huyendo de la tormenta jamás conocerá el poder de sus alas."',
     },
     {
       id: 4,
-      title: 'IV. El Fuego de la Transmutación',
-      subtitle: 'La energía sexual como combustible de creación de software',
-      tag: 'SOBERANÍA',
+      title: 'IV. La Sonrisa ante la Muerte: Morir con los Brazos Abiertos',
+      subtitle: 'El desapego absoluto de quien lo entregó todo por su tribu',
+      tag: 'AMOR FATI & VALHALLA',
       content: [
-        'La retención y la templanza no son castigos; son la acumulación deliberada de tu fuerza vital más potente. La energía que engendra vida es la misma que engendra imperios, código elegante y presencia magnética frente al lente.',
-        'Cuando sientas la pulsión de la bestia, no luches contra ella como si fuera un enemigo. Reconócela, respira hacia el pecho y canalízala: abre tu editor de código, diseña la interfaz de tu SaaS o sal a bailar y mover tu cuerpo con vigor.',
-        '30 días invicto en el Frente de Templanza forjarán una mirada impenetrable y una seguridad que ningún curso ni dinero pueden comprar.'
+        'El guerrero antiguo no le teme a la muerte porque sabe que el fin es inevitable. La mira de frente con una sonrisa serena. Sabe que cuando llegue su última hora, correrá hacia ella con los brazos abiertos, no con cobardía, sino con el orgullo de quien se vació por completo.',
+        'No importa si dentro de mil años recuerdan tu nombre o si el cosmos se apaga en ceniza. Lo que importa es que mientras respiraste, no fuiste un espectador tibio. Protegiste a tu gente, defendiste tu causa ética vegana, cuidaste la tierra de tus tomates y dejaste una huella indeleble de honor.',
+        'Pensar en la muerte a diario destruye toda pereza. ¿Vas a desperdiciar esta noche en placeres mediocres cuando tu tiempo en este reino es un soplo fugaz? Sal al combate y entrega tu mejor golpe hoy.'
       ],
-      quote: '"El hierro no se endurece huyendo del fuego, sino soportando el calor."',
+      quote: '"Morir no es la pérdida; la verdadera tragedia es llegar al final dándote cuenta de que nunca viviste despierto."',
     },
     {
       id: 5,
-      title: 'V. El Manifiesto del Restaurante Vegano',
-      subtitle: 'Tu granito de arena para un mundo sin sufrimiento animal',
-      tag: 'PROPÓSITO',
+      title: 'V. La Raíz Silenciosa: Los 10 Tomates y la Paciencia del Clan',
+      subtitle: 'La conexión con la tierra que neutraliza la histeria de la prisa',
+      tag: 'CONEXIÓN CON LA TIERRA',
       content: [
-        'Tu segundo SaaS no es solo una línea de código ni un negocio más: es tu vehículo para transformar la gastronomía y apoyar proyectos éticos. Los restaurantes basados en plantas luchan todos los días contra la inercia del mercado tradicional.',
-        'Al darles tecnología moderna, pedidos eficientes y control financiero, estás haciendo que esos negocios prosperen, que sean rentables y que más personas elijan un camino de compasión y salud.',
-        'Cada vez que dedicas 1 hora a pulir ese software, estás sirviendo a una causa mayor que tú mismo. Ese es el verdadero propósito que te levantará cuando el ánimo flaquee.'
+        'El jefe tribal conoce el lenguaje del suelo y del bosque. Sabe que un árbol milenario no crece en una noche de desesperación. En tu terraza, tus 10 plantas de tomate Río Grande en baldes de 20 litros y tus gatos descansando al sol son tu ancla con la realidad.',
+        'El mundo digital te intoxica con velocidad falsa y resultados instantáneos. La naturaleza te enseña la verdad: siembras, riegas, proteges del viento y confías en la fuerza silenciosa de la vida. Tus negocios, tus seguidores y tu estabilidad financiera florecen bajo esa misma ley cósmica.',
+        'Toca la tierra húmeda, siente el ronroneo de tus gatos y respira. Todo lo que necesitas para vencer ya está dentro de ti. Eres el líder de tu destino y esta noche la forja te pertenece.'
       ],
-      quote: '"Trabajar por una causa justa convierte el cansancio en honor."',
+      quote: '"El roble más fuerte de la montaña es aquel que no tuvo prisa por desafiar al cielo."',
     },
+    {
+      id: 6,
+      title: 'VI. La Templanza del Alfa: Transmutar el Fuego Salvaje',
+      subtitle: 'La retención seminal y el dominio del instinto creador',
+      tag: 'FUEGO PRIMORDIAL',
+      content: [
+        'El bárbaro débil es esclavo de sus impulsos más bajos: ve una presa fácil y se abalanza, ve una pantalla brillante y se hipnotiza, siente una pulsión sexual y la derrocha en la soledad de una habitación oscura.',
+        'El jefe tribal sabe que esa energía es fuego divino. No la desperdicia en placeres baratos de 3 segundos. La retiene en sus entrañas, la hace subir por su columna y la convierte en carisma magnético, en código indestructible para sus restaurantes y en una mirada que nadie puede desviar.',
+        '30 días invicto no son un sacrificio de dolor; son la forja de tu armadura dorada. Eres el guardián de tu propia soberanía.'
+      ],
+      quote: '"El fuego que no consume la madera es el que ilumina el camino del clan."',
+    },
+    {
+      id: 7,
+      title: 'VII. El Manifiesto Vegano: La Fuerza al Servicio de la Vida',
+      subtitle: 'El verdadero guerrero no tiraniza al débil; protege a los inocentes',
+      tag: 'EL PACTO COMPASIVO',
+      content: [
+        'En los mitos antiguos, el guerrero más respetado no era el que aplastaba a los seres vulnerables, sino el que usaba su espada y su sabiduría para defender a quienes no tenían voz. Tu misión con el software de restaurantes no es solo ganar $150 mensuales: es hacer que la alimentación basada en plantas triunfe.',
+        'Al darle herramientas a negocios éticos, estás librando una batalla silenciosa contra el sufrimiento innecesario de millones de seres vivos. Estás alineando tu fuerza tribal con la preservación del planeta.',
+        'Esa es tu causa sagrada. Cuando te levantes cada día a picar código y a vender, recuerda que tu esfuerzo tiene un eco que trasciende tu propio plato. Peleas por la vida, y por eso eres invencible.'
+      ],
+      quote: '"La verdadera grandeza del guerrero se mide por la cantidad de vidas que supo proteger."',
+    }
   ];
 
   // Controlador de Respiración SOS
@@ -120,7 +147,7 @@ export function GrimoireSovereignModal({
       clearInterval(timer);
       setSosActive(false);
       soundFx.playFanfare();
-    }, 32000); // 2 ciclos completos de 16 segundos
+    }, 32000);
   };
 
   if (!isOpen) return null;
@@ -136,20 +163,20 @@ export function GrimoireSovereignModal({
         {/* Cabecera del Grimorio */}
         <div className="flex items-center justify-between border-b border-[#C5A059]/20 pb-3 mb-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#C5A059]/30 to-[#14171C] border border-[#C5A059]/60 flex items-center justify-center text-[#C5A059] shadow-[0_2px_10px_rgba(197,160,89,0.3)]">
-              <BookOpen className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-600/30 via-rose-700/20 to-[#14171C] border border-[#C5A059]/60 flex items-center justify-center text-[#C5A059] shadow-[0_2px_12px_rgba(197,160,89,0.35)]">
+              <Axe className="w-5 h-5 text-amber-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-serif font-black text-sm tracking-widest text-[#E2E8F0] uppercase">
-                  GRIMORIO DEL SOBERANO
+                  EL CÓDICE DEL JEFE TRIBAL
                 </h3>
                 <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#C5A059]/20 border border-[#C5A059]/50 text-[#C5A059] font-mono font-bold">
-                  GUÍA DE {leaderName.toUpperCase()}
+                  {leaderName.toUpperCase()}
                 </span>
               </div>
               <p className="text-[11px] text-[#64748B] font-mono">
-                Santuario de inspiración, rescate y firmeza estoica
+                La mente salvaje, la fiesta de los sentidos y la sonrisa ante el destino
               </p>
             </div>
           </div>
@@ -178,7 +205,7 @@ export function GrimoireSovereignModal({
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span>Manifiesto</span>
+            <span>Códice</span>
           </button>
 
           <button
@@ -227,13 +254,13 @@ export function GrimoireSovereignModal({
           </button>
         </div>
 
-        {/* CONTENIDO 1: EL EBOOK INTERACTIVO (MANIFIESTO) */}
+        {/* CONTENIDO 1: EL LIBRO DE LOS 7 CAPÍTULOS TRIBALES */}
         {activeTab === 'chapters' && (
           <div className="flex-1 overflow-y-auto pr-1 space-y-4">
             <div className="bg-[#14171C] border border-[#C5A059]/30 rounded-2xl p-4 relative overflow-hidden">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] px-2 py-0.5 rounded bg-[#C5A059]/15 border border-[#C5A059]/40 text-[#C5A059] font-mono font-bold tracking-wider">
-                  {chapters[currentChapter].tag} • CAPÍTULO {currentChapter + 1}/5
+                <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-400 font-mono font-bold tracking-wider">
+                  {chapters[currentChapter].tag} • CAPÍTULO {currentChapter + 1}/{chapters.length}
                 </span>
                 <span className="text-xs text-[#64748B] font-mono">
                   {currentChapter + 1} de {chapters.length}
@@ -249,14 +276,14 @@ export function GrimoireSovereignModal({
 
               <div className="space-y-2.5 text-xs text-[#CBD5E1] leading-relaxed">
                 {chapters[currentChapter].content.map((p, idx) => (
-                  <p key={idx} className="border-l-2 border-[#C5A059]/40 pl-2.5">
+                  <p key={idx} className="border-l-2 border-amber-500/40 pl-2.5">
                     {p}
                   </p>
                 ))}
               </div>
 
               <div className="mt-4 pt-3 border-t border-white/5 bg-[#0B0C0E]/50 rounded-xl p-2.5 text-center">
-                <p className="text-[11px] font-serif italic text-[#C5A059]">
+                <p className="text-[11px] font-serif italic text-amber-300">
                   {chapters[currentChapter].quote}
                 </p>
               </div>
@@ -275,7 +302,7 @@ export function GrimoireSovereignModal({
                 <ChevronLeft className="w-4 h-4" /> Anterior
               </button>
 
-              <div className="flex gap-1.5">
+              <div className="flex gap-1.5 overflow-x-auto py-1">
                 {chapters.map((_, i) => (
                   <div
                     key={i}
@@ -284,7 +311,7 @@ export function GrimoireSovereignModal({
                       setCurrentChapter(i);
                     }}
                     className={`w-2.5 h-2.5 rounded-full cursor-pointer transition-all ${
-                      currentChapter === i ? 'bg-[#C5A059] scale-125' : 'bg-white/20'
+                      currentChapter === i ? 'bg-amber-400 scale-125' : 'bg-white/20'
                     }`}
                   />
                 ))}
