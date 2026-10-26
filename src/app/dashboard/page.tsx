@@ -554,17 +554,40 @@ export default function DashboardPage() {
               onOpenDatePicker={() => setJourneyModalOpen(true)}
             />
 
-            {/* Listado Bento de Hábitos con Micro-interacciones */}
+            {/* Listado Bento de Hábitos o Estado Vacío Intuitivo */}
             <div className="space-y-2.5">
-              {habits
-                .filter((h) => h.front_type === 'vigor' || h.front_type === 'expansion')
-                .map((h) => (
-                  <RunicHabitCard
-                    key={h.id}
-                    habit={h}
-                    onSeal={(habitObj, e) => handleHabitSeal(habitObj, e)}
-                  />
-                ))}
+              {habits.filter((h) => h.front_type === 'vigor' || h.front_type === 'expansion').length === 0 ? (
+                <div className="p-6 rounded-2xl bg-white border border-[#E8E5DD] text-center space-y-3 shadow-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-[#D97043]/10 border border-[#D97043]/20 flex items-center justify-center text-[#D97043] mx-auto">
+                    <Plus className="w-6 h-6 stroke-[2.2]" />
+                  </div>
+                  <div>
+                    <h3 className="font-editorial text-base font-semibold text-[#1F1E1B]">
+                      Sin retos activos esta semana
+                    </h3>
+                    <p className="text-xs text-[#706E66] max-w-xs mx-auto mt-1 leading-relaxed">
+                      Define 2 o 3 hábitos para conquistar tus próximos 7 días y ganar minutos de cartucho.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setCreateHabitModalOpen(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-4 h-4 stroke-[2.5]" />
+                    <span>Crear Mi Primer Reto Semanal</span>
+                  </button>
+                </div>
+              ) : (
+                habits
+                  .filter((h) => h.front_type === 'vigor' || h.front_type === 'expansion')
+                  .map((h) => (
+                    <RunicHabitCard
+                      key={h.id}
+                      habit={h}
+                      onSeal={(habitObj, e) => handleHabitSeal(habitObj, e)}
+                    />
+                  ))
+              )}
             </div>
           </div>
         )}

@@ -119,31 +119,31 @@ export function OracleForgeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 select-none">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 select-none">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-sm rounded-2xl bg-[#14171C] border border-[#C5A059]/60 p-5 space-y-4 shadow-[0_10px_30px_rgba(0,0,0,0.85)] text-[#E2E8F0]"
+        className="w-full max-w-sm rounded-2xl bg-white border border-[#E8E5DD] p-5 space-y-4 shadow-[0_16px_40px_rgba(0,0,0,0.12)] text-[#1F1E1B]"
       >
-        {/* Cabecera del Oráculo */}
-        <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#C5A059]/15 border border-[#C5A059]/40 flex items-center justify-center text-[#C5A059]">
+        {/* Cabecera del Creador de Retos */}
+        <div className="flex items-center justify-between border-b border-[#F2EFE9] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#D97043]/10 border border-[#D97043]/20 flex items-center justify-center text-[#D97043]">
               <BrainCircuit className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-xs font-black tracking-widest text-[#E2E8F0] uppercase">
-                EL ORÁCULO DE JOHTO
+              <h3 className="font-editorial text-sm font-semibold tracking-tight text-[#1F1E1B]">
+                Nuevo Reto Semanal
               </h3>
-              <span className="text-[10px] text-[#C5A059] font-mono block -mt-0.5">
-                Cerebro de Tasación Rúnica • {totemName}
+              <span className="text-[10px] text-[#706E66] font-mono block -mt-0.5">
+                Personalizado para tu semana • {totemName}
               </span>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="text-[#64748B] hover:text-[#E2E8F0] cursor-pointer"
+            className="text-[#8A877E] hover:text-[#1F1E1B] cursor-pointer p-1 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -151,78 +151,77 @@ export function OracleForgeModal({
 
         {/* Mensaje de error / aviso nativo */}
         {errorMessage && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/40 text-xs text-rose-300 flex items-center justify-between gap-2">
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-600 flex items-center justify-between gap-2">
             <span>{errorMessage}</span>
             <button 
               onClick={() => setErrorMessage(null)} 
-              className="text-rose-400 hover:text-rose-200 cursor-pointer font-bold"
+              className="text-rose-600 hover:text-rose-800 cursor-pointer font-bold"
             >
               ✕
             </button>
           </div>
         )}
 
-        {/* DIÁLOGO RPG O RESULTADO DEL ORÁCULO */}
+        {/* DIÁLOGO RESULTADO */}
         {oracleResult ? (
           <div className="space-y-4">
-            {/* Cuadro de Diálogo Estilo Nintendo RPG (Máximo 2 líneas) */}
-            <div className="rounded-xl bg-[#0B0C0E] border-2 border-[#C5A059] p-3 shadow-[0_4px_0_0_#000]">
-              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#C5A059] font-black uppercase mb-1">
+            <div className="rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] p-3.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-mono text-[#D97043] font-semibold uppercase mb-1">
                 <Sparkles className="w-3.5 h-3.5 fill-current" />
-                <span>DICTAMEN DEL ORÁCULO:</span>
+                <span>Dictamen del Reto:</span>
               </div>
-              <p className="text-xs text-[#E2E8F0] font-sans leading-relaxed italic">
+              <p className="font-editorial text-xs text-[#1F1E1B] leading-relaxed italic">
                 "{oracleResult.oracle_judgment}"
               </p>
             </div>
 
             {/* Veredicto de Tasación */}
             <div className="grid grid-cols-2 gap-2 text-center font-mono text-xs">
-              <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-[#C5A059]/40">
-                <span className="text-[10px] text-[#64748B] block">ORO ASIGNADO</span>
-                <span className="text-sm font-black text-[#C5A059]">
-                  +{oracleResult.gold_reward} 💰
+              <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
+                <span className="text-[10px] text-[#706E66] block">CONCHAS</span>
+                <span className="text-sm font-semibold text-[#A6752C] tabular-nums">
+                  +{oracleResult.gold_reward} 🐚
                 </span>
               </div>
-              <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-emerald-500/40">
-                <span className="text-[10px] text-[#64748B] block">BATERÍA GBA</span>
-                <span className="text-sm font-black text-emerald-400">
+              <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
+                <span className="text-[10px] text-[#706E66] block">BATERÍA GBA</span>
+                <span className="text-sm font-semibold text-[#5B7855] tabular-nums">
                   +{oracleResult.battery_reward}m 🔋
                 </span>
               </div>
             </div>
 
             {oracleResult.requires_proof && (
-              <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-400 font-mono text-center">
-                ⚖️ El Oráculo exigirá comprobante al sellar esta tarea.
+              <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-700 font-mono text-center">
+                ⚖️ Se solicitará comprobante al marcar este reto.
               </div>
             )}
 
             <button
               onClick={handleFinish}
-              className="w-full py-3 bg-[#C5A059] text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-[0_3px_0_0_#000] active:translate-y-0.5 cursor-pointer"
+              className="w-full py-3 bg-[#D97043] hover:bg-[#CC6437] text-white font-semibold text-xs tracking-wide rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer"
             >
-              Consagrar y Volver a la Forja
+              Activar Reto en mi Semana
             </button>
           </div>
         ) : (
-          /* FORMULARIO DE CONSULTA: CERO VALORES NUMÉRICOS MANUALES */
+          /* FORMULARIO DE CONSULTA INTUITIVO */
           <form onSubmit={handleConsultAndForge} className="space-y-3.5">
-            <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-white/5 text-[11px] text-[#64748B] leading-tight">
-              🏛️ <em>El usuario no fija su recompensa.</em> Describe tu batalla; el Oráculo auditará su valor real y equilibrará la economía.
+            <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] text-[11px] text-[#706E66] leading-relaxed">
+              Describe lo que quieres cumplir esta semana. La IA equilibrará automáticamente los minutos de juego y conchas.
             </div>
 
-            {/* Categoría Rúnica */}
+            {/* Categoría */}
             <div>
-              <label className="text-[10px] font-mono text-[#64748B] block mb-1">
-                FRENTE DE BATALLA:
+              <label className="text-[10px] font-mono text-[#706E66] block mb-1">
+                ÁREA DEL RETO:
               </label>
               <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
                 {[
-                  { id: 'fisico', label: '🏋️ Físico / Vigor' },
-                  { id: 'negocio', label: '📹 Negocio / SaaS' },
+                  { id: 'fisico', label: '🏋️ Físico / Gym' },
+                  { id: 'negocio', label: '📹 Negocio / Trabajo' },
                   { id: 'mente', label: '🧘 Mente / Lectura' },
-                  { id: 'expansion', label: '🦉 Idiomas / Skill' },
+                  { id: 'expansion', label: '🦉 Idioma / Skill' },
                 ].map((cat) => (
                   <button
                     key={cat.id}
@@ -230,8 +229,8 @@ export function OracleForgeModal({
                     onClick={() => setCategory(cat.id as any)}
                     className={`py-2 px-2.5 rounded-xl border text-left cursor-pointer transition-all ${
                       category === cat.id
-                        ? 'bg-[#C5A059]/20 border-[#C5A059] text-[#C5A059] font-bold shadow-[0_2px_0_0_#000]'
-                        : 'bg-[#0B0C0E] border-white/10 text-[#64748B]'
+                        ? 'bg-[#D97043]/10 border-[#D97043] text-[#D97043] font-semibold'
+                        : 'bg-[#FAF9F5] border-[#E8E5DD] text-[#706E66]'
                     }`}
                   >
                     {cat.label}
@@ -242,23 +241,23 @@ export function OracleForgeModal({
 
             {/* Título de la disciplina */}
             <div>
-              <label className="text-[10px] font-mono text-[#64748B] block mb-1">
-                ACCIÓN O DISCIPLINA CONCRETA:
+              <label className="text-[10px] font-mono text-[#706E66] block mb-1">
+                ¿QUÉ ACCIÓN VAS A REALIZAR?
               </label>
               <input
                 type="text"
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ej. 45 min pesas intensas, 1 video TikTok..."
-                className="w-full bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
+                placeholder="Ej. 45 min de gym, grabar 1 video, leer 20 min..."
+                className="w-full bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl p-2.5 text-xs text-[#1F1E1B] focus:outline-none focus:border-[#D97043] font-sans"
               />
             </div>
 
             {/* Tiempo estimado */}
             <div>
-              <label className="text-[10px] font-mono text-[#64748B] block mb-1">
-                DURACIÓN ESTIMADA:
+              <label className="text-[10px] font-mono text-[#706E66] block mb-1">
+                TIEMPO APROXIMADO:
               </label>
               <div className="grid grid-cols-4 gap-1.5 font-mono text-xs">
                 {[15, 30, 45, 60].map((mins) => (
@@ -266,10 +265,10 @@ export function OracleForgeModal({
                     key={mins}
                     type="button"
                     onClick={() => setDurationMinutes(mins)}
-                    className={`py-1.5 rounded-xl border cursor-pointer ${
+                    className={`py-1.5 rounded-xl border cursor-pointer transition-all ${
                       durationMinutes === mins
-                        ? 'bg-[#C5A059] text-black font-black shadow-[0_2px_0_0_#000]'
-                        : 'bg-[#0B0C0E] border-white/10 text-[#64748B]'
+                        ? 'bg-[#D97043] text-white font-semibold shadow-sm'
+                        : 'bg-[#FAF9F5] border-[#E8E5DD] text-[#706E66]'
                     }`}
                   >
                     {mins}m
@@ -278,15 +277,15 @@ export function OracleForgeModal({
               </div>
             </div>
 
-            {/* Botón Supremo de Consulta */}
+            {/* Botón de Guardar */}
             <div className="pt-1">
               <button
                 type="submit"
                 disabled={evaluating || !title.trim()}
-                className="w-full py-3.5 bg-gradient-to-r from-[#C5A059] to-amber-500 hover:from-amber-400 hover:to-[#C5A059] text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-[0_4px_0_0_#000] active:translate-y-0.5 active:shadow-[0_2px_0_0_#000] cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                className="w-full py-3 bg-[#D97043] hover:bg-[#CC6437] text-white font-semibold text-xs tracking-wide rounded-xl shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
               >
                 <Sparkles className="w-4 h-4 fill-current" />
-                <span>{evaluating ? 'El Oráculo Pesa tu Alma...' : 'Someter al Oráculo Rúnico'}</span>
+                <span>{evaluating ? 'Equilibrando tu Reto...' : 'Guardar y Activar Reto'}</span>
               </button>
             </div>
           </form>

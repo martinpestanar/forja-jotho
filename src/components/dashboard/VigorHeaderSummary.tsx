@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Swords, Coins, BatteryCharging, Trophy, Sparkles } from 'lucide-react';
+import { Swords, Coins, BatteryCharging, Trophy, Sparkles, Plus } from 'lucide-react';
 
 interface VigorHeaderSummaryProps {
   totalCount: number;
@@ -81,14 +81,15 @@ export function VigorHeaderSummary({
             </div>
           </div>
 
-          {/* Botón Consultar al Oráculo */}
+          {/* Botón Claro y Directo para Agregar Retos */}
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={onOpenOracle}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold cursor-pointer shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold cursor-pointer shadow-sm transition-all"
+            title="Crear un nuevo hábito o reto semanal"
           >
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
-            <span>Consultar</span>
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Nuevo Reto</span>
           </motion.button>
         </div>
 
