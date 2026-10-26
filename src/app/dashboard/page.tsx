@@ -30,7 +30,14 @@ import {
   Gamepad2, 
   ShieldCheck, 
   AlertTriangle,
-  Zap
+  Zap,
+  Flame,
+  Edit2,
+  Check,
+  Settings,
+  User,
+  LogOut,
+  Calendar
 } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
 
@@ -115,6 +122,8 @@ export default function DashboardPage() {
 
   // Estado para marcar victoria diaria de Templanza
   const [temperanceConfirmedToday, setTemperanceConfirmedToday] = useState(false);
+  const [editingInnerBeast, setEditingInnerBeast] = useState(false);
+  const [innerBeastInput, setInnerBeastInput] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
   const [timeUntilMidnight, setTimeUntilMidnight] = useState('');
@@ -402,6 +411,20 @@ export default function DashboardPage() {
     }
   };
 
+  const handleUpdateInnerBeast = async (newBeastName: string) => {
+    if (!newBeastName.trim()) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase
+        .from('valdr_profiles')
+        .update({ inner_beast: newBeastName.trim() })
+        .eq('id', user.id);
+    }
+    setProfileData((prev: any) => ({ ...prev, inner_beast: newBeastName.trim() }));
+    setEditingInnerBeast(false);
+    soundFx.playLevelUp();
+  };
+
   const removeFloatingReward = (id: string) => {
     setFloatingRewards((prev) => prev.filter((r) => r.id !== id));
   };
@@ -558,6 +581,83 @@ export default function DashboardPage() {
               </p>
             </div>
 
+            {/* Tarjeta de la Bestia Interior / Compulsión a Eliminar */}
+            <div className="rounded-2xl bg-[#14171C] border border-[#E60012]/40 p-4 shadow-[0_4px_0_0_#000] relative overflow-hidden">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-[#E60012]/15 border border-[#E60012]/30 text-[#E60012]">
+                    <Flame className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#E60012]">
+                      Tu Compulsión a Eliminar (Bestia Interior)
+                    </span>
+                    {!editingInnerBeast ? (
+                      <h3 className="text-sm font-black text-[#E2E8F0] tracking-wide">
+                        {profileData?.inner_beast || 'Procrastinación y Distracción Nocturna'}
+                      </h3>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <input
+                          type="text"
+                          value={innerBeastInput}
+                          onChange={(e) => setInnerBeastInput(e.target.value)}
+                          placeholder="Ej. Porno, Scroll en TikTok, Azúcar..."
+                          className="bg-[#0B0C0E] border border-white/20 rounded-lg px-2.5 py-1 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#4E9F9F]"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleUpdateInnerBeast(innerBeastInput)}
+                          className="p-1.5 bg-[#4E9F9F] hover:bg-[#3d8383] text-black rounded-lg cursor-pointer transition-all"
+                          title="Guardar compulsión"
+                        >
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </button>
+                        <button
+                          onClick={() => setEditingInnerBeast(false)}
+                          className="p-1.5 bg-white/10 hover:bg-white/20 text-[#64748B] rounded-lg cursor-pointer transition-all"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {!editingInnerBeast && (
+                  <button
+                    onClick={() => {
+                      setInnerBeastInput(profileData?.inner_beast || 'Procrastinación y Distracción Nocturna');
+                      setEditingInnerBeast(true);
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-mono text-[#64748B] hover:text-[#E2E8F0] transition-colors cursor-pointer"
+                  >
+                    <Edit2 className="w-3 h-3" />
+                    <span>Personalizar</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-1.5">
+                <span className="text-[10px] text-[#64748B] font-mono mr-1">Sugerencias rápidas:</span>
+                {[
+                  'Porno & Masturbación',
+                  'Scroll Infinito TikTok/Reels',
+                  'Comida Chatarra / Azúcar',
+                  'Videojuegos sin límite',
+                  'Procrastinación Nocturna'
+                ].map((sug) => (
+                  <button
+                    key={sug}
+                    onClick={() => handleUpdateInnerBeast(sug)}
+                    className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 hover:bg-[#E60012]/20 border border-white/10 hover:border-[#E60012]/40 text-[#94A3B8] hover:text-[#E2E8F0] transition-all cursor-pointer"
+                  >
+                    {sug}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="rounded-2xl bg-[#14171C] border border-[#4E9F9F]/40 p-6 text-center space-y-4 shadow-[0_4px_0_0_#000]">
               <div className="w-20 h-20 mx-auto rounded-full bg-[#4E9F9F]/10 border-2 border-[#4E9F9F]/50 flex items-center justify-center text-[#4E9F9F] shadow-[0_0_20px_rgba(78,159,159,0.3)] animate-pulse">
                 <ShieldCheck className="w-10 h-10" />
@@ -615,84 +715,135 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* PESTAÑA 3: JURAMENTOS SAGRADOS */}
-        {activeTab === 'oaths' && (
-          <div className="space-y-3.5">
-            <div className="flex items-center justify-between border-l-2 border-[#F59E0B] pl-3 py-1">
-              <div>
-                <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
-                  Pactos & Juramentos Sagrados
-                </h2>
-                <p className="text-xs text-[#64748B]">
-                  Contratos de honor a mediano plazo (7 a 90 días) sellados con firma rúnica.
-                </p>
-              </div>
-
-              <button
-                onClick={() => setCreateOathModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-xs font-black cursor-pointer shadow-[0_2px_0_0_#000] active:translate-y-0.5"
-              >
-                <Scroll className="w-4 h-4" />
-                <span>Nuevo Pacto</span>
-              </button>
+        {/* PESTAÑA 3: AJUSTES, PERFIL & PACTOS */}
+        {activeTab === 'settings' && (
+          <div className="space-y-4">
+            <div className="border-l-2 border-[#F59E0B] pl-3 py-1">
+              <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
+                Ajustes & Configuración del Líder
+              </h2>
+              <p className="text-xs text-[#64748B]">
+                Gestiona tus datos de líder, tus pactos sagrados y tus preferencias.
+              </p>
             </div>
 
-            {/* Guía Visual Explicativa estilo Nintendo */}
-            <div className="rounded-xl bg-[#14171C] border border-[#F59E0B]/20 p-3.5 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-black text-amber-400 uppercase tracking-wide">
-                <Scroll className="w-4 h-4 text-amber-400" />
-                <span>¿Qué es este módulo?</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-[#94A3B8]">
-                <div className="p-2 rounded-lg bg-[#0B0C0E] border border-white/5 flex items-start gap-2">
-                  <span className="text-amber-400 font-bold">📜</span>
-                  <span><strong>Elige tu desafío:</strong> Comprométete a una regla no negociable (ej. cero alcohol, 1 hora de estudio).</span>
+            {/* Sub-Tarjeta 1: Perfil y Datos Personales */}
+            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-4 space-y-3 shadow-[0_3px_0_0_#000]">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-[#C5A059]" />
+                  <span className="text-xs font-black text-[#E2E8F0] uppercase">Identidad del Soberano</span>
                 </div>
-                <div className="p-2 rounded-lg bg-[#0B0C0E] border border-white/5 flex items-start gap-2">
-                  <span className="text-amber-400 font-bold">⚡</span>
-                  <span><strong>Sello Rúnico:</strong> Firma con tu alias y mantén presionado 3s para sellar. Una vez activo, es inviolable.</span>
-                </div>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#C5A059]/20 text-[#C5A059]">
+                  TOTEM {profileData?.guide_totem?.toUpperCase() || 'LOBO'}
+                </span>
               </div>
-            </div>
 
-            {oaths.length === 0 ? (
-              <div className="rounded-2xl bg-[#14171C] border border-[#C5A059]/20 p-8 text-center space-y-3 text-[#64748B]">
-                <Scroll className="w-10 h-10 mx-auto opacity-40 text-[#C5A059]" />
-                <p className="text-xs">No tienes juramentos activos.</p>
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-white/5">
+                  <span className="text-[10px] text-[#64748B] block font-mono">Nombre de Líder</span>
+                  <span className="font-bold text-[#E2E8F0] mt-0.5 block">{profileData?.leader_name || 'Martín'}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-white/5">
+                  <span className="text-[10px] text-[#64748B] block font-mono">Oro Soberano</span>
+                  <span className="font-bold text-amber-400 mt-0.5 block">{profileData?.sovereignty_gold ?? 0} 💰</span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0C0E] border border-white/5">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#4E9F9F]" />
+                  <div>
+                    <span className="text-[10px] text-[#64748B] block font-mono">Fecha de Inicio de Conquista</span>
+                    <span className="text-xs font-bold text-[#E2E8F0]">
+                      {profileData?.journey_start_date || 'No definida'}
+                    </span>
+                  </div>
+                </div>
                 <button
-                  onClick={() => setCreateOathModalOpen(true)}
-                  className="px-4 py-2 bg-[#C5A059] text-black font-black text-xs rounded-xl shadow-[0_3px_0_0_#000] active:translate-y-0.5 cursor-pointer inline-flex items-center gap-1.5"
+                  onClick={() => setJourneyModalOpen(true)}
+                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-bold text-[#E2E8F0] transition-colors cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span>Sellar mi primer pacto</span>
+                  Cambiar
                 </button>
               </div>
-            ) : (
-              <div className="space-y-2.5">
-                {oaths.map((o) => (
-                  <div
-                    key={o.id}
-                    className="rounded-2xl bg-[#14171C] border border-[#C5A059]/30 p-4 space-y-2 shadow-[0_3px_0_0_#000]"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-[#E2E8F0] uppercase tracking-wide">
-                        {o.title}
-                      </span>
-                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-400">
-                        {o.status.toUpperCase()} ({o.duration_days} DÍAS)
-                      </span>
-                    </div>
+            </div>
 
-                    <p className="text-xs text-[#64748B] italic">"{o.front_vow}"</p>
-
-                    <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px] font-mono text-[#64748B]">
-                      <span>Hasta: {o.end_date}</span>
-                      <span className="text-[#C5A059] font-bold">Firma: {o.runic_signature}</span>
-                    </div>
-                  </div>
-                ))}
+            {/* Sub-Tarjeta 2: Sección de Pactos y Juramentos */}
+            <div className="rounded-2xl bg-[#14171C] border border-[#F59E0B]/30 p-4 space-y-3 shadow-[0_3px_0_0_#000]">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Scroll className="w-4 h-4 text-amber-400" />
+                  <span className="text-xs font-black text-[#E2E8F0] uppercase">Pactos & Juramentos</span>
+                </div>
+                <button
+                  onClick={() => setCreateOathModalOpen(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-[11px] font-black cursor-pointer shadow-[0_2px_0_0_#000] active:translate-y-0.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Nuevo Pacto</span>
+                </button>
               </div>
-            )}
+
+              <p className="text-[11px] text-[#64748B] leading-relaxed">
+                Contratos de honor no negociables (7 a 90 días) sellados con firma rúnica para disciplinar tu voluntad.
+              </p>
+
+              {oaths.length === 0 ? (
+                <div className="p-4 rounded-xl bg-[#0B0C0E] border border-dashed border-white/10 text-center space-y-2">
+                  <p className="text-xs text-[#64748B]">No tienes juramentos activos en curso.</p>
+                  <button
+                    onClick={() => setCreateOathModalOpen(true)}
+                    className="px-3 py-1.5 bg-[#C5A059] text-black font-black text-xs rounded-xl shadow-[0_2px_0_0_#000] cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Sellar mi primer pacto</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {oaths.map((o) => (
+                    <div
+                      key={o.id}
+                      className="p-3 rounded-xl bg-[#0B0C0E] border border-[#C5A059]/20 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-[#E2E8F0] uppercase">
+                          {o.title}
+                        </span>
+                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-400">
+                          {o.status.toUpperCase()} ({o.duration_days}D)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#94A3B8] italic">"{o.front_vow}"</p>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-[#64748B] pt-1 border-t border-white/5">
+                        <span>Hasta: {o.end_date}</span>
+                        <span className="text-[#C5A059] font-bold">Firma: {o.runic_signature}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sub-Tarjeta 3: Sesión & Cierre Seguro */}
+            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-4 flex items-center justify-between shadow-[0_3px_0_0_#000]">
+              <div>
+                <span className="text-xs font-black text-[#E2E8F0] block">Cerrar Sesión</span>
+                <span className="text-[11px] text-[#64748B]">Salir de la cuenta de Martín en este dispositivo</span>
+              </div>
+              <button
+                onClick={async () => {
+                  soundFx.playClick();
+                  await supabase.auth.signOut();
+                  window.location.href = '/admin/login';
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40 text-xs font-bold cursor-pointer active:translate-y-0.5 transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Salir</span>
+              </button>
+            </div>
           </div>
         )}
 
