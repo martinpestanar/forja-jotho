@@ -517,7 +517,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B0C0E] text-[#E2E8F0] flex flex-col font-sans select-none pb-28">
+    <div className="min-h-screen bg-[#FAF9F5] text-[#1F1E1B] flex flex-col font-sans select-none pb-28">
       {/* 1. Top HUD Móvil de Alto Impacto */}
       <MobileTopHud
         profileData={profileData}
@@ -572,28 +572,28 @@ export default function DashboardPage() {
         {/* PESTAÑA 2: TEMPLANZA (30 DÍAS) */}
         {activeTab === 'templanza' && (
           <div className="space-y-4">
-            <div className="border-l-2 border-[#4E9F9F] pl-3 py-1">
-              <h2 className="text-sm font-black text-[#4E9F9F] uppercase tracking-wider">
+            <div className="border-l-2 border-[#4A8B99] pl-3 py-1">
+              <h2 className="font-editorial text-sm font-semibold text-[#1F1E1B] tracking-tight">
                 Santuario de Templanza
               </h2>
-              <p className="text-xs text-[#64748B]">
+              <p className="text-xs text-[#706E66]">
                 Registro de Victoria Diaria: Cero Dopamina Barata & Retención.
               </p>
             </div>
 
             {/* Tarjeta de la Bestia Interior / Compulsión a Eliminar */}
-            <div className="rounded-2xl bg-[#14171C] border border-[#E60012]/40 p-4 shadow-[0_4px_0_0_#000] relative overflow-hidden">
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-4 shadow-sm relative overflow-hidden">
               <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-[#E60012]/15 border border-[#E60012]/30 text-[#E60012]">
-                    <Flame className="w-5 h-5 animate-pulse" />
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-[#D97043]/10 border border-[#D97043]/20 text-[#D97043]">
+                    <Flame className="w-5 h-5 fill-current" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#E60012]">
-                      Tu Compulsión a Eliminar (Bestia Interior)
+                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-[#D97043]">
+                      Tu Compulsión a Eliminar
                     </span>
                     {!editingInnerBeast ? (
-                      <h3 className="text-sm font-black text-[#E2E8F0] tracking-wide">
+                      <h3 className="font-editorial text-sm font-semibold text-[#1F1E1B] tracking-tight mt-0.5">
                         {profileData?.inner_beast || 'Procrastinación y Distracción Nocturna'}
                       </h3>
                     ) : (
@@ -603,19 +603,19 @@ export default function DashboardPage() {
                           value={innerBeastInput}
                           onChange={(e) => setInnerBeastInput(e.target.value)}
                           placeholder="Ej. Porno, Scroll en TikTok, Azúcar..."
-                          className="bg-[#0B0C0E] border border-white/20 rounded-lg px-2.5 py-1 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#4E9F9F]"
+                          className="bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl px-2.5 py-1 text-xs text-[#1F1E1B] focus:outline-none focus:border-[#4A8B99]"
                           autoFocus
                         />
                         <button
                           onClick={() => handleUpdateInnerBeast(innerBeastInput)}
-                          className="p-1.5 bg-[#4E9F9F] hover:bg-[#3d8383] text-black rounded-lg cursor-pointer transition-all"
+                          className="p-1.5 bg-[#4A8B99] hover:bg-[#3B7582] text-white rounded-lg cursor-pointer transition-all"
                           title="Guardar compulsión"
                         >
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                         </button>
                         <button
                           onClick={() => setEditingInnerBeast(false)}
-                          className="p-1.5 bg-white/10 hover:bg-white/20 text-[#64748B] rounded-lg cursor-pointer transition-all"
+                          className="p-1.5 bg-[#F2EFE9] hover:bg-[#E8E5DD] text-[#706E66] rounded-lg cursor-pointer transition-all"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -630,7 +630,7 @@ export default function DashboardPage() {
                       setInnerBeastInput(profileData?.inner_beast || 'Procrastinación y Distracción Nocturna');
                       setEditingInnerBeast(true);
                     }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-[11px] font-mono text-[#64748B] hover:text-[#E2E8F0] transition-colors cursor-pointer"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E8E5DD] text-[11px] font-mono text-[#706E66] hover:text-[#1F1E1B] transition-colors cursor-pointer"
                   >
                     <Edit2 className="w-3 h-3" />
                     <span>Personalizar</span>
@@ -638,8 +638,8 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              <div className="mt-3 pt-3 border-t border-white/5 flex flex-wrap gap-1.5">
-                <span className="text-[10px] text-[#64748B] font-mono mr-1">Sugerencias rápidas:</span>
+              <div className="mt-3 pt-3 border-t border-[#F2EFE9] flex flex-wrap gap-1.5">
+                <span className="text-[10px] text-[#8A877E] font-mono mr-1">Sugerencias:</span>
                 {[
                   'Porno & Masturbación',
                   'Scroll Infinito TikTok/Reels',
@@ -650,7 +650,7 @@ export default function DashboardPage() {
                   <button
                     key={sug}
                     onClick={() => handleUpdateInnerBeast(sug)}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/5 hover:bg-[#E60012]/20 border border-white/10 hover:border-[#E60012]/40 text-[#94A3B8] hover:text-[#E2E8F0] transition-all cursor-pointer"
+                    className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FAF9F5] hover:bg-[#D97043]/10 border border-[#E8E5DD] hover:border-[#D97043]/30 text-[#706E66] hover:text-[#D97043] transition-all cursor-pointer"
                   >
                     {sug}
                   </button>
@@ -658,31 +658,31 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-[#14171C] border border-[#4E9F9F]/40 p-6 text-center space-y-4 shadow-[0_4px_0_0_#000]">
-              <div className="w-20 h-20 mx-auto rounded-full bg-[#4E9F9F]/10 border-2 border-[#4E9F9F]/50 flex items-center justify-center text-[#4E9F9F] shadow-[0_0_20px_rgba(78,159,159,0.3)] animate-pulse">
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-6 text-center space-y-4 shadow-sm">
+              <div className="w-20 h-20 mx-auto rounded-full bg-[#4A8B99]/10 border-2 border-[#4A8B99]/30 flex items-center justify-center text-[#4A8B99]">
                 <ShieldCheck className="w-10 h-10" />
               </div>
 
               <div>
-                <span className="text-4xl font-black text-[#E2E8F0] font-mono block">
+                <span className="text-4xl font-semibold text-[#1F1E1B] font-mono tabular-nums block">
                   {profileData?.temperance_streak_days ?? 0} / 30
                 </span>
-                <span className="text-xs text-[#4E9F9F] font-bold uppercase tracking-widest">
+                <span className="text-xs text-[#3B7582] font-semibold uppercase tracking-wider">
                   Días Invicto en Retención
                 </span>
               </div>
 
               {/* Barra de Progreso Visual hacia el Día 30 */}
               <div className="space-y-1.5 text-left">
-                <div className="flex justify-between text-[11px] font-mono text-[#64748B]">
+                <div className="flex justify-between text-[11px] font-mono text-[#706E66]">
                   <span>Progreso de Purificación</span>
-                  <span className="text-[#4E9F9F] font-bold">
+                  <span className="text-[#3B7582] font-semibold tabular-nums">
                     {Math.min(100, Math.round(((profileData?.temperance_streak_days ?? 0) / 30) * 100))}%
                   </span>
                 </div>
-                <div className="h-2.5 w-full bg-[#0B0C0E] border border-white/10 rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-[#EAE7DF] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-[#4E9F9F] to-emerald-400 transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-[#4A8B99] to-[#6E8B68] transition-all duration-500 rounded-full"
                     style={{
                       width: `${Math.min(100, Math.round(((profileData?.temperance_streak_days ?? 0) / 30) * 100))}%`,
                     }}
@@ -694,21 +694,21 @@ export default function DashboardPage() {
               <button
                 disabled={temperanceConfirmedToday || submitting}
                 onClick={handleConfirmTemperance}
-                className={`w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all border-2 shadow-[0_4px_0_0_#000] active:translate-y-1 active:shadow-none ${
+                className={`w-full py-3.5 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm active:scale-[0.98] ${
                   temperanceConfirmedToday
-                    ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/50 cursor-default shadow-none'
-                    : 'bg-[#4E9F9F] hover:bg-[#3d8383] text-black border-black hover:shadow-[0_4px_12px_rgba(78,159,159,0.5)]'
+                    ? 'bg-[#6E8B68]/15 text-[#5B7855] border border-[#6E8B68]/30 cursor-default'
+                    : 'bg-[#4A8B99] hover:bg-[#3B7582] text-white border border-[#3B7582]'
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 fill-current" />
                 <span>
                   {temperanceConfirmedToday
                     ? '✓ ¡Hoy Permaneciste Invicto!'
-                    : 'Marcar Victoria: Hoy no caí en la compulsión (+100 💰)'}
+                    : 'Marcar Victoria: Hoy no caí (+100 Conchas)'}
                 </span>
               </button>
 
-              <div className="p-3 rounded-xl bg-[#0B0C0E] border border-white/5 text-xs text-[#64748B] leading-relaxed">
+              <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] text-xs text-[#706E66] leading-relaxed">
                 ✨ Recompensa al Día 30: Huevo Místico con Pokémon Shiny de 6 IVs perfectos inyectado al cartucho.
               </div>
             </div>
@@ -718,51 +718,51 @@ export default function DashboardPage() {
         {/* PESTAÑA 3: AJUSTES, PERFIL & PACTOS */}
         {activeTab === 'settings' && (
           <div className="space-y-4">
-            <div className="border-l-2 border-[#F59E0B] pl-3 py-1">
-              <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
+            <div className="border-l-2 border-[#D97043] pl-3 py-1">
+              <h2 className="font-editorial text-sm font-semibold text-[#1F1E1B] tracking-tight">
                 Ajustes & Configuración del Líder
               </h2>
-              <p className="text-xs text-[#64748B]">
+              <p className="text-xs text-[#706E66]">
                 Gestiona tus datos de líder, tus pactos sagrados y tus preferencias.
               </p>
             </div>
 
             {/* Sub-Tarjeta 1: Perfil y Datos Personales */}
-            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-4 space-y-3 shadow-[0_3px_0_0_#000]">
-              <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-4 space-y-3 shadow-sm">
+              <div className="flex items-center justify-between border-b border-[#F2EFE9] pb-2.5">
                 <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-[#C5A059]" />
-                  <span className="text-xs font-black text-[#E2E8F0] uppercase">Identidad del Soberano</span>
+                  <User className="w-4 h-4 text-[#D97043]" />
+                  <span className="text-xs font-semibold text-[#1F1E1B] uppercase tracking-wide">Identidad del Entrenador</span>
                 </div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#C5A059]/20 text-[#C5A059]">
+                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-[#D97043]/10 text-[#D97043]">
                   TOTEM {profileData?.guide_totem?.toUpperCase() || 'LOBO'}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-white/5">
-                  <span className="text-[10px] text-[#64748B] block font-mono">Nombre de Líder</span>
-                  <span className="font-bold text-[#E2E8F0] mt-0.5 block">{profileData?.leader_name || 'Martín'}</span>
+                <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
+                  <span className="text-[10px] text-[#706E66] block font-mono">Nombre de Líder</span>
+                  <span className="font-semibold text-[#1F1E1B] mt-0.5 block">{profileData?.leader_name || 'Martín'}</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-[#0B0C0E] border border-white/5">
-                  <span className="text-[10px] text-[#64748B] block font-mono">Oro Soberano</span>
-                  <span className="font-bold text-amber-400 mt-0.5 block">{profileData?.sovereignty_gold ?? 0} 💰</span>
+                <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
+                  <span className="text-[10px] text-[#706E66] block font-mono">Conchas de Trueque</span>
+                  <span className="font-semibold text-[#A6752C] mt-0.5 block">{profileData?.sovereignty_gold ?? 0} 🐚</span>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#0B0C0E] border border-white/5">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#4E9F9F]" />
+                  <Calendar className="w-4 h-4 text-[#4A8B99]" />
                   <div>
-                    <span className="text-[10px] text-[#64748B] block font-mono">Fecha de Inicio de Conquista</span>
-                    <span className="text-xs font-bold text-[#E2E8F0]">
+                    <span className="text-[10px] text-[#706E66] block font-mono">Inicio de Marea</span>
+                    <span className="text-xs font-semibold text-[#1F1E1B]">
                       {profileData?.journey_start_date || 'No definida'}
                     </span>
                   </div>
                 </div>
                 <button
                   onClick={() => setJourneyModalOpen(true)}
-                  className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[11px] font-bold text-[#E2E8F0] transition-colors cursor-pointer"
+                  className="px-2.5 py-1 rounded-xl bg-white hover:bg-[#F2EFE9] border border-[#E8E5DD] text-[11px] font-medium text-[#1F1E1B] transition-colors cursor-pointer shadow-sm"
                 >
                   Cambiar
                 </button>
@@ -770,31 +770,31 @@ export default function DashboardPage() {
             </div>
 
             {/* Sub-Tarjeta 2: Sección de Pactos y Juramentos */}
-            <div className="rounded-2xl bg-[#14171C] border border-[#F59E0B]/30 p-4 space-y-3 shadow-[0_3px_0_0_#000]">
-              <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-4 space-y-3 shadow-sm">
+              <div className="flex items-center justify-between border-b border-[#F2EFE9] pb-2.5">
                 <div className="flex items-center gap-2">
-                  <Scroll className="w-4 h-4 text-amber-400" />
-                  <span className="text-xs font-black text-[#E2E8F0] uppercase">Pactos & Juramentos</span>
+                  <Scroll className="w-4 h-4 text-[#D97043]" />
+                  <span className="text-xs font-semibold text-[#1F1E1B] uppercase tracking-wide">Pactos & Contratos</span>
                 </div>
                 <button
                   onClick={() => setCreateOathModalOpen(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/40 text-[11px] font-black cursor-pointer shadow-[0_2px_0_0_#000] active:translate-y-0.5"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-[11px] font-medium cursor-pointer shadow-sm active:scale-95 transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Nuevo Pacto</span>
                 </button>
               </div>
 
-              <p className="text-[11px] text-[#64748B] leading-relaxed">
-                Contratos de honor no negociables (7 a 90 días) sellados con firma rúnica para disciplinar tu voluntad.
+              <p className="text-[11px] text-[#706E66] leading-relaxed">
+                Contratos de honor no negociables (7 a 90 días) para mantener la disciplina en la marea.
               </p>
 
               {oaths.length === 0 ? (
-                <div className="p-4 rounded-xl bg-[#0B0C0E] border border-dashed border-white/10 text-center space-y-2">
-                  <p className="text-xs text-[#64748B]">No tienes juramentos activos en curso.</p>
+                <div className="p-4 rounded-xl bg-[#FAF9F5] border border-dashed border-[#E8E5DD] text-center space-y-2">
+                  <p className="text-xs text-[#706E66]">No tienes juramentos activos en curso.</p>
                   <button
                     onClick={() => setCreateOathModalOpen(true)}
-                    className="px-3 py-1.5 bg-[#C5A059] text-black font-black text-xs rounded-xl shadow-[0_2px_0_0_#000] cursor-pointer inline-flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-[#D97043] text-white font-medium text-xs rounded-xl shadow-sm cursor-pointer inline-flex items-center gap-1.5 active:scale-95 transition-all"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Sellar mi primer pacto</span>
@@ -805,20 +805,20 @@ export default function DashboardPage() {
                   {oaths.map((o) => (
                     <div
                       key={o.id}
-                      className="p-3 rounded-xl bg-[#0B0C0E] border border-[#C5A059]/20 space-y-1.5"
+                      className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] space-y-1.5"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-[#E2E8F0] uppercase">
+                        <span className="text-xs font-semibold text-[#1F1E1B]">
                           {o.title}
                         </span>
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/40 text-emerald-400">
+                        <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded-full bg-[#6E8B68]/10 text-[#5B7855]">
                           {o.status.toUpperCase()} ({o.duration_days}D)
                         </span>
                       </div>
-                      <p className="text-[11px] text-[#94A3B8] italic">"{o.front_vow}"</p>
-                      <div className="flex items-center justify-between text-[10px] font-mono text-[#64748B] pt-1 border-t border-white/5">
+                      <p className="text-[11px] text-[#5E5C56] italic">"{o.front_vow}"</p>
+                      <div className="flex items-center justify-between text-[10px] font-mono text-[#706E66] pt-1 border-t border-[#E8E5DD]">
                         <span>Hasta: {o.end_date}</span>
-                        <span className="text-[#C5A059] font-bold">Firma: {o.runic_signature}</span>
+                        <span className="text-[#D97043] font-medium">Firma: {o.runic_signature}</span>
                       </div>
                     </div>
                   ))}
@@ -827,10 +827,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Sub-Tarjeta 3: Sesión & Cierre Seguro */}
-            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-4 flex items-center justify-between shadow-[0_3px_0_0_#000]">
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-4 flex items-center justify-between shadow-sm">
               <div>
-                <span className="text-xs font-black text-[#E2E8F0] block">Cerrar Sesión</span>
-                <span className="text-[11px] text-[#64748B]">Salir de la cuenta de Martín en este dispositivo</span>
+                <span className="text-xs font-semibold text-[#1F1E1B] block">Cerrar Sesión</span>
+                <span className="text-[11px] text-[#706E66]">Salir de la cuenta en este dispositivo</span>
               </div>
               <button
                 onClick={async () => {
@@ -838,7 +838,7 @@ export default function DashboardPage() {
                   await supabase.auth.signOut();
                   window.location.href = '/admin/login';
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/40 text-xs font-bold cursor-pointer active:translate-y-0.5 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-medium cursor-pointer active:scale-95 transition-all"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Salir</span>
@@ -850,20 +850,20 @@ export default function DashboardPage() {
         {/* PESTAÑA 4: BÓVEDA ANCESTRAL */}
         {activeTab === 'vault' && (
           <div className="space-y-4">
-            <div className="border-l-2 border-[#8B5CF6] pl-3 py-1">
-              <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
-                Bóveda Ancestral & Inyección .SAV
+            <div className="border-l-2 border-[#D4A359] pl-3 py-1">
+              <h2 className="font-editorial text-sm font-semibold text-[#1F1E1B] tracking-tight">
+                Santuario & Inyección .SAV
               </h2>
-              <p className="text-xs text-[#64748B]">
+              <p className="text-xs text-[#706E66]">
                 Inspecciona tu equipo y despacha suministros a Pokémon Heart & Soul.
               </p>
             </div>
 
-            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-3 shadow-[0_3px_0_0_#000]">
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
               <PartyPcManager />
             </div>
 
-            <div className="rounded-2xl bg-[#14171C] border border-white/10 p-3 shadow-[0_3px_0_0_#000]">
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
               <PokedexBagViewer />
             </div>
           </div>
@@ -872,30 +872,30 @@ export default function DashboardPage() {
         {/* PESTAÑA 5: EMULADOR GBA */}
         {activeTab === 'game' && (
           <div className="space-y-4">
-            <div className="border-l-2 border-emerald-500 pl-3 py-1">
-              <h2 className="text-sm font-black text-[#E2E8F0] uppercase tracking-wider">
-                Cartucho Ancestral (mGBA)
+            <div className="border-l-2 border-[#6E8B68] pl-3 py-1">
+              <h2 className="font-editorial text-sm font-semibold text-[#1F1E1B] tracking-tight">
+                Cartucho Portátil (mGBA)
               </h2>
-              <p className="text-xs text-[#64748B]">
-                Batería disponible: {profileData?.battery_minutes ?? 0} minutos.
+              <p className="text-xs text-[#706E66]">
+                Batería de inmersión disponible: {profileData?.battery_minutes ?? 0} minutos.
               </p>
             </div>
 
-            <div className="rounded-2xl bg-[#14171C] border border-emerald-500/30 p-6 text-center space-y-4 shadow-[0_4px_0_0_#000]">
-              <Gamepad2 className="w-14 h-14 text-emerald-400 mx-auto opacity-90 animate-bounce" />
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-6 text-center space-y-4 shadow-sm">
+              <Gamepad2 className="w-14 h-14 text-[#6E8B68] mx-auto opacity-90 animate-bounce" />
               <div>
-                <h3 className="text-base font-black text-[#E2E8F0]">Pokémon Heart & Soul</h3>
-                <p className="text-xs text-[#64748B] mt-1">
-                  El juego se pausará automáticamente al llegar a 0m de batería. Cumple hábitos en la vida real para ganar más tiempo.
+                <h3 className="font-editorial text-base font-semibold text-[#1F1E1B]">Pokémon Heart & Soul</h3>
+                <p className="text-xs text-[#706E66] mt-1 max-w-xs mx-auto">
+                  El juego se pausará al llegar a 0m de flujo. Cumple hábitos en la vida real para expandir tu sesión.
                 </p>
               </div>
 
               <button
                 onClick={openArcadeRoom}
-                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-black text-sm font-black rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_0_0_#000] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wider"
+                className="w-full py-3.5 bg-[#6E8B68] hover:bg-[#5B7855] text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.98] transition-all tracking-wide"
               >
                 <Zap className="w-4 h-4 fill-current" />
-                <span>Encender Cartucho Ancestral</span>
+                <span>Encender Cartucho</span>
               </button>
             </div>
           </div>

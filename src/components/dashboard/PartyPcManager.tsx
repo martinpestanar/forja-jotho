@@ -34,9 +34,9 @@ type ActiveSection = 'party' | 'pc' | 'bag';
 
 export const PartyPcManager: React.FC = () => {
   const profile = useTrainerStore((s) => s.profile);
-  const theme = useTrainerStore((s) => s.theme);
   const updateProfile = useTrainerStore((s) => s.updateProfile);
-  const isLight = theme === 'light_gbc';
+  // Estándar 100% Light Mode Claude
+  const isLight = true;
 
   const [activeSection, setActiveSection] = useState<ActiveSection>('party');
   const [selectedSlot, setSelectedSlot] = useState<number | null>(0);
@@ -138,12 +138,10 @@ export const PartyPcManager: React.FC = () => {
 
   // ── TAB BUTTON STYLES ──────────────────────────────────────────────────
   const tabBtn = (section: ActiveSection, colorActive: string, colorActiveDark: string) =>
-    `px-3 py-1.5 rounded-xl font-black text-xs uppercase flex items-center gap-1.5 transition-all cursor-pointer ${
+    `px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
       activeSection === section
-        ? isLight
-          ? `${colorActive} border-2 border-black shadow-[2px_2px_0_#000]`
-          : `${colorActiveDark} border-2 border-black font-black`
-        : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+        ? 'bg-[#1F1E1B] text-white shadow-sm'
+        : 'bg-[#F2EFE9] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
     }`;
 
   return (
@@ -217,14 +215,10 @@ export const PartyPcManager: React.FC = () => {
                     <div
                       key={idx}
                       onClick={() => { soundFx.playClick(); setSelectedSlot(idx); }}
-                      className={`p-3 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${
+                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                         isSelected
-                          ? isLight
-                            ? 'bg-amber-100 border-black shadow-[3px_3px_0_#000]'
-                            : 'bg-emerald-950/40 border-emerald-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]'
-                          : isLight
-                            ? 'bg-white border-black/30 hover:border-black'
-                            : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                          ? 'bg-[#FAF9F5] border-[#D97043] shadow-sm'
+                          : 'bg-white border-[#E8E5DD] hover:border-[#D5D1C5]'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -238,33 +232,33 @@ export const PartyPcManager: React.FC = () => {
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-black text-sm text-[#E2E8F0] tracking-tight">{mon.name}</span>
+                            <span className="font-editorial font-semibold text-sm text-[#1F1E1B] tracking-tight">{mon.name}</span>
                             {mon.isShiny && (
-                              <span className="px-1 py-0.5 bg-amber-400 text-slate-950 text-[9px] font-black rounded flex items-center gap-0.5 shrink-0">
+                              <span className="px-1 py-0.5 bg-[#D4A359]/20 text-[#A6752C] text-[9px] font-mono rounded flex items-center gap-0.5 shrink-0">
                                 <Sparkles className="w-2.5 h-2.5" /> SHINY
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-1.5 font-mono">
-                            <span className="font-bold text-amber-400">Nv. {mon.level}</span>
+                          <div className="text-[11px] text-[#706E66] flex items-center gap-1.5 font-mono">
+                            <span className="font-semibold text-[#D97043]">Nv. {mon.level}</span>
                             <span>·</span>
-                            <span className="text-slate-300">{mon.types.join(' / ')}</span>
+                            <span className="text-[#706E66]">{mon.types.join(' / ')}</span>
                           </div>
                         </div>
                       </div>
                       <div className="text-right space-y-1 shrink-0 pl-2">
-                        <div className="text-[10px] text-slate-400 font-bold font-mono">
-                          HP: <span className="text-emerald-400">{mon.hp}</span>/{mon.maxHp}
+                        <div className="text-[10px] text-[#706E66] font-mono">
+                          HP: <span className="text-[#5B7855] font-semibold">{mon.hp}</span>/{mon.maxHp}
                         </div>
-                        <div className="w-16 sm:w-20 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700 ml-auto">
+                        <div className="w-16 sm:w-20 h-1.5 bg-[#EAE7DF] rounded-full overflow-hidden ml-auto">
                           <div
-                            className={`h-full ${hpPct > 50 ? 'bg-emerald-500' : hpPct > 20 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                            className={`h-full ${hpPct > 50 ? 'bg-[#6E8B68]' : hpPct > 20 ? 'bg-[#D97043]' : 'bg-rose-500'}`}
                             style={{ width: `${hpPct}%` }}
                           />
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDepositOrWithdraw('party', idx); }}
-                          className="text-[10px] text-amber-400/90 hover:text-amber-300 font-bold underline cursor-pointer block ml-auto pt-0.5"
+                          className="text-[10px] text-[#D97043] hover:underline font-mono cursor-pointer block ml-auto pt-0.5"
                         >
                           Depositar en PC →
                         </button>
@@ -275,10 +269,10 @@ export const PartyPcManager: React.FC = () => {
                 {Array(6 - party.length).fill(null).map((_, i) => (
                   <div
                     key={`empty-${i}`}
-                    className="p-3 rounded-xl border-2 border-dashed border-slate-700/60 flex items-center justify-center text-slate-500 text-xs gap-2"
+                    className="p-3 rounded-xl border border-dashed border-[#E8E5DD] flex items-center justify-center text-[#8A877E] text-xs gap-2 bg-[#FAF9F5]"
                   >
-                    <Users className="w-4 h-4 opacity-50" />
-                    <span>Espacio de Equipo Disponible (#{party.length + i + 1})</span>
+                    <Users className="w-4 h-4 opacity-40" />
+                    <span className="font-mono text-[11px]">Espacio Disponible (#{party.length + i + 1})</span>
                   </div>
                 ))}
               </div>
@@ -347,47 +341,54 @@ export const PartyPcManager: React.FC = () => {
           </div>
 
           {/* Inspector Derecho */}
-          <div
-            className={`lg:col-span-5 rounded-xl p-4 border-2 flex flex-col justify-between ${
-              isLight
-                ? 'bg-[#FFFFFF] border-black shadow-[4px_4px_0_#000]'
-                : 'bg-[#0f172a] border-slate-700'
-            }`}
-          >
+          <div className="lg:col-span-5 rounded-2xl p-4 border border-[#E8E5DD] bg-white flex flex-col justify-between shadow-sm">
             {currentSelectedMon ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-black/15">
+                <div className="flex items-center justify-between pb-2 border-b border-[#F2EFE9]">
                   <div className="min-w-0 pr-2">
-                    <h3 className="font-black text-lg flex items-center gap-2 flex-wrap">
+                    <h3 className="font-editorial font-semibold text-lg flex items-center gap-2 flex-wrap text-[#1F1E1B]">
                       <span className="truncate">{currentSelectedMon.name}</span>
                       {currentSelectedMon.isShiny && (
-                        <span className="text-xs px-1.5 py-0.5 bg-amber-400 text-black font-black rounded shrink-0">★ SHINY</span>
+                        <span className="text-xs px-1.5 py-0.5 bg-[#D4A359]/20 text-[#A6752C] font-mono rounded shrink-0">★ SHINY</span>
                       )}
                     </h3>
-                    <p className="text-xs text-amber-500 font-bold">
+                    <p className="text-xs text-[#D97043] font-mono font-medium">
                       Nivel {currentSelectedMon.level} · {currentSelectedMon.types.join(' / ')}
                     </p>
                   </div>
-                  <span className="text-xs font-bold text-slate-400 shrink-0">
+                  <span className="text-xs font-mono text-[#8A877E] shrink-0">
                     {activeSection === 'party' ? `Slot #${(selectedSlot ?? 0) + 1}` : `PC #${(selectedSlot ?? 0) + 1}`}
                   </span>
                 </div>
-                <div className="flex items-center justify-center p-6 bg-slate-950/40 rounded-xl border border-slate-800">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={POKEMON_ASSETS.getAnimatedSprite(currentSelectedMon.speciesId, currentSelectedMon.isShiny)}
-                    alt={currentSelectedMon.name}
-                    className="h-28 object-contain"
+                <div className="relative flex flex-col items-center justify-center p-6 bg-[#FAF9F5] rounded-xl border border-[#E8E5DD] overflow-hidden">
+                  {/* Sprite con balanceo flotante orgánico (Idle Bobbing) */}
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
+                    className="relative z-10"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={POKEMON_ASSETS.getAnimatedSprite(currentSelectedMon.speciesId, currentSelectedMon.isShiny)}
+                      alt={currentSelectedMon.name}
+                      className="h-28 object-contain drop-shadow-sm"
+                    />
+                  </motion.div>
+                  {/* Sombra elástica en el suelo */}
+                  <motion.div
+                    animate={{ scaleX: [1, 0.85, 1], opacity: [0.2, 0.12, 0.2] }}
+                    transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
+                    className="w-16 h-2 bg-[#1F1E1B] rounded-full filter blur-[1px] -mt-1"
                   />
                 </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex justify-between font-bold">
-                    <span>Puntos de Salud (HP):</span>
-                    <span className="text-emerald-400">{currentSelectedMon.hp} / {currentSelectedMon.maxHp}</span>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between font-mono">
+                    <span className="text-[#706E66]">Puntos de Salud (HP):</span>
+                    <span className="text-[#5B7855] font-semibold">{currentSelectedMon.hp} / {currentSelectedMon.maxHp}</span>
                   </div>
-                  <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                  <div className="w-full h-2 bg-[#EAE7DF] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500"
+                      className="h-full bg-[#6E8B68]"
                       style={{ width: `${Math.round((currentSelectedMon.hp / currentSelectedMon.maxHp) * 100)}%` }}
                     />
                   </div>
@@ -400,14 +401,10 @@ export const PartyPcManager: React.FC = () => {
                       handleDepositOrWithdraw('pc', selectedSlot ?? 0);
                     }
                   }}
-                  className={`w-full py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 border-2 transition-all cursor-pointer ${
+                  className={`w-full py-2.5 rounded-xl font-medium text-xs uppercase flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-[0.98] ${
                     activeSection === 'party'
-                      ? isLight
-                        ? 'bg-amber-300 hover:bg-amber-400 text-black border-black shadow-[2px_2px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-black'
-                      : isLight
-                        ? 'bg-emerald-400 hover:bg-emerald-500 text-black border-black shadow-[2px_2px_0_#000]'
-                        : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-black'
+                      ? 'bg-[#D97043] hover:bg-[#CC6437] text-white'
+                      : 'bg-[#4A8B99] hover:bg-[#3B7582] text-white'
                   }`}
                 >
                   <ArrowRightLeft className="w-4 h-4" />
@@ -415,9 +412,9 @@ export const PartyPcManager: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500 space-y-2">
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-[#8A877E] space-y-2">
                 <Layers className="w-8 h-8 opacity-40 animate-pulse" />
-                <p className="text-xs">Selecciona un Pokémon para ver sus estadísticas.</p>
+                <p className="text-xs font-mono">Selecciona un Pokémon para ver sus estadísticas.</p>
               </div>
             )}
           </div>

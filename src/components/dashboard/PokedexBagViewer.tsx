@@ -29,8 +29,8 @@ import confetti from 'canvas-confetti';
 
 export const PokedexBagViewer: React.FC = () => {
   const profile = useTrainerStore((s) => s.profile);
-  const theme = useTrainerStore((s) => s.theme);
-  const isLight = theme === 'light_gbc';
+  // Estándar 100% Light Mode Claude Oficial
+  const isLight = true;
 
   const [activeSection, setActiveSection] = useState<'party' | 'pokedex' | 'bag'>('party');
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,27 +117,17 @@ export const PokedexBagViewer: React.FC = () => {
       </AnimatePresence>
 
       {/* Sub-Header con Pestañas de Navegación Visual */}
-      <div
-        className={`p-2.5 rounded-xl border flex flex-col gap-2.5 ${
-          isLight
-            ? 'bg-[#FFFFFF] border-2 border-black shadow-[3px_3px_0_#000]'
-            : 'bg-[#121214] border-slate-800'
-        }`}
-      >
+      <div className="p-2.5 rounded-2xl border border-[#E8E5DD] bg-white shadow-sm flex flex-col gap-2.5">
         <div className="flex items-center gap-1.5 flex-wrap">
           <button
             onClick={() => {
               soundFx.playClick();
               setActiveSection('party');
             }}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               activeSection === 'party'
-                ? isLight
-                  ? 'bg-[#E60012] text-white border-2 border-black shadow-[2px_2px_0_#000]'
-                  : 'bg-emerald-500/30 text-emerald-300 border border-emerald-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
-                : isLight
-                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                : 'bg-slate-900 text-slate-400 hover:text-white'
+                ? 'bg-[#1F1E1B] text-white shadow-sm'
+                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
             }`}
           >
             <ShieldCheck className="w-3.5 h-3.5" />
@@ -149,14 +139,10 @@ export const PokedexBagViewer: React.FC = () => {
               soundFx.playClick();
               setActiveSection('pokedex');
             }}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               activeSection === 'pokedex'
-                ? isLight
-                  ? 'bg-[#2563EB] text-white border-2 border-black shadow-[2px_2px_0_#000]'
-                  : 'bg-cyan-500/30 text-cyan-300 border border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
-                : isLight
-                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                : 'bg-slate-900 text-slate-400 hover:text-white'
+                ? 'bg-[#1F1E1B] text-white shadow-sm'
+                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
             }`}
           >
             <Eye className="w-3.5 h-3.5" />
@@ -168,14 +154,10 @@ export const PokedexBagViewer: React.FC = () => {
               soundFx.playClick();
               setActiveSection('bag');
             }}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
               activeSection === 'bag'
-                ? isLight
-                  ? 'bg-[#F59E0B] text-black border-2 border-black shadow-[2px_2px_0_#000]'
-                  : 'bg-amber-500/30 text-amber-300 border border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.2)]'
-                : isLight
-                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                : 'bg-slate-900 text-slate-400 hover:text-white'
+                ? 'bg-[#1F1E1B] text-white shadow-sm'
+                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
@@ -186,17 +168,13 @@ export const PokedexBagViewer: React.FC = () => {
         {/* Buscador Rápido */}
         {activeSection !== 'party' && (
           <div className="relative w-full">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-[#8A877E]" />
             <input
               type="text"
               placeholder="Buscar por nombre o tipo..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border outline-none font-sans ${
-                isLight
-                  ? 'bg-slate-50 border-black/30 text-slate-900 focus:border-black'
-                  : 'bg-slate-900 border-slate-700 text-slate-100 focus:border-emerald-500'
-              }`}
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-[#E8E5DD] outline-none font-sans bg-[#FAF9F5] text-[#1F1E1B] focus:border-[#D97043]"
             />
           </div>
         )}
@@ -216,24 +194,18 @@ export const PokedexBagViewer: React.FC = () => {
               <motion.div
                 key={idx}
                 whileHover={{ y: -3 }}
-                className={`p-3.5 rounded-2xl border flex flex-col justify-between transition-all ${
-                  isLight
-                    ? 'bg-[#FFFFFF] border-3 border-black shadow-[4px_4px_0_#000]'
-                    : 'bg-[#121214] border-2 border-slate-800 hover:border-emerald-500/60 shadow-lg'
-                }`}
+                className="p-3.5 rounded-2xl border border-[#E8E5DD] bg-white flex flex-col justify-between transition-all shadow-sm"
               >
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] px-2 py-0.5 rounded font-black bg-black/10">
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FAF9F5] border border-[#E8E5DD] text-[#706E66]">
                       SLOT #{idx + 1}
                     </span>
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-medium ${
                         isShiny
-                          ? 'bg-amber-400 text-black border border-black shadow-[1px_1px_0_#000]'
-                          : isLight
-                          ? 'bg-slate-200 text-black'
-                          : 'bg-slate-800 text-slate-300'
+                          ? 'bg-[#D4A359]/20 text-[#A6752C]'
+                          : 'bg-[#FAF9F5] text-[#D97043] border border-[#D97043]/20'
                       }`}
                     >
                       {isShiny ? '✨ SHINY' : `NV. ${pkmn.level || 12}`}
@@ -241,37 +213,33 @@ export const PokedexBagViewer: React.FC = () => {
                   </div>
 
                   {/* Escenario 3D del Sprite */}
-                  <div className="h-32 w-full flex items-center justify-center relative my-2 bg-gradient-to-b from-transparent via-black/5 to-black/15 rounded-xl overflow-hidden">
+                  <div className="h-32 w-full flex items-center justify-center relative my-2 bg-[#FAF9F5] rounded-xl border border-[#E8E5DD] overflow-hidden">
                     <img
                       src={POKEMON_ASSETS.getAnimatedSprite(speciesId, isShiny)}
                       alt={pkmn.name}
-                      className="h-24 w-24 object-contain filter drop-shadow-[0_10px_8px_rgba(0,0,0,0.4)] transition-transform hover:scale-125"
+                      className="h-24 w-24 object-contain filter drop-shadow-sm transition-transform hover:scale-125"
                       loading="lazy"
                     />
                   </div>
 
                   <div className="text-center">
-                    <h3 className="font-black text-sm uppercase tracking-wide">{pkmn.name}</h3>
+                    <h3 className="font-editorial font-semibold text-sm tracking-tight text-[#1F1E1B]">{pkmn.name}</h3>
                   </div>
                 </div>
 
                 {/* Barra de Salud Elástica */}
-                <div className="mt-3 pt-2 border-t border-black/10">
-                  <div className="flex items-center justify-between text-[10px] font-bold mb-1">
+                <div className="mt-3 pt-2 border-t border-[#F2EFE9]">
+                  <div className="flex items-center justify-between text-[10px] font-mono mb-1 text-[#706E66]">
                     <span className="flex items-center gap-1">
                       <Heart className="w-3 h-3 text-rose-500 fill-rose-500" />
                       <span>PS</span>
                     </span>
-                    <span>{pkmn.hp || 35} / {pkmn.maxHp || 35}</span>
+                    <span className="font-medium text-[#1F1E1B]">{pkmn.hp || 35} / {pkmn.maxHp || 35}</span>
                   </div>
-                  <div
-                    className={`h-2.5 rounded-full overflow-hidden border ${
-                      isLight ? 'bg-slate-200 border-black' : 'bg-slate-800 border-slate-700'
-                    }`}
-                  >
+                  <div className="h-2 rounded-full overflow-hidden bg-[#EAE7DF]">
                     <div
                       className={`h-full transition-all duration-500 ${
-                        hpPct > 50 ? 'bg-emerald-500' : hpPct > 20 ? 'bg-amber-500' : 'bg-rose-500'
+                        hpPct > 50 ? 'bg-[#6E8B68]' : hpPct > 20 ? 'bg-[#D97043]' : 'bg-rose-500'
                       }`}
                       style={{ width: `${hpPct}%` }}
                     />

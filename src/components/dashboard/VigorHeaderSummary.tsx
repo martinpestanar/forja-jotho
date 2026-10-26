@@ -55,28 +55,28 @@ export function VigorHeaderSummary({
       )}
 
       {/* Altar de Batalla Bento Card */}
-      <div className="rounded-2xl bg-gradient-to-br from-[#14171C] via-[#101318] to-[#0B0C0E] border border-[#C5A059]/40 p-4 space-y-3 shadow-[0_4px_0_0_#000]">
+      <div className="rounded-2xl bg-white border border-[#E8E5DD] p-4 space-y-3 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#C5A059]/20 border border-[#C5A059]/50 flex items-center justify-center text-[#C5A059]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#D97043]/10 border border-[#D97043]/20 flex items-center justify-center text-[#D97043]">
               <Swords className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xs font-black tracking-widest text-[#E2E8F0] uppercase">
-                  CAMPAÑA DE VIGOR
+                <h2 className="font-editorial text-sm font-semibold tracking-tight text-[#1F1E1B]">
+                  Mareas de Vigor
                 </h2>
                 {onOpenDatePicker && (
                   <button
                     onClick={onOpenDatePicker}
-                    className="text-[9px] font-mono text-[#C5A059] hover:text-amber-300 underline cursor-pointer"
+                    className="text-[10px] font-mono text-[#D97043] hover:underline cursor-pointer"
                   >
-                    {isPendingStart ? '⏳ Inicia pronto' : 'Configurar Inicio'}
+                    {isPendingStart ? '⏳ Inicia pronto' : 'Configurar'}
                   </button>
                 )}
               </div>
-              <span className="text-[10px] text-[#C5A059] font-mono">
-                {completedCount} de {totalCount} disciplinas forjadas
+              <span className="text-[11px] text-[#706E66] font-mono">
+                {completedCount} de {totalCount} disciplinas en flujo
               </span>
             </div>
           </div>
@@ -85,7 +85,7 @@ export function VigorHeaderSummary({
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={onOpenOracle}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#C5A059] to-amber-500 text-black text-xs font-black uppercase tracking-wider cursor-pointer shadow-[0_2px_0_0_#000] active:translate-y-0.5"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold cursor-pointer shadow-sm transition-all"
           >
             <Sparkles className="w-3.5 h-3.5 fill-current" />
             <span>Consultar</span>
@@ -93,52 +93,52 @@ export function VigorHeaderSummary({
         </div>
 
         {/* Barra de Progreso de Batalla */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-[10px] font-mono font-bold">
-            <span className="text-[#64748B]">AVANCE DIARIO</span>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] font-mono font-medium">
+            <span className="text-[#8A877E]">AVANCE DEL DÍA</span>
             <span
               className={
                 isAllDone
-                  ? 'text-emerald-400 font-black'
+                  ? 'text-[#5B7855] font-bold'
                   : percent >= 60
-                  ? 'text-amber-400'
-                  : 'text-rose-400'
+                  ? 'text-[#D97043] font-bold'
+                  : 'text-[#D9534F] font-bold'
               }
             >
-              {isAllDone ? '👑 100% VICTORIA' : `${percent}% VIGOR`}
+              {isAllDone ? '👑 100% CUMPLIDO' : `${percent}% VIGOR`}
             </span>
           </div>
 
-          <div className="w-full h-2.5 rounded-full bg-[#0B0C0E] border border-white/10 overflow-hidden relative p-[1px]">
+          <div className="w-full h-2 rounded-full bg-[#EAE7DF] overflow-hidden relative">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${percent}%` }}
               transition={{ type: 'spring', damping: 20, stiffness: 100 }}
               className={`h-full rounded-full ${
                 isAllDone
-                  ? 'bg-gradient-to-r from-emerald-500 via-amber-400 to-[#C5A059] shadow-[0_0_10px_rgba(197,160,89,0.8)]'
-                  : 'bg-gradient-to-r from-[#C5A059] to-amber-500'
+                  ? 'bg-gradient-to-r from-[#6E8B68] via-[#4A8B99] to-[#D97043]'
+                  : 'bg-gradient-to-r from-[#D97043] to-[#E07A4D]'
               }`}
             />
           </div>
         </div>
 
         {/* Resumen de Recursos Cosechados Hoy */}
-        <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono font-black">
-          <div className="p-2 rounded-xl bg-[#0B0C0E] border border-[#C5A059]/30 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[#C5A059]">
+        <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono">
+          <div className="p-2.5 rounded-xl bg-[#F7F5F0] border border-[#E8E5DD] flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[#A6752C]">
               <Coins className="w-4 h-4" />
-              <span>ORO HOY:</span>
+              <span className="font-medium">CONCHAS:</span>
             </div>
-            <span className="text-[#E2E8F0]">+{earnedGoldToday}</span>
+            <span className="text-[#1F1E1B] font-bold tabular-nums">+{earnedGoldToday}</span>
           </div>
 
-          <div className="p-2 rounded-xl bg-[#0B0C0E] border border-emerald-500/30 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-emerald-400">
+          <div className="p-2.5 rounded-xl bg-[#F7F5F0] border border-[#E8E5DD] flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-[#5B7855]">
               <BatteryCharging className="w-4 h-4" />
-              <span>GBA EXTRA:</span>
+              <span className="font-medium">FLUJO GBA:</span>
             </div>
-            <span className="text-[#E2E8F0]">+{earnedBatteryToday}m</span>
+            <span className="text-[#1F1E1B] font-bold tabular-nums">+{earnedBatteryToday}m</span>
           </div>
         </div>
       </div>

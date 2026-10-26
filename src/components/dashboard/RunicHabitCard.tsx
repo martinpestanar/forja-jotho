@@ -1,21 +1,18 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-  CheckCircle2, 
+  Check, 
   ChevronRight, 
-  Sparkles, 
-  Flame, 
+  Waves, 
+  Sun, 
   Dumbbell, 
   Video, 
   Brain, 
-  BookOpen, 
   Code2, 
-  Zap, 
-  ShieldCheck, 
   Coins, 
-  Clock 
+  Sparkles 
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { soundFx } from '@/lib/soundFx';
@@ -38,81 +35,66 @@ interface RunicHabitCardProps {
   onSeal: (habit: HabitVisualData, e: React.MouseEvent) => void;
 }
 
-// Helper para clasificar tema visual por palabras clave o tipo
+// Clasificación refinada estilo Anthropic x Johto Surf
 function getHabitTheme(h: HabitVisualData) {
   const text = (h.title + ' ' + (h.subtitle || '')).toLowerCase();
 
-  // 1. Físico / Entrenamiento (Fuego Rojo / Rubí)
+  // 1. Físico / Entrenamiento (Sol Terracota)
   if (text.match(/(pesas|gym|gimnasio|correr|calistenia|cuerda|crossfit|boxeo|cardio|entrenar|ejercicio|flexiones|burpees|frente físico)/)) {
     return {
       type: 'physical',
       icon: Dumbbell,
       badgeText: 'VIGOR FÍSICO',
-      badgeColor: 'text-rose-400 bg-rose-500/15 border-rose-500/40',
-      accentGlow: 'from-rose-500/20 via-amber-500/10 to-transparent',
-      borderColor: 'border-rose-500/40 hover:border-rose-500/80',
-      fillGradient: 'from-rose-600 via-amber-500 to-yellow-400',
-      iconBg: 'bg-rose-500/20 text-rose-400 border-rose-500/40',
-      statBadge: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+      badgeColor: 'text-[#D97043] bg-[#D97043]/10 border-[#D97043]/20',
+      iconBg: 'bg-[#D97043]/15 text-[#D97043] border-[#D97043]/30',
+      accentColor: '#D97043',
     };
   }
 
-  // 2. Negocio / TikTok / Marca / SaaS (Oro de Johto)
+  // 2. Negocio / Creación / Provisión (Campana Oleaje Dorada)
   if (text.match(/(tiktok|video|grabar|editar|guion|leads|prospectar|saas|ventas|publicar|cliente|bastión)/)) {
     return {
       type: 'business',
       icon: Video,
-      badgeText: 'PROVISIÓN TRIBAL',
-      badgeColor: 'text-amber-400 bg-amber-500/15 border-amber-500/40',
-      accentGlow: 'from-amber-500/20 via-[#C5A059]/10 to-transparent',
-      borderColor: 'border-[#C5A059]/50 hover:border-[#C5A059]',
-      fillGradient: 'from-[#C5A059] via-amber-500 to-yellow-300',
-      iconBg: 'bg-[#C5A059]/20 text-[#C5A059] border-[#C5A059]/50',
-      statBadge: 'border-amber-500/40 text-amber-400 bg-amber-500/10',
+      badgeText: 'CREACIÓN & FLUJO',
+      badgeColor: 'text-[#D4A359] bg-[#D4A359]/10 border-[#D4A359]/20',
+      iconBg: 'bg-[#D4A359]/15 text-[#D4A359] border-[#D4A359]/30',
+      accentColor: '#D4A359',
     };
   }
 
-  // 3. Mental / Meditación / Estoicismo (Azul Zafiro / Glacial)
+  // 3. Mental / Meditación / Santuario (Marea Pacífica Azul)
   if (text.match(/(medit|leer|lectura|estudi|libro|enfoque|filosofia|santuario)/)) {
     return {
       type: 'mind',
       icon: Brain,
       badgeText: 'SANTUARIO MENTAL',
-      badgeColor: 'text-cyan-400 bg-cyan-500/15 border-cyan-500/40',
-      accentGlow: 'from-cyan-500/20 via-blue-500/10 to-transparent',
-      borderColor: 'border-cyan-500/40 hover:border-cyan-500/80',
-      fillGradient: 'from-cyan-500 via-blue-500 to-indigo-400',
-      iconBg: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40',
-      statBadge: 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10',
+      badgeColor: 'text-[#4A8B99] bg-[#4A8B99]/10 border-[#4A8B99]/20',
+      iconBg: 'bg-[#4A8B99]/15 text-[#4A8B99] border-[#4A8B99]/30',
+      accentColor: '#4A8B99',
     };
   }
 
-  // 4. Código / Idiomas / Skills (Esmeralda / Jade)
+  // 4. Código / Idiomas / Expansión (Verde Salvia Alola)
   if (text.match(/(duolingo|ingles|idioma|codigo|programar|antigravity|skill|curso)/)) {
     return {
       type: 'expansion',
       icon: Code2,
-      badgeText: 'EXPANSIÓN DE PODER',
-      badgeColor: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/40',
-      accentGlow: 'from-emerald-500/20 via-teal-500/10 to-transparent',
-      borderColor: 'border-emerald-500/40 hover:border-emerald-500/80',
-      fillGradient: 'from-emerald-500 via-teal-400 to-cyan-300',
-      iconBg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
-      statBadge: 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10',
+      badgeText: 'EXPANSIÓN',
+      badgeColor: 'text-[#6E8B68] bg-[#6E8B68]/10 border-[#6E8B68]/20',
+      iconBg: 'bg-[#6E8B68]/15 text-[#6E8B68] border-[#6E8B68]/30',
+      accentColor: '#6E8B68',
     };
   }
 
-  // 5. Default Vigor
+  // 5. Default Vigor / Marea
   return {
     type: 'default',
-    icon: Zap,
-    badgeText: 'FORJA DE CARÁCTER',
-    badgeColor: 'text-[#C5A059] bg-[#C5A059]/15 border-[#C5A059]/40',
-    accentGlow: 'from-[#C5A059]/20 to-transparent',
-    borderColor: 'border-[#C5A059]/30 hover:border-[#C5A059]/70',
-    fillGradient: 'from-[#C5A059] via-amber-500 to-yellow-400',
-    iconBg: 'bg-[#C5A059]/20 text-[#C5A059] border-[#C5A059]/40',
-    statBadge: 'border-[#C5A059]/40 text-[#C5A059] bg-[#C5A059]/10',
+    icon: Waves,
+    badgeText: 'HÁBITO SOLAR',
+    badgeColor: 'text-[#D97043] bg-[#D97043]/10 border-[#D97043]/20',
+    iconBg: 'bg-[#D97043]/15 text-[#D97043] border-[#D97043]/30',
+    accentColor: '#D97043',
   };
 }
 
@@ -124,7 +106,7 @@ export function RunicHabitCard({ habit, onSeal }: RunicHabitCardProps) {
   const theme = getHabitTheme(habit);
   const MainIcon = theme.icon;
 
-  // Iniciar presión sostenida de bronce fundido
+  // Presión sostenida suave de flujo
   const handleTouchStart = (e: React.SyntheticEvent) => {
     if (habit.completed || habit.requires_proof) return;
 
@@ -133,11 +115,11 @@ export function RunicHabitCard({ habit, onSeal }: RunicHabitCardProps) {
     clearInterval(holdIntervalRef.current);
 
     holdIntervalRef.current = setInterval(() => {
-      current += 12;
+      current += 10;
       setHoldProgress(current);
 
       if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate(28);
+        navigator.vibrate(20);
       }
 
       if (current >= 100) {
@@ -146,7 +128,7 @@ export function RunicHabitCard({ habit, onSeal }: RunicHabitCardProps) {
         setHoldProgress(0);
         triggerCompletion();
       }
-    }, 70);
+    }, 65);
   };
 
   const handleTouchEnd = () => {
@@ -160,10 +142,10 @@ export function RunicHabitCard({ habit, onSeal }: RunicHabitCardProps) {
     soundFx.playCoin();
 
     confetti({
-      particleCount: 40,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#C5A059', '#F59E0B', '#22C55E', '#EF4444'],
+      particleCount: 35,
+      spread: 60,
+      origin: { y: 0.7 },
+      colors: ['#D97043', '#4A8B99', '#D4A359', '#6E8B68'],
     });
 
     onSeal(habit, e);
@@ -179,7 +161,7 @@ export function RunicHabitCard({ habit, onSeal }: RunicHabitCardProps) {
 
   return (
     <motion.div
-      whileTap={{ scale: habit.completed ? 1 : 0.98 }}
+      whileTap={{ scale: habit.completed ? 1 : 0.99 }}
       onClick={handleClick}
       onMouseDown={handleTouchStart}
       onMouseUp={handleTouchEnd}
@@ -188,38 +170,32 @@ export function RunicHabitCard({ habit, onSeal }: RunicHabitCardProps) {
       onTouchEnd={handleTouchEnd}
       className={`relative overflow-hidden rounded-2xl border transition-all select-none p-3.5 ${
         habit.completed
-          ? 'bg-gradient-to-r from-[#12161f] to-[#0c0f14] border-emerald-500/40 opacity-80 shadow-[0_2px_0_0_#000]'
-          : `bg-[#14171C] ${theme.borderColor} shadow-[0_4px_0_0_#000] active:translate-y-0.5 active:shadow-[0_2px_0_0_#000]`
+          ? 'bg-[#181918]/80 border-[#6E8B68]/30 opacity-75'
+          : 'bg-[#1D1E1D] border-white/[0.08] hover:border-[#D97043]/30 active:border-[#D97043]/50'
       }`}
     >
-      {/* Fondo de Brillo y Gradiente Rúnico */}
-      <div
-        className={`absolute inset-0 bg-gradient-to-r ${theme.accentGlow} opacity-60 pointer-events-none`}
-      />
-
-      {/* Relleno de Metal Fundido durante la presión sostenida */}
+      {/* Relleno de Flujo durante la presión sostenida */}
       {holding && (
         <div
-          className={`absolute inset-0 bg-gradient-to-r ${theme.fillGradient} opacity-30 pointer-events-none transition-all duration-75`}
+          className="absolute inset-0 bg-[#D97043]/20 pointer-events-none transition-all duration-75"
           style={{ width: `${holdProgress}%` }}
         />
       )}
 
       <div className="relative z-10 flex items-center justify-between gap-3">
-        {/* Lado Izquierdo: Icono Grande Ilustrado + Detalles */}
+        {/* Lado Izquierdo: Icono Minimalista + Contenido */}
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          {/* Avatar Icono Rúnico */}
           <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center border shrink-0 shadow-[0_2px_6px_rgba(0,0,0,0.5)] ${
+            className={`w-11 h-11 rounded-xl flex items-center justify-center border shrink-0 transition-colors ${
               habit.completed
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                ? 'bg-[#6E8B68]/15 text-[#6E8B68] border-[#6E8B68]/40'
                 : theme.iconBg
             }`}
           >
             {habit.completed ? (
-              <CheckCircle2 className="w-6 h-6 animate-pulse" />
+              <Check className="w-5 h-5 stroke-[2.5]" />
             ) : (
-              <MainIcon className="w-6 h-6 stroke-[2.2]" />
+              <MainIcon className="w-5 h-5 stroke-[1.9]" />
             )}
           </div>
 
@@ -227,76 +203,76 @@ export function RunicHabitCard({ habit, onSeal }: RunicHabitCardProps) {
           <div className="space-y-1 flex-1 min-w-0 pr-1">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span
-                className={`text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded-full border ${theme.badgeColor}`}
+                className={`text-[9px] font-mono font-medium uppercase px-2 py-0.5 rounded-full border ${theme.badgeColor}`}
               >
                 {theme.badgeText}
               </span>
 
               {habit.is_custom && (
-                <span className="text-[8px] px-1.5 py-0.2 bg-white/5 border border-white/10 rounded text-[#C5A059] font-mono font-bold">
+                <span className="text-[8px] px-1.5 py-0.2 bg-white/5 border border-white/10 rounded text-[#D4A359] font-mono">
                   ORÁCULO
                 </span>
               )}
 
               {habit.requires_proof && !habit.completed && (
-                <span className="text-[8px] px-1.5 py-0.2 bg-amber-500/15 border border-amber-500/40 rounded text-amber-400 font-mono font-bold">
-                  PRUEBA
+                <span className="text-[8px] px-1.5 py-0.2 bg-[#4A8B99]/15 border border-[#4A8B99]/30 rounded text-[#4A8B99] font-mono font-medium">
+                  VERIFICAR
                 </span>
               )}
             </div>
 
             <h3
-              className={`text-sm font-black tracking-wide truncate ${
-                habit.completed ? 'text-emerald-300 line-through' : 'text-[#E2E8F0]'
+              className={`text-sm font-medium tracking-tight truncate ${
+                habit.completed ? 'text-[#969894] line-through' : 'text-[#EFECE6]'
               }`}
             >
               {habit.title}
             </h3>
 
-            <p className="text-[11px] text-[#64748B] leading-tight line-clamp-1">
+            <p className="text-[11px] text-[#969894] leading-tight line-clamp-1">
               {habit.subtitle}
             </p>
 
-            {/* Recompensas Visuales estilo RPG Badges */}
+            {/* Recompensas Minimalistas */}
             <div className="flex items-center gap-2 pt-0.5">
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#0B0C0E] border border-[#C5A059]/40 text-[#C5A059] text-[10px] font-mono font-black shadow-[0_1px_0_0_#000]">
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#141514] border border-white/[0.06] text-[#D4A359] text-[10px] font-mono">
                 <Coins className="w-3 h-3" />
-                <span>+{habit.gold_reward} ORO</span>
+                <span className="tabular-nums">+{habit.gold_reward}</span>
               </div>
 
               {habit.game_battery_reward > 0 && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#0B0C0E] border border-emerald-500/40 text-emerald-400 text-[10px] font-mono font-black shadow-[0_1px_0_0_#000]">
-                  <Flame className="w-3 h-3 fill-current" />
-                  <span>+{habit.game_battery_reward}m GBA</span>
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#141514] border border-white/[0.06] text-[#6E8B68] text-[10px] font-mono">
+                  <Sun className="w-3 h-3" strokeWidth={2} />
+                  <span className="tabular-nums">+{habit.game_battery_reward}m</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Lado Derecho: Botón de Sello Rúnico 3D */}
+        {/* Lado Derecho: Botón de Flujo / Sello Táctil */}
         <div className="shrink-0">
           {habit.completed ? (
-            <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/60 flex flex-col items-center justify-center text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
-              <Sparkles className="w-5 h-5 fill-current" />
-              <span className="text-[7px] font-black uppercase tracking-tighter">FORJADO</span>
+            <div className="w-10 h-10 rounded-xl bg-[#6E8B68]/15 border border-[#6E8B68]/40 flex flex-col items-center justify-center text-[#6E8B68]">
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span className="text-[7px] font-mono uppercase tracking-tight mt-0.5">LISTO</span>
             </div>
           ) : habit.requires_proof ? (
-            <div className="w-11 h-11 rounded-2xl bg-[#0B0C0E] border-2 border-amber-500/50 flex flex-col items-center justify-center text-amber-400 shadow-[0_3px_0_0_#000] active:translate-y-0.5">
-              <ChevronRight className="w-5 h-5 stroke-[3]" />
-              <span className="text-[7px] font-black uppercase">REGISTRAR</span>
+            <div className="w-10 h-10 rounded-xl bg-[#141514] border border-[#4A8B99]/40 flex flex-col items-center justify-center text-[#4A8B99] cursor-pointer active:scale-95 transition-all">
+              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+              <span className="text-[7px] font-mono uppercase">COMPROBAR</span>
             </div>
           ) : (
             <div
-              className={`w-11 h-11 rounded-2xl border-2 flex flex-col items-center justify-center transition-all shadow-[0_3px_0_0_#000] cursor-pointer ${
+              className={`w-10 h-10 rounded-xl border flex flex-col items-center justify-center transition-all cursor-pointer ${
                 holding
-                  ? 'bg-gradient-to-br from-[#C5A059] to-amber-500 border-[#C5A059] text-black scale-95 shadow-none'
-                  : 'bg-[#0B0C0E] border-[#C5A059]/60 text-[#C5A059] hover:border-[#C5A059]'
+                  ? 'bg-[#D97043] border-[#D97043] text-[#141514] scale-95'
+                  : 'bg-[#141514] border-white/[0.1] text-[#D97043] hover:border-[#D97043]/50'
               }`}
             >
-              <Sparkles className="w-4 h-4 fill-current animate-pulse" />
-              <span className="text-[8px] font-black leading-none mt-0.5">
-                {holding ? `${holdProgress}%` : 'SELLAR'}
+              <Sparkles className="w-4 h-4" />
+              <span className="text-[8px] font-mono font-medium leading-none mt-0.5">
+                {holding ? `${holdProgress}%` : 'FLUIR'}
               </span>
             </div>
           )}

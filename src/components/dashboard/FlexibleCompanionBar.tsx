@@ -74,11 +74,11 @@ export function FlexibleCompanionBar({
   const tone = getCompanionTone();
 
   return (
-    <div className={`rounded-2xl border p-3.5 transition-all shadow-[0_4px_12px_rgba(0,0,0,0.5)] ${tone.color}`}>
-      <div className="flex items-center justify-between gap-2 mb-1.5">
+    <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3.5 space-y-2.5 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <Compass className="w-4 h-4 shrink-0" />
-          <span className="text-[10px] font-black uppercase tracking-wider font-mono truncate">
+          <Compass className="w-4 h-4 shrink-0 text-[#D97043]" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider font-mono text-[#D97043] truncate">
             {tone.title}
           </span>
         </div>
@@ -90,9 +90,9 @@ export function FlexibleCompanionBar({
                 soundFx.playClick();
                 onOpenTutorial();
               }}
-              className="text-[9px] px-2 py-0.5 rounded-lg bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 text-amber-300 font-mono font-bold uppercase transition-colors"
+              className="text-[10px] px-2 py-0.5 rounded-lg bg-[#FAF9F5] border border-[#E8E5DD] text-[#706E66] hover:text-[#1F1E1B] font-mono transition-colors"
             >
-              ❓ Guía
+              📖 Guía
             </button>
           )}
           {onOpenJournal && (
@@ -101,7 +101,7 @@ export function FlexibleCompanionBar({
                 soundFx.playClick();
                 onOpenJournal();
               }}
-              className="text-[9px] px-2 py-0.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 hover:bg-indigo-500/30 text-indigo-300 font-mono font-bold uppercase transition-colors"
+              className="text-[10px] px-2 py-0.5 rounded-lg bg-[#FAF9F5] border border-[#E8E5DD] text-[#706E66] hover:text-[#1F1E1B] font-mono transition-colors"
             >
               ✍️ Diario
             </button>
@@ -111,28 +111,28 @@ export function FlexibleCompanionBar({
               soundFx.playClick();
               onOpenGrimoire();
             }}
-            className="text-[9px] px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-mono font-bold uppercase transition-colors shrink-0"
+            className="text-[10px] px-2 py-0.5 rounded-lg bg-[#FAF9F5] border border-[#E8E5DD] text-[#D97043] font-mono font-medium hover:bg-[#F2EFE9] transition-colors shrink-0"
           >
-            📖 Grimorio
+            📜 Grimorio
           </button>
         </div>
       </div>
 
-      <p className="text-xs text-[#CBD5E1] font-mono leading-tight mb-2.5">
+      <p className="font-editorial text-xs text-[#1F1E1B] leading-relaxed">
         {tone.message}
       </p>
 
-      {/* Barra de Progreso Fluida (Sin estrés de reloj) */}
+      {/* Barra de Progreso Fluida Claude */}
       <div className="flex items-center gap-2">
-        <div className="flex-1 h-2 rounded-full bg-black/40 overflow-hidden p-0.5 border border-white/10">
+        <div className="flex-1 h-2 rounded-full bg-[#EAE7DF] overflow-hidden">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-[#C5A059] to-amber-400"
+            className="h-full rounded-full bg-gradient-to-r from-[#6E8B68] via-[#4A8B99] to-[#D97043]"
             initial={{ width: 0 }}
             animate={{ width: `${percent}%` }}
             transition={{ duration: 0.5, ease: 'easeOut' }}
           />
         </div>
-        <span className="text-[10px] font-mono font-bold text-[#E2E8F0] shrink-0">
+        <span className="text-[10px] font-mono font-medium text-[#706E66] shrink-0">
           {completedCount}/{totalCount} ({percent}%)
         </span>
       </div>

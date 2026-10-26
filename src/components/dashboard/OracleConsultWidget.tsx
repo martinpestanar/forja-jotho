@@ -58,7 +58,7 @@ export const OracleConsultWidget: React.FC<OracleConsultWidgetProps> = ({ profil
 
   return (
     <>
-      {/* Botón flotante estilo Pokégear Nintendo */}
+      {/* Botón flotante estilo Claude Pill */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -66,60 +66,58 @@ export const OracleConsultWidget: React.FC<OracleConsultWidgetProps> = ({ profil
           soundFx.playClick();
           setIsOpen(true);
         }}
-        className="fixed bottom-20 right-4 z-40 p-3 rounded-full bg-[#14171C] border-2 border-[#C5A059] text-[#C5A059] shadow-[0_4px_15px_rgba(197,160,89,0.4)] cursor-pointer flex items-center gap-2 group active:translate-y-0.5"
+        className="fixed bottom-20 right-4 z-40 px-3.5 py-2 rounded-full bg-white border border-[#E8E5DD] text-[#1F1E1B] shadow-[0_4px_16px_rgba(0,0,0,0.08)] cursor-pointer flex items-center gap-2 hover:border-[#D97043]/40 transition-all active:scale-95"
         title="Consultar al Oráculo de Johto"
       >
-        <BrainCircuit className="w-5 h-5 animate-pulse" />
-        <span className="hidden sm:inline text-xs font-mono font-black uppercase text-[#E2E8F0]">
-          Oráculo
-        </span>
+        <BrainCircuit className="w-4 h-4 text-[#D97043]" />
+        <span className="font-mono text-xs font-semibold text-[#1F1E1B]">Oráculo</span>
       </motion.button>
 
-      {/* Modal / Cuadro de Diálogo RPG */}
+      {/* Modal / Cuadro de Diálogo Estilo Claude Warm Light */}
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 select-none font-sans">
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 select-none font-sans">
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 15 }}
+              initial={{ scale: 0.92, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 15 }}
-              className="max-w-sm w-full bg-[#14171C] rounded-2xl border-2 border-[#C5A059] p-5 space-y-4 shadow-[0_10px_35px_rgba(0,0,0,0.9)] text-[#E2E8F0]"
+              exit={{ scale: 0.92, opacity: 0, y: 15 }}
+              className="max-w-sm w-full bg-white rounded-2xl border border-[#E8E5DD] p-5 space-y-4 shadow-[0_16px_40px_rgba(0,0,0,0.12)] text-[#1F1E1B]"
             >
               {/* Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E8E5DD]">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-[#C5A059]/15 text-[#C5A059]">
+                  <div className="p-1.5 rounded-lg bg-[#D97043]/10 text-[#D97043]">
                     <Sparkles className="w-4 h-4 fill-current" />
                   </div>
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-wider text-[#E2E8F0]">
+                    <h3 className="font-editorial text-sm font-semibold tracking-tight text-[#1F1E1B]">
                       El Oráculo de Johto
                     </h3>
-                    <span className="text-[10px] text-[#C5A059] font-mono block">
+                    <span className="text-[10px] text-[#706E66] font-mono block">
                       Tótem {totem} • Memoria Activa
                     </span>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="text-[#64748B] hover:text-[#E2E8F0] p-1 cursor-pointer transition-colors"
+                  className="text-[#8A877E] hover:text-[#1F1E1B] p-1 cursor-pointer transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Cuadro de Diálogo Estilo Nintendo RPG (Máximo 2 líneas teletipo) */}
-              <div className="p-3.5 rounded-xl bg-[#0B0C0E] border-2 border-[#C5A059]/40 text-xs text-[#CBD5E1] leading-relaxed font-mono shadow-inner min-h-[70px] flex items-center">
+              {/* Cuadro de Diálogo Estilo Carta Claude */}
+              <div className="p-3.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] text-xs text-[#1F1E1B] leading-relaxed font-editorial min-h-[70px] flex items-center">
                 {loading ? (
-                  <div className="flex items-center gap-2 text-[#C5A059] animate-pulse">
+                  <div className="flex items-center gap-2 text-[#D97043] font-mono">
                     <Sparkles className="w-4 h-4 animate-spin" />
-                    <span>El Oráculo está consultando las runas...</span>
+                    <span>El Oráculo está meditando...</span>
                   </div>
                 ) : (
                   <span>
                     {oracleReply
                       ? `"${oracleReply}"`
-                      : `"${profileData?.leader_name || 'Guerrero'}, el Tótem ${totem} observa tu marcha. ¿Qué duda o asedio inquieta hoy tu disciplina?"`}
+                      : `"${profileData?.leader_name || 'Entrenador'}, el Tótem ${totem} observa tu marcha. ¿Qué duda o marea inquieta hoy tu disciplina?"`}
                   </span>
                 )}
               </div>
@@ -130,14 +128,14 @@ export const OracleConsultWidget: React.FC<OracleConsultWidgetProps> = ({ profil
                   type="text"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Ej. ¿Cómo resisto el cansancio hoy?"
+                  placeholder="Ej. ¿Cómo entro en la zona de flujo hoy?"
                   disabled={loading}
-                  className="flex-1 bg-[#0B0C0E] border border-white/10 rounded-xl px-3 py-2 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059] font-sans"
+                  className="flex-1 bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl px-3 py-2 text-xs text-[#1F1E1B] focus:outline-none focus:border-[#D97043] font-sans"
                 />
                 <button
                   type="submit"
                   disabled={loading || !prompt.trim()}
-                  className="px-3.5 py-2 rounded-xl bg-[#C5A059] hover:bg-[#d4b069] text-black font-black text-xs cursor-pointer disabled:opacity-40 transition-all border border-black shadow-[0_2px_0_0_#000] active:translate-y-0.5"
+                  className="px-3.5 py-2 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white font-semibold text-xs cursor-pointer disabled:opacity-40 transition-all shadow-sm active:scale-95"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>

@@ -2,22 +2,41 @@
 
 @layer base {
   :root {
-    /* Paleta Oficial VALDR: FORJA JOHTO */
-    --color-abyss: #0B0C0E;        /* Fondo base profundo */
-    --color-volcanic: #14171C;     /* Tarjetas táctiles y paneles */
-    --color-bronze: #C5A059;       /* Acentos rúnicos y CTAs */
-    --color-blood: #D93829;        /* Alertas y peaje de la bestia */
-    --color-glacial: #4E9F9F;      /* Templanza y escudos limpios */
-    --color-silver: #E2E8F0;       /* Tipografía principal */
-    --color-ash: #64748B;          /* Descripciones secundarias */
+    /* 🌺 PALETA OFICIAL CLAUDE / ANTHROPIC WARM LIGHT (100% LIGHT THEME OBLIGATORIO) */
+    --color-cream-bg: #FAF9F5;         /* Fondo pergamino Claude cálido oficial */
+    --color-cream-surface: #FFFFFF;    /* Tarjetas blancas nítidas con sombra suave */
+    --color-cream-muted: #F2EFE9;      /* Contenedores secundarios y badges suaves */
+    --color-cream-border: #E8E5DD;     /* Bordes sutiles ultra-finos de 1px */
+    --color-cream-border-strong: #D5D1C5;
 
-    --bg-main: var(--color-abyss);
-    --text-main: var(--color-silver);
+    /* Acentos Claude & Johto Coastal */
+    --color-sun-terracotta: #D97043;   /* Terracota Claude oficial */
+    --color-pacific-swell: #4A8B99;    /* Marea Pacífica */
+    --color-palm-sage: #6E8B68;        /* Salvia Alola / Éxito */
+    --color-tidal-bell: #C49347;       /* Campana de oro / Pokédólares */
+    --color-coral-flare: #D9534F;      /* Alertas */
+
+    /* Tipografía */
+    --color-text-primary: #1F1E1B;     /* Carbón cálido suave (lectura relajante) */
+    --color-text-secondary: #5E5C56;   /* Gris cálido secundario */
+    --color-text-muted: #8A877E;       /* Metadatos */
+
+    /* RETROCOMPATIBILIDAD CON COMPONENTES EXISTENTES EN LIGHT MODE */
+    --color-abyss: var(--color-cream-bg);
+    --color-volcanic: var(--color-cream-surface);
+    --color-bronze: var(--color-sun-terracotta);
+    --color-blood: var(--color-coral-flare);
+    --color-glacial: var(--color-pacific-swell);
+    --color-silver: var(--color-text-primary);
+    --color-ash: var(--color-text-secondary);
+
+    --bg-main: var(--color-cream-bg);
+    --text-main: var(--color-text-primary);
   }
 
   body {
-    background-color: var(--color-abyss);
-    color: var(--color-silver);
+    background-color: var(--color-cream-bg);
+    color: var(--color-text-primary);
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
     margin: 0;
     padding: 0;
@@ -25,52 +44,68 @@
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
+
+  .font-editorial {
+    font-family: var(--font-lora), Georgia, serif;
+  }
 }
 
-/* Tarjeta Táctica de la Forja */
-.valdr-card {
-  background-color: #14171C;
-  border: 1px solid rgba(197, 160, 89, 0.2);
+/* 🐚 COMPONENTES CLAUDE WARM LIGHT */
+.coastal-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-cream-border);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.coastal-card:hover {
+  border-color: var(--color-cream-border-strong);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.coastal-button-sun {
+  background-color: #D97043;
+  color: #FFFFFF;
+  font-weight: 600;
   border-radius: 0.75rem;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(217, 112, 67, 0.25);
+}
+
+.coastal-button-sun:hover {
+  background-color: #CC6437;
+}
+
+.coastal-button-sun:active {
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+/* TARJETAS COMPATIBLES VALDR EN LIGHT */
+.valdr-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-cream-border);
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .valdr-card:hover {
-  border-color: rgba(197, 160, 89, 0.45);
+  border-color: var(--color-cream-border-strong);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
-/* Botón Rúnico */
 .valdr-button-bronze {
-  background: linear-gradient(180deg, #D4AF37 0%, #A67C1E 100%);
-  color: #0B0C0E;
-  font-weight: 700;
-  border: 1px solid #E5C158;
-  border-radius: 0.5rem;
+  background-color: #D97043;
+  color: #FFFFFF;
+  font-weight: 600;
+  border-radius: 0.625rem;
   transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(217, 112, 67, 0.2);
 }
 
 .valdr-button-bronze:active {
   transform: scale(0.98);
-  opacity: 0.9;
-}
-
-/* Bordes Glaciales de Templanza */
-.valdr-glacial-glow {
-  border-color: rgba(78, 159, 159, 0.4);
-  box-shadow: 0 0 15px rgba(78, 159, 159, 0.15);
-}
-
-/* Alerta de Asedio / Fuego Sangre */
-.valdr-blood-pulse {
-  border-color: rgba(217, 56, 41, 0.6);
-  animation: pulse-blood 2s infinite ease-in-out;
-}
-
-@keyframes pulse-blood {
-  0%, 100% {
-    box-shadow: 0 0 8px rgba(217, 56, 41, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 20px rgba(217, 56, 41, 0.6);
-  }
+  opacity: 0.95;
 }
