@@ -57,6 +57,11 @@ export class PokemonMemoryBridge {
     this.userId = userId;
   }
 
+  /** Actualiza el identificador de usuario activo */
+  public setUserId(newUserId: string): void {
+    this.userId = newUserId;
+  }
+
   /** Actualiza el nombre del slot activo para sincronizar con Supabase Storage */
   public setActiveSlot(slotName: string): void {
     this._activeSlot = slotName;
@@ -102,6 +107,22 @@ export class PokemonMemoryBridge {
         if (!fallbackRes.error && fallbackRes.data) {
           data = fallbackRes.data;
           error = null;
+        }
+      }
+
+      // Fallback a guest-trainer-id si el usuario recién se autenticó y aún no tiene .sav en su carpeta
+      if ((error || !data) && this.userId !== 'guest-trainer-id') {
+        const guestPath = `guest-trainer-id/${slotName || this._activeSlot}`;
+        const guestRes = await supabase.storage.from(SAV_BUCKET).download(guestPath);
+        if (!guestRes.error && guestRes.data) {
+          data = guestRes.data;
+          error = null;
+        } else {
+          const guestFallback = await supabase.storage.from(SAV_BUCKET).download('guest-trainer-id/slot_1.sav');
+          if (!guestFallback.error && guestFallback.data) {
+            data = guestFallback.data;
+            error = null;
+          }
         }
       }
 

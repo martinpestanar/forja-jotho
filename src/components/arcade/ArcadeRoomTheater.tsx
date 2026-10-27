@@ -426,10 +426,10 @@ export const ArcadeRoomTheater: React.FC = () => {
           }`}
         >
           <div
-            className={`w-full h-full rounded-2xl p-2 sm:p-3 flex flex-col border shadow-2xl overflow-hidden transition-colors ${
+            className={`w-full h-full rounded-none md:rounded-2xl p-0 md:p-2.5 flex flex-col border-0 md:border shadow-none md:shadow-2xl overflow-hidden transition-colors ${
               isLight
-                ? 'bg-[#EAE6DD] border-4 border-black shadow-[6px_6px_0_#000]'
-                : 'bg-[#121214] border-2 border-emerald-500/40 shadow-[0_0_30px_rgba(34,197,94,0.15)]'
+                ? 'bg-transparent md:bg-[#EAE6DD] md:border-4 md:border-black md:shadow-[6px_6px_0_#000]'
+                : 'bg-transparent md:bg-[#121214] md:border-2 md:border-emerald-500/40 md:shadow-[0_0_30px_rgba(34,197,94,0.15)]'
             }`}
           >
             {isArcadeOpen && <GbaPanel />}

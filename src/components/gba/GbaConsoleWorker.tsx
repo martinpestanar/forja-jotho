@@ -25,11 +25,48 @@ import {
   RotateCcw,
   X,
   Sliders,
+  Zap,
 } from 'lucide-react';
 
 const ROM_PATH_VFS = '/data/games/pokemonHnS.gba';
 const SAV_PATH_VFS = '/data/saves/pokemonHnS.sav';
 const SAV_BUCKET = 'gba-saves';
+
+// Clave local para redundancia de partidas en el navegador del usuario
+const LOCAL_SAV_KEY_PREFIX = 'syndex_gba_sav_';
+
+function saveLocalBackup(slot: string, data: Uint8Array): void {
+  if (typeof window === 'undefined') return;
+  try {
+    let binary = '';
+    const len = data.byteLength;
+    for (let i = 0; i < len; i += 8192) {
+      binary += String.fromCharCode.apply(null, Array.from(data.subarray(i, Math.min(i + 8192, len))));
+    }
+    const b64 = btoa(binary);
+    localStorage.setItem(`${LOCAL_SAV_KEY_PREFIX}${slot}`, b64);
+    localStorage.setItem(`${LOCAL_SAV_KEY_PREFIX}time_${slot}`, new Date().toISOString());
+  } catch (e) {
+    console.warn('[GBA] Error en respaldo local:', e);
+  }
+}
+
+function loadLocalBackup(slot: string): Uint8Array | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const b64 = localStorage.getItem(`${LOCAL_SAV_KEY_PREFIX}${slot}`);
+    if (!b64) return null;
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.length >= 0x1C000 ? bytes : null;
+  } catch (e) {
+    console.warn('[GBA] Error cargando respaldo local:', e);
+    return null;
+  }
+}
 
 interface SaveSlotInfo {
   id: string;
@@ -149,10 +186,40 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
   const [rebindingAction, setRebindingAction] = useState<string | null>(null);
 
+  // Escala de pantalla en móviles: 'fit' (relación 3:2 nativa GBA) o 'wide' (pantalla ancha sin bordes)
+  const [screenScaleMode, setScreenScaleMode] = useState<'fit' | 'wide'>('wide');
+
+  useEffect(() => {
+    try {
+      const savedMode = localStorage.getItem('syndex_screen_scale_mode');
+      if (savedMode === 'fit' || savedMode === 'wide') {
+        setScreenScaleMode(savedMode);
+      }
+    } catch {}
+  }, []);
+
+  const toggleScreenScaleMode = () => {
+    soundFx.playClick();
+    setScreenScaleMode((prev) => {
+      const next = prev === 'wide' ? 'fit' : 'wide';
+      try {
+        localStorage.setItem('syndex_screen_scale_mode', next);
+      } catch {}
+      return next;
+    });
+  };
+
   const batteryMinutes = profile?.battery_minutes ?? 42;
   const isDrained = batteryMinutes <= 0;
   const isLight = theme === 'light_gbc';
   const userId = profile?.id ?? 'guest-trainer-id';
+  const userIdRef = useRef<string>(userId);
+
+  useEffect(() => {
+    userIdRef.current = userId;
+    bridgeRef.current?.setUserId(userId);
+  }, [userId]);
+
   const romUrl = process.env.NEXT_PUBLIC_ROM_URL || '/roms/pokemonHnS.gba';
 
   // Guardar configuración de teclas en LocalStorage
@@ -179,7 +246,14 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     return {
       readSaveFile: (): Uint8Array | null => {
         try {
-          return Module.FS.readFile(SAV_PATH_VFS);
+          if (typeof Module.getSave === 'function') {
+            const data = Module.getSave();
+            if (data && data.length >= 0x1C000) return data;
+          }
+          if (Module.FS?.analyzePath(SAV_PATH_VFS).exists) {
+            return Module.FS.readFile(SAV_PATH_VFS);
+          }
+          return null;
         } catch {
           return null;
         }
@@ -190,6 +264,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           try {
             Module.FS.writeFile('/data/games/pokemonHnS.sav', data);
           } catch {}
+          Module.FSSync?.();
         } catch (err) {
           console.error('[mGBA] Error guardando en VFS:', err);
         }
@@ -225,37 +300,137 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     });
   }, []);
 
-  // Listar partidas disponibles en Supabase Storage
+  // Listar partidas disponibles en Supabase Storage y LocalStorage
   const refreshSlotsList = useCallback(async () => {
     try {
-      const { data, error } = await supabase.storage.from(SAV_BUCKET).list(userId);
-      if (!error && data) {
-        const slots: SaveSlotInfo[] = data
+      const currentUid = userIdRef.current;
+      const { data, error } = await supabase.storage.from(SAV_BUCKET).list(currentUid);
+      const slots: SaveSlotInfo[] = [];
+
+      if (!error && data && data.length > 0) {
+        data
           .filter((f) => f.name.endsWith('.sav'))
-          .map((f) => ({
-            id: f.name,
-            name:
-              f.name === 'slot_1.sav'
-                ? 'Slot 1 (Principal)'
-                : f.name === 'slot_2.sav'
-                ? 'Slot 2 (Secundario)'
-                : f.name === 'slot_3.sav'
-                ? 'Slot 3 (Reserva)'
-                : f.name.replace('.sav', ''),
-            updatedAt: new Date(f.updated_at || Date.now()).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            }),
-            size: f.metadata?.size || 131072,
-          }));
-        setAvailableSlots(slots);
+          .forEach((f) => {
+            slots.push({
+              id: f.name,
+              name:
+                f.name === 'slot_1.sav'
+                  ? 'Slot 1 (Principal)'
+                  : f.name === 'slot_2.sav'
+                  ? 'Slot 2 (Secundario)'
+                  : f.name === 'slot_3.sav'
+                  ? 'Slot 3 (Reserva)'
+                  : f.name.replace('.sav', ''),
+              updatedAt: new Date(f.updated_at || Date.now()).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              size: f.metadata?.size || 131072,
+            });
+          });
       }
+
+      // Complementar con partidas detectadas en respaldo local si no están en la lista
+      ['slot_1.sav', 'slot_2.sav', 'slot_3.sav'].forEach((slotName) => {
+        if (!slots.some((s) => s.id === slotName)) {
+          const localTime = localStorage.getItem(`${LOCAL_SAV_KEY_PREFIX}time_${slotName}`);
+          if (localTime) {
+            slots.push({
+              id: slotName,
+              name:
+                slotName === 'slot_1.sav'
+                  ? 'Slot 1 (Local)'
+                  : slotName === 'slot_2.sav'
+                  ? 'Slot 2 (Local)'
+                  : 'Slot 3 (Local)',
+              updatedAt: new Date(localTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              size: 131072,
+            });
+          }
+        }
+      });
+
+      setAvailableSlots(slots);
     } catch (err) {
       console.warn('[GBA] Error listando slots:', err);
     }
-  }, [userId]);
+  }, []);
 
-  // Guardar partida en un slot específico
+  // Manejador central de guardado automático (disparado por mGBA cuando el jugador guarda DENTRO del juego)
+  const handleSaveDataUpdated = useCallback(async () => {
+    const mod = moduleRef.current;
+    if (!mod) return;
+
+    try {
+      console.info('[mGBA] 💾 Evento saveDataUpdated detectado: persistiendo partida...');
+
+      // 1. Extraer los bytes actualizados del .sav
+      let savBytes: Uint8Array | null = null;
+      try {
+        if (typeof mod.getSave === 'function') {
+          savBytes = mod.getSave();
+        }
+      } catch {}
+
+      if (!savBytes || savBytes.length < 0x1C000) {
+        try {
+          if (mod.FS?.analyzePath(SAV_PATH_VFS).exists) {
+            savBytes = mod.FS.readFile(SAV_PATH_VFS);
+          }
+        } catch {}
+      }
+
+      if (!savBytes || savBytes.length < 0x1C000) {
+        console.warn('[mGBA] saveDataUpdated disparado pero los bytes de guardado son insuficientes.');
+        return;
+      }
+
+      // 2. Sincronizar VFS con IndexedDB localmente
+      try {
+        await mod.FSSync?.();
+      } catch (fsErr) {
+        console.warn('[mGBA] FSSync warning:', fsErr);
+      }
+
+      // 3. Respaldo secundario local en LocalStorage
+      const activeSlot = currentSlotRef.current;
+      saveLocalBackup(activeSlot, savBytes);
+
+      // 4. Subir a Supabase Storage (Nube)
+      const currentUid = userIdRef.current;
+      await supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/${activeSlot}`, savBytes, {
+        contentType: 'application/octet-stream',
+        upsert: true,
+      });
+
+      await supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/savegame.sav`, savBytes, {
+        contentType: 'application/octet-stream',
+        upsert: true,
+      });
+
+      // 5. Sincronizar equipo y dinero del cartucho al perfil Zustand y Supabase en tiempo real
+      const liveData = bridgeRef.current?.readTrainerDataFromEmulator();
+      if (liveData) {
+        updateProfile({
+          gba_party_json: liveData.party as any,
+          pokedollars: liveData.money,
+        });
+      }
+
+      // 6. Notificación visual estilo Nintendo + sonido retro
+      soundFx.playCoin();
+      setShowSaveSuccess(`💾 ¡Partida guardada en ${activeSlot.replace('.sav', '').toUpperCase()}!`);
+      setTimeout(() => setShowSaveSuccess(null), 3000);
+      refreshSlotsList();
+    } catch (err) {
+      console.error('[mGBA] Error en sincronización de guardado automático:', err);
+    }
+  }, [refreshSlotsList, updateProfile]);
+
+  // Guardar partida en un slot específico (Guardado desde afuera)
   const saveToSlot = async (slotId: string) => {
     const mod = moduleRef.current;
     if (!mod || isSaving) return;
@@ -264,29 +439,59 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     soundFx.playClick();
 
     try {
+      // 1. Obtener bytes del save del core activo
       let savBytes: Uint8Array | null = null;
       try {
-        savBytes = mod.FS.readFile(SAV_PATH_VFS);
+        if (typeof mod.getSave === 'function') {
+          savBytes = mod.getSave();
+        }
       } catch {}
 
-      if (!savBytes && bridgeRef.current) {
-        savBytes = bridgeRef.current.readPartyFromEmulator() ? mod.FS.readFile(SAV_PATH_VFS) : null;
+      if (!savBytes || savBytes.length < 0x1C000) {
+        try {
+          if (mod.FS?.analyzePath(SAV_PATH_VFS).exists) {
+            savBytes = mod.FS.readFile(SAV_PATH_VFS);
+          }
+        } catch {}
       }
 
-      if (savBytes) {
-        const storagePath = `${userId}/${slotId}`;
-        await supabase.storage.from(SAV_BUCKET).upload(storagePath, savBytes, {
+      if (!savBytes || savBytes.length < 0x1C000) {
+        if (bridgeRef.current) {
+          savBytes = bridgeRef.current.readPartyFromEmulator() && mod.FS?.analyzePath(SAV_PATH_VFS).exists
+            ? mod.FS.readFile(SAV_PATH_VFS)
+            : null;
+        }
+      }
+
+      if (savBytes && savBytes.length >= 0x1C000) {
+        // Asegurar escritura en VFS
+        try {
+          mod.FS.writeFile(SAV_PATH_VFS, savBytes);
+          mod.FS.writeFile(`/data/saves/${slotId}`, savBytes);
+        } catch {}
+
+        // Sincronizar con IndexedDB
+        try {
+          await mod.FSSync?.();
+        } catch {}
+
+        // Respaldo local en LocalStorage
+        saveLocalBackup(slotId, savBytes);
+
+        // Subir a la nube (Supabase)
+        const currentUid = userIdRef.current;
+        await supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/${slotId}`, savBytes, {
           contentType: 'application/octet-stream',
           upsert: true,
         });
 
-        await supabase.storage.from(SAV_BUCKET).upload(`${userId}/savegame.sav`, savBytes, {
+        await supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/savegame.sav`, savBytes, {
           contentType: 'application/octet-stream',
           upsert: true,
         });
 
         setCurrentSlot(slotId);
-        
+
         // Sincronizar equipo y dinero del cartucho a la web en tiempo real
         const liveData = bridgeRef.current?.readTrainerDataFromEmulator();
         if (liveData) {
@@ -296,16 +501,70 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           });
         }
 
-        setShowSaveSuccess(`💾 ¡Guardado en ${slotId.replace('.sav', '').toUpperCase()}!`);
+        setShowSaveSuccess(`💾 ¡Partida guardada en ${slotId.replace('.sav', '').toUpperCase()}!`);
         soundFx.playCoin();
         refreshSlotsList();
 
         setTimeout(() => setShowSaveSuccess(null), 2800);
+      } else {
+        // Si el usuario aún no ha guardado en el juego:
+        soundFx.playDamage?.();
+        setShowSaveSuccess('⚠️ Guarda dentro del juego con START → GUARDAR, o usa [⚡ Guardado Rápido].');
+        setTimeout(() => setShowSaveSuccess(null), 3800);
       }
     } catch (err) {
       console.error('[GBA] Error guardando slot:', err);
+      setShowSaveSuccess('⚠️ Error al respaldar partida.');
+      setTimeout(() => setShowSaveSuccess(null), 2800);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Guardado Rápido Instantáneo (Save State de emulador desde afuera)
+  const quickSaveState = async (slot = 1) => {
+    const mod = moduleRef.current;
+    if (!mod || emuState !== 'running') return;
+    soundFx.playClick();
+
+    try {
+      const ok = mod.saveState?.(slot);
+      if (ok) {
+        try {
+          await mod.FSSync?.();
+        } catch {}
+        soundFx.playCoin();
+        setShowSaveSuccess(`⚡ ¡Guardado Rápido (Estado ${slot}) Exitoso!`);
+        setTimeout(() => setShowSaveSuccess(null), 2800);
+      } else {
+        soundFx.playDamage?.();
+        setShowSaveSuccess('⚠️ No se pudo guardar el estado.');
+        setTimeout(() => setShowSaveSuccess(null), 2500);
+      }
+    } catch (err) {
+      console.error('[GBA] Error en quickSaveState:', err);
+    }
+  };
+
+  // Carga Rápida Instantánea (Load State de emulador desde afuera)
+  const quickLoadState = (slot = 1) => {
+    const mod = moduleRef.current;
+    if (!mod) return;
+    soundFx.playClick();
+
+    try {
+      const ok = mod.loadState?.(slot);
+      if (ok) {
+        soundFx.playCoin();
+        setShowSaveSuccess(`⚡ ¡Estado Rápido ${slot} Restaurado!`);
+        setTimeout(() => setShowSaveSuccess(null), 2800);
+      } else {
+        soundFx.playDamage?.();
+        setShowSaveSuccess(`⚠️ Sin estado rápido previo en ranura ${slot}.`);
+        setTimeout(() => setShowSaveSuccess(null), 2800);
+      }
+    } catch (err) {
+      console.error('[GBA] Error en quickLoadState:', err);
     }
   };
 
@@ -315,11 +574,34 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     setEmuState('loading');
 
     try {
-      const storagePath = `${userId}/${slotId}`;
-      const { data, error } = await supabase.storage.from(SAV_BUCKET).download(storagePath);
+      let bytes: Uint8Array | null = null;
+      const currentUid = userIdRef.current;
 
-      if (!error && data) {
-        const bytes = new Uint8Array(await data.arrayBuffer());
+      // 1. Intentar descargar desde Supabase Storage
+      try {
+        const storagePath = `${currentUid}/${slotId}`;
+        const { data, error } = await supabase.storage.from(SAV_BUCKET).download(storagePath);
+        if (!error && data) {
+          bytes = new Uint8Array(await data.arrayBuffer());
+        }
+      } catch {}
+
+      // 2. Si no está en Supabase, intentar respaldo local
+      if (!bytes || bytes.length < 0x1C000) {
+        bytes = loadLocalBackup(slotId);
+      }
+
+      // 3. Fallback a guest save si el usuario recién se autenticó
+      if ((!bytes || bytes.length < 0x1C000) && currentUid !== 'guest-trainer-id') {
+        try {
+          const { data } = await supabase.storage.from(SAV_BUCKET).download(`guest-trainer-id/${slotId}`);
+          if (data) {
+            bytes = new Uint8Array(await data.arrayBuffer());
+          }
+        } catch {}
+      }
+
+      if (bytes && bytes.length >= 0x1C000) {
         setCurrentSlot(slotId);
         bridgeRef.current?.setActiveSlot(slotId);
         setShowSlotModal(false);
@@ -327,6 +609,11 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         setShowSaveSuccess(`📂 ¡Cargada partida ${slotId.replace('.sav', '').toUpperCase()}!`);
         setTimeout(() => setShowSaveSuccess(null), 2800);
         rebootEmulator(bytes);
+      } else {
+        setEmuState('running');
+        soundFx.playDamage?.();
+        setShowSaveSuccess(`⚠️ No hay partida guardada en ${slotId.replace('.sav', '').toUpperCase()}`);
+        setTimeout(() => setShowSaveSuccess(null), 2800);
       }
     } catch (err) {
       console.error('[GBA] Error cargando slot:', err);
@@ -420,29 +707,76 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       // Escribir ROM al sistema de archivos virtual
       Module.FS.writeFile(ROM_PATH_VFS, romBytes);
 
-      // Cargar savegame previo:
-      // Si tenemos pendingSavBytesRef (recién inyectado en caliente), usarlo de inmediato
+      // Cargar savegame previo con jerarquía de redundancia multinivel
+      // 1. Si tenemos pendingSavBytesRef (recién inyectado en caliente por tienda/misión), usarlo
       const pendingSav = pendingSavBytesRef.current;
+      let initialSavBytes: Uint8Array | null = null;
+
       if (pendingSav && pendingSav.length >= 0x1C000) {
-        Module.FS.writeFile(SAV_PATH_VFS, pendingSav);
-        try {
-          Module.FS.writeFile('/data/games/pokemonHnS.sav', pendingSav);
-        } catch {}
+        initialSavBytes = pendingSav;
         pendingSavBytesRef.current = null;
       } else {
-        // Sino, descargar desde Supabase Storage
+        const currentUid = userIdRef.current;
+        const activeSlot = currentSlotRef.current;
+
+        // 2. Descargar desde Supabase Storage (Nube)
         try {
           const { data: savData } = await supabase.storage
             .from(SAV_BUCKET)
-            .download(`${userId}/${currentSlotRef.current}`);
+            .download(`${currentUid}/${activeSlot}`);
           if (savData) {
-            const cloudSav = new Uint8Array(await savData.arrayBuffer());
-            Module.FS.writeFile(SAV_PATH_VFS, cloudSav);
-            try {
-              Module.FS.writeFile('/data/games/pokemonHnS.sav', cloudSav);
-            } catch {}
+            initialSavBytes = new Uint8Array(await savData.arrayBuffer());
+          } else {
+            // Fallback a savegame.sav
+            const { data: fallbackData } = await supabase.storage
+              .from(SAV_BUCKET)
+              .download(`${currentUid}/savegame.sav`);
+            if (fallbackData) {
+              initialSavBytes = new Uint8Array(await fallbackData.arrayBuffer());
+            } else if (currentUid !== 'guest-trainer-id') {
+              // Fallback a guest save si el usuario recién se logueó
+              const { data: guestData } = await supabase.storage
+                .from(SAV_BUCKET)
+                .download('guest-trainer-id/slot_1.sav');
+              if (guestData) {
+                initialSavBytes = new Uint8Array(await guestData.arrayBuffer());
+              }
+            }
           }
-        } catch {}
+        } catch (cloudErr) {
+          console.warn('[mGBA] Error en descarga de nube, probando fuentes locales:', cloudErr);
+        }
+
+        // 3. Si no hay en Supabase, buscar en respaldo local del navegador (LocalStorage)
+        if (!initialSavBytes || initialSavBytes.length < 0x1C000) {
+          initialSavBytes = loadLocalBackup(activeSlot) || loadLocalBackup('slot_1.sav');
+        }
+
+        // 4. Si no hay en LocalStorage, verificar si ya existe en VFS (restaurado de IndexedDB por FSInit)
+        if (!initialSavBytes || initialSavBytes.length < 0x1C000) {
+          try {
+            if (Module.FS.analyzePath(SAV_PATH_VFS).exists) {
+              const vfsBytes = Module.FS.readFile(SAV_PATH_VFS);
+              if (vfsBytes && vfsBytes.length >= 0x1C000) {
+                initialSavBytes = vfsBytes;
+              }
+            }
+          } catch {}
+        }
+      }
+
+      // Escribir el .sav si lo encontramos; si es nuevo, inicializar Flash 128KB virgen (0xFF)
+      if (initialSavBytes && initialSavBytes.length >= 0x1C000) {
+        Module.FS.writeFile(SAV_PATH_VFS, initialSavBytes);
+        try { Module.FS.writeFile('/data/games/pokemonHnS.sav', initialSavBytes); } catch {}
+        console.info(`[mGBA] Partida previa cargada con éxito (${initialSavBytes.length} bytes).`);
+      } else {
+        // Inicializar archivo de 128 KB en blanco (0xFF) para que mGBA abra el descriptor O_RDWR
+        const blankFlash = new Uint8Array(0x20000); // 131,072 bytes
+        blankFlash.fill(0xFF);
+        Module.FS.writeFile(SAV_PATH_VFS, blankFlash);
+        try { Module.FS.writeFile('/data/games/pokemonHnS.sav', blankFlash); } catch {}
+        console.info('[mGBA] Inicializado archivo Flash 128KB virgen (0xFF) en VFS.');
       }
 
       if (abortToken.cancelled) {
@@ -467,6 +801,21 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
       // Arrancar juego pasando SAV_PATH_VFS explícito para carga determinista del SaveBlock
       Module.loadGame(ROM_PATH_VFS, SAV_PATH_VFS);
+
+      // Registrar callbacks centrales para detectar cuando el jugador guarda DENTRO del juego
+      try {
+        Module.pauseGame?.();
+        Module.addCoreCallbacks?.({
+          saveDataUpdatedCallback: () => {
+            console.info('[mGBA] 💾 In-game save detectado vía core callback.');
+            handleSaveDataUpdated();
+          },
+        });
+        Module.resumeGame?.();
+      } catch (cbErr) {
+        console.warn('[mGBA] Error registrando addCoreCallbacks:', cbErr);
+      }
+
       setEmuState('running');
       refreshSlotsList();
 
@@ -486,7 +835,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         setEmuState('idle');
       }
     }
-  }, [romUrl, userId, createAdapter, refreshSlotsList]);
+  }, [romUrl, createAdapter, refreshSlotsList, handleSaveDataUpdated]);
 
   // Boot inicial y reinicios limpios al cambiar bootCount
   useEffect(() => {
@@ -494,11 +843,29 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     return () => {
       bootAbortRef.current.cancelled = true;
       if (moduleRef.current) {
+        const mod = moduleRef.current;
         try {
-          moduleRef.current.pauseMainLoop?.();
-          moduleRef.current.pauseGame?.();
-          moduleRef.current.quitGame?.();
-          moduleRef.current.quitMgba?.();
+          // Persistir save dirty antes de destruir el core
+          let savBytes: Uint8Array | null = null;
+          try {
+            if (typeof mod.getSave === 'function') savBytes = mod.getSave();
+          } catch {}
+          if (!savBytes && mod.FS?.analyzePath(SAV_PATH_VFS).exists) {
+            try { savBytes = mod.FS.readFile(SAV_PATH_VFS); } catch {}
+          }
+          if (savBytes && savBytes.length >= 0x1C000) {
+            try { mod.FSSync?.(); } catch {}
+            saveLocalBackup(currentSlotRef.current, savBytes);
+            const currentUid = userIdRef.current;
+            supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/${currentSlotRef.current}`, savBytes, { upsert: true }).catch(() => {});
+          }
+        } catch {}
+
+        try {
+          mod.pauseMainLoop?.();
+          mod.pauseGame?.();
+          mod.quitGame?.();
+          mod.quitMgba?.();
         } catch {}
         moduleRef.current = null;
       }
@@ -801,9 +1168,22 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           ref={canvasRef}
           width={240}
           height={160}
-          className="w-full h-full object-contain [image-rendering:pixelated]"
+          className={`w-full h-full [image-rendering:pixelated] transition-transform duration-300 ${
+            screenScaleMode === 'wide'
+              ? 'object-fill scale-x-[1.08] sm:scale-100 sm:object-contain'
+              : 'object-contain'
+          }`}
           style={{ imageRendering: 'pixelated' }}
         />
+
+        {/* Botón flotante para alternar relación de aspecto 3:2 / Ancha */}
+        <button
+          onClick={toggleScreenScaleMode}
+          className="absolute top-2 right-2 z-30 px-2 py-0.5 rounded-full bg-black/75 hover:bg-black/95 text-[9px] font-mono font-bold text-cyan-300 border border-cyan-500/50 backdrop-blur-sm cursor-pointer active:scale-95 transition-all shadow-[0_0_8px_rgba(6,182,212,0.4)]"
+          title="Alternar entre formato GBA original 3:2 y Pantalla Ancha (Edge-to-Edge)"
+        >
+          {screenScaleMode === 'wide' ? '↔ ANCHA' : '⊡ 3:2'}
+        </button>
 
         {/* Pantalla de Carga Inicial */}
         {emuState === 'loading' && (
@@ -830,10 +1210,10 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
   return (
     <div
-      className={`w-full h-full flex flex-col rounded-2xl transition-all duration-300 p-3 relative overflow-hidden select-none ${
+      className={`w-full h-full flex flex-col rounded-none sm:rounded-2xl transition-all duration-300 p-1.5 sm:p-3 relative overflow-hidden select-none ${
         isLight
-          ? 'bg-[#F4F1EA] text-slate-800 border-4 border-black shadow-[6px_6px_0px_0px_#000]'
-          : 'bg-[#121214] text-slate-100 border-2 border-emerald-500/40 shadow-[0_0_25px_rgba(34,197,94,0.15)]'
+          ? 'bg-[#F4F1EA] text-slate-800 border-y-2 sm:border-4 border-black shadow-[6px_6px_0px_0px_#000]'
+          : 'bg-[#121214] text-slate-100 border-y sm:border-2 border-emerald-500/40 shadow-[0_0_25px_rgba(34,197,94,0.15)]'
       }`}
     >
 
@@ -1035,9 +1415,58 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
                 })}
               </div>
 
-              <p className="text-[10px] text-slate-400 font-mono mt-3 text-center">
-                ☁️ Sincronizado automáticamente en la nube (Supabase).
-              </p>
+              {/* Sección de Guardado Rápido Instantáneo (Save State desde afuera) */}
+              <div className="mt-3 pt-2.5 border-t border-slate-700/40">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-mono font-bold text-amber-400 flex items-center gap-1">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>GUARDADO RÁPIDO (ESTADO)</span>
+                  </span>
+                  <span className="text-[9px] text-slate-400 font-mono">1 Clic desde afuera</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      quickSaveState(1);
+                      setShowSlotModal(false);
+                    }}
+                    className={`py-1.5 px-2 text-[10px] font-mono font-black rounded-lg border cursor-pointer transition-all flex items-center justify-center gap-1 ${
+                      isLight
+                        ? 'bg-amber-300 hover:bg-amber-400 text-black border-black shadow-[2px_2px_0_#000] active:translate-x-0.5 active:translate-y-0.5'
+                        : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/50 active:scale-95'
+                    }`}
+                    title="Guarda la posición y combate exacto del emulador desde afuera"
+                  >
+                    <Zap className="w-3 h-3 text-amber-500" />
+                    <span>Guardar Estado</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      quickLoadState(1);
+                      setShowSlotModal(false);
+                    }}
+                    className={`py-1.5 px-2 text-[10px] font-mono font-black rounded-lg border cursor-pointer transition-all flex items-center justify-center gap-1 ${
+                      isLight
+                        ? 'bg-cyan-200 hover:bg-cyan-300 text-black border-black shadow-[2px_2px_0_#000] active:translate-x-0.5 active:translate-y-0.5'
+                        : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/50 active:scale-95'
+                    }`}
+                    title="Carga el último estado rápido capturado"
+                  >
+                    <FolderOpen className="w-3 h-3 text-cyan-400" />
+                    <span>Cargar Estado</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-2.5 pt-2 border-t border-slate-700/30 space-y-1 text-center">
+                <p className="text-[9px] text-emerald-400 font-mono flex items-center justify-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  <span>Auto-guardado activo: guarda en el menú START de Pokémon y se respalda solo.</span>
+                </p>
+                <p className="text-[9px] text-slate-500 font-mono">
+                  Sincronizado en Supabase e IndexedDB local.
+                </p>
+              </div>
             </div>
           </motion.div>
         )}
@@ -1190,13 +1619,22 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
       {/* Pantalla del Emulador (Marco CRT Oficial mGBA) */}
       <div
-        className={`relative flex-1 min-h-[190px] rounded-xl overflow-hidden flex items-center justify-center ${
+        className={`relative flex-1 min-h-[220px] sm:min-h-[190px] rounded-lg sm:rounded-xl overflow-hidden flex items-center justify-center ${
           isLight
-            ? 'bg-[#0f172a] border-4 border-black shadow-inner'
-            : 'bg-black border-2 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
+            ? 'bg-[#0f172a] border-2 sm:border-4 border-black shadow-inner'
+            : 'bg-black border sm:border-2 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
         }`}
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent pointer-events-none z-10" />
+
+        {/* Botón flotante para alternar relación de aspecto 3:2 / Ancha */}
+        <button
+          onClick={toggleScreenScaleMode}
+          className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-full bg-black/75 hover:bg-black/90 text-[9px] font-mono font-bold text-cyan-300 border border-cyan-500/50 backdrop-blur-sm cursor-pointer active:scale-95 transition-all shadow-md flex items-center gap-1"
+          title="Alternar entre relación 3:2 original y Pantalla Ancha (Edge-to-Edge)"
+        >
+          <span>{screenScaleMode === 'wide' ? '↔ ANCHA' : '⊡ 3:2'}</span>
+        </button>
 
         {/* Canvas oficial nativo para mGBA WebAssembly con desmontaje limpio en cada reinicio */}
         <canvas
@@ -1204,7 +1642,11 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           ref={canvasRef}
           width={240}
           height={160}
-          className="w-full h-full object-contain [image-rendering:pixelated]"
+          className={`w-full h-full [image-rendering:pixelated] transition-transform duration-300 ${
+            screenScaleMode === 'wide'
+              ? 'object-fill scale-x-[1.08] sm:scale-100 sm:object-contain'
+              : 'object-contain'
+          }`}
           style={{ imageRendering: 'pixelated' }}
         />
 
@@ -1295,6 +1737,20 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
             {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
           </button>
 
+          {/* Botón Guardado Rápido Instantáneo desde afuera */}
+          <button
+            onClick={() => quickSaveState(1)}
+            className={`px-2 py-1 text-[10px] font-black rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+              isLight
+                ? 'bg-amber-300 hover:bg-amber-400 text-slate-950 border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
+                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
+            }`}
+            title="Guardar Estado Rápido: Guarda la partida desde afuera al instante con 1 clic."
+          >
+            <Zap className="w-3 h-3 text-amber-500" />
+            <span className="hidden sm:inline">⚡ Rápido</span>
+          </button>
+
           {/* Botón Respaldar Partida en Supabase */}
           <button
             onClick={() => saveToSlot(currentSlot)}
@@ -1304,7 +1760,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
                 ? 'bg-[#2563EB] text-white border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
                 : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
             }`}
-            title="Respaldar archivo .SAV en Supabase. Guarda primero dentro del juego con START -> GUARDAR."
+            title="Respaldar archivo .SAV en Supabase e IndexedDB. Guarda primero dentro del juego con START -> GUARDAR."
           >
             {isSaving ? (
               <RefreshCw className="w-3 h-3 animate-spin text-white" />

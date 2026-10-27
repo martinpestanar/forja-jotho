@@ -123,12 +123,12 @@ export const MobileHandheldConsole: React.FC = () => {
       )}
 
       {/* 2. Área Central: Pantalla Game Boy Advance Edge-to-Edge (Máxima Amplitud y Claridad) */}
-      <div className="flex-1 w-full flex items-center justify-center px-1.5 py-1 min-h-0">
+      <div className="flex-1 w-full flex items-center justify-center p-0 min-h-0">
         <div
-          className={`w-full h-full max-h-[58vh] rounded-xl p-1.5 flex flex-col relative overflow-hidden transition-all ${
+          className={`w-full h-full max-h-[62vh] rounded-none md:rounded-xl p-0 md:p-1 flex flex-col relative overflow-hidden transition-all ${
             isLight
-              ? 'bg-[#182030] border-3 border-black shadow-[4px_4px_0_#000]'
-              : 'bg-[#080d18] border border-emerald-500/50 shadow-[0_0_20px_rgba(34,197,94,0.25)]'
+              ? 'bg-[#182030] border-y-2 md:border-3 border-black shadow-none md:shadow-[4px_4px_0_#000]'
+              : 'bg-[#080d18] border-y border-emerald-500/50 shadow-none md:shadow-[0_0_20px_rgba(34,197,94,0.25)]'
           }`}
         >
           {/* Header Minimalista de la Pantalla */}
@@ -152,7 +152,7 @@ export const MobileHandheldConsole: React.FC = () => {
           </div>
 
           {/* Canvas de mGBA ocupando todo el alto y ancho proporcional restante */}
-          <div className="flex-1 w-full rounded-lg overflow-hidden bg-black flex items-center justify-center relative">
+          <div className="flex-1 w-full overflow-hidden bg-black flex items-center justify-center relative">
             <GbaPanel standaloneScreen={true} />
           </div>
         </div>
