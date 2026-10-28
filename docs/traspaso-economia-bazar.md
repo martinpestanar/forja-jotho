@@ -287,8 +287,11 @@ Se hizo un análisis de alcanzabilidad desde las 28 entradas reales de Next (`pa
 |---|---|
 | `/admin` y `/admin/login` | Panel de otra etapa del proyecto; dependía de un login paralelo y de un "SuperAdmin" que ya no existe en el producto |
 | `/projector/[pin]` | Pantalla de sala con PIN y jefe "Cyber-Johto" del proyecto anterior |
+| `/onboarding` | Cuestionario de "naturaleza" del alumno. Ya no hay alta de alumnos: la app es single-user |
 
-**Superviven por ser entradas legítimas:** `/`, `/login`, `/onboarding` (registro que fija starter y `nature_role`), `/dashboard`, `/hq/*` y `/api/*`.
+**Superviven por ser entradas legítimas:** `/`, `/login`, `/dashboard`, `/hq/*` y `/api/*`.
+
+> Nota: el trigger `tr_notify_parent_onboarding` de `profiles` (evento `onboarding_complete`) sigue en base de datos. Es del webhook de padres y no depende de la ruta; se deja hasta decidir si el webhook de WhatsApp sigue vigente.
 
 **Componentes y utilidades borrados (27 archivos)**
 
