@@ -274,3 +274,35 @@ Tres defectos encontrados al verificar `/hq/tienda` de verdad:
    - `cacheKey` pasó a `v2:…` y se borraron las entradas truncadas (`length(text) < 20`).
 2. **HUD con ceros falsos.** Mientras `rpc_economy_state` no respondía, el HUD mostraba `WALLET ₽0 · DEUDA ₽0 · DRATINI 0%` — indistinguible de "estás en bancarrota". Ahora muestra `—` / "cargando" hasta que hay snapshot.
 3. **SALDO desincronizado en ese instante.** `GoldenrodShop` cae a `profile.pokedollars` (persistido) cuando no hay snapshot, así que por un segundo podía mostrar un saldo viejo. Se acepta como respaldo visual, pero conviene revisarlo si se nota.
+
+---
+
+## 10. Limpieza de código muerto (ruta por ruta)
+
+Se hizo un análisis de alcanzabilidad desde las 28 entradas reales de Next (`page`/`layout`/`route`) y se borró todo lo que ninguna ruta viva importa.
+
+**Rutas eliminadas**
+
+| Ruta | Motivo |
+|---|---|
+| `/admin` y `/admin/login` | Panel de otra etapa del proyecto; dependía de un login paralelo y de un "SuperAdmin" que ya no existe en el producto |
+| `/projector/[pin]` | Pantalla de sala con PIN y jefe "Cyber-Johto" del proyecto anterior |
+
+**Superviven por ser entradas legítimas:** `/`, `/login`, `/onboarding` (registro que fija starter y `nature_role`), `/dashboard`, `/hq/*` y `/api/*`.
+
+**Componentes y utilidades borrados (27 archivos)**
+
+- Admin: `AdminStudentGodModal`, `SuperAdminDashboard`, `lib/adminService.ts`.
+- Dashboard: `JohtoMap`, `GymBadgeShowcase`, `CyberPokedexView`, `MissionSubmitModal`.
+- Layout: `RightPanel`, `TopStatusBar`, `MobileBottomNav`.
+- GBA: `GbaConsolePersistent` (el emulador real es `GbaConsoleWorker`), `MobileHandheldConsole`, `MobileGamepad`, `lib/gba/virtualGamepad.ts`.
+- Juego/marketing del proyecto viejo: `LiveArena`, `StudentAuthModal`, `WildEncounterDemo`, `BattleTrivia`, `AiRivalFace`, `HolographicGradCard`, `LiveLeaderboard`, `SocraticPokegear`, `TrainerTuningStudio`, `DuoCustomizerCanvas`.
+- `hooks/useMediaQuery.ts`, `hooks/useIsMobileDevice.ts`, `lib/phoneValidation.ts`.
+
+**Dependencias fuera:** `qrcode.react`, `@types/qrcode.react` (solo las usaba `/projector`), `html-to-image` (solo `HolographicGradCard`), `tailwind-merge` y `@supabase/ssr` (sin ningún import).
+
+**Se conserva a propósito:** `src/types/mgba-wasm.d.ts` (declaraciones de tipos del emulador, no se importa pero tipa `Module`).
+
+**Tablas que ya no usa nadie en el código** (no se borraron: son del módulo de marketing, fuera de alcance): `brands`, `brand_templates`, `channels`, `content_vault`, `image_formats`, `video_jobs`, `google_accounts`, `economy_config`.
+
+**`admin_game_rules` quedó sin lector en el front** al borrar el panel y `JohtoMap`; las RPC siguen existiendo y endurecidas. Si el juego no necesita reglas dinámicas, se puede borrar la tabla y las 4 funciones en una limpieza futura.
