@@ -1,7 +1,16 @@
-import { HNS_ITEM_IDS } from '@/lib/gba/gbaSaveEngine';
+import { HNS_ITEM_IDS, HNS_TM_CATALOG, HNS_MINT_CATALOG } from '@/lib/hnsCatalog';
 import { TRAINER_SKINS_CATALOG, POKEMON_COSTUMES_CATALOG } from '@/types/cosmetics';
 
-export type ShopFloor = 'eggs' | 'breeding' | 'specials' | 'supplies' | 'pokemon_costumes' | 'trainer_skins' | 'cosmetics';
+export type ShopFloor =
+  | 'eggs'
+  | 'breeding'
+  | 'specials'
+  | 'supplies'
+  | 'tms'
+  | 'mints'
+  | 'pokemon_costumes'
+  | 'trainer_skins'
+  | 'cosmetics';
 
 export interface ShopProduct {
   id: string;
@@ -21,8 +30,15 @@ export interface ShopProduct {
   isShiny?: boolean;
   perfectIVs?: boolean;
   gbaItemId?: number;
-  pocket?: 'ITEMS' | 'POKEBALLS' | 'KEY_ITEMS' | 'BERRIES';
+  pocket?: 'ITEMS' | 'POKEBALLS' | 'KEY_ITEMS' | 'BERRIES' | 'TMHM';
   previewImage?: string;
+  tmCode?: string;
+  moveName?: string;
+  moveType?: string;
+  power?: number | null;
+  accuracy?: number | null;
+  pp?: number;
+  effect?: string;
 }
 
 export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
@@ -238,33 +254,9 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 80,
     description: 'Herramienta clave: transmite la Naturaleza del progenitor al 100%.',
     badge: 'HERENCIA NATURALEZA',
-    gbaItemId: 0x006C,
+    gbaItemId: HNS_ITEM_IDS.EVERSTONE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/everstone.png',
-  },
-  {
-    id: 'BREED_DESTINY_KNOT',
-    name: 'Lazo Destino (Destiny Knot)',
-    type: 'item',
-    floor: 'breeding',
-    cost: 150,
-    description: 'Equípalo en la guardería para heredar 5 de los 6 IVs de los padres.',
-    badge: 'HERENCIA 5-IVs',
-    gbaItemId: 0x006F,
-    pocket: 'ITEMS',
-    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/destiny-knot.png',
-  },
-  {
-    id: 'BREED_ABILITY_CAPSULE',
-    name: 'Cápsula de Habilidad',
-    type: 'item',
-    floor: 'breeding',
-    cost: 180,
-    description: 'Alterna al instante entre las habilidades pasivas primarias y secundarias.',
-    badge: 'MODIFICADOR PASIVA',
-    gbaItemId: HNS_ITEM_IDS.ABILITY_CAPSULE || 0x0260,
-    pocket: 'ITEMS',
-    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ability-capsule.png',
   },
   {
     id: 'BREED_LEFTOVERS',
@@ -274,7 +266,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 120,
     description: 'Restaura 1/16 de PS máximos en cada turno al portador en combate.',
     badge: 'REGENERACIÓN PS',
-    gbaItemId: 0x00C3,
+    gbaItemId: HNS_ITEM_IDS.LEFTOVERS,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/leftovers.png',
   },
@@ -286,7 +278,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 95,
     description: 'Duplica la ganancia de Amistad/Felicidad para evoluciones rápidas.',
     badge: 'AMISTAD ACELERADA',
-    gbaItemId: 0x00D6,
+    gbaItemId: HNS_ITEM_IDS.SOOTHE_BELL,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/soothe-bell.png',
   },
@@ -298,7 +290,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 220,
     description: 'Aumenta en un 50% la experiencia (XP) ganada por el Pokémon en combate.',
     badge: '+50% XP BATALLA',
-    gbaItemId: 0x00E6,
+    gbaItemId: HNS_ITEM_IDS.LUCKY_EGG,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/lucky-egg.png',
   },
@@ -310,69 +302,9 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 160,
     description: 'Aumenta el Ataque Físico un 50%, pero restringe a usar el mismo movimiento.',
     badge: '+50% ATAQUE FÍSICO',
-    gbaItemId: 0x0113,
+    gbaItemId: HNS_ITEM_IDS.CHOICE_BAND,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/choice-band.png',
-  },
-  {
-    id: 'BREED_CHOICE_SPECS',
-    name: 'Gafas Elegidas (Choice Specs)',
-    type: 'item',
-    floor: 'breeding',
-    cost: 160,
-    description: 'Aumenta el Ataque Especial un 50% fijando el movimiento inicial.',
-    badge: '+50% ATQ ESPECIAL',
-    gbaItemId: 0x0114,
-    pocket: 'ITEMS',
-    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/choice-specs.png',
-  },
-  {
-    id: 'BREED_CHOICE_SCARF',
-    name: 'Pañuelo Elegido (Choice Scarf)',
-    type: 'item',
-    floor: 'breeding',
-    cost: 160,
-    description: 'Aumenta la Velocidad un 50% garantizando golpear primero en la arena.',
-    badge: '+50% VELOCIDAD',
-    gbaItemId: 0x0115,
-    pocket: 'ITEMS',
-    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/choice-scarf.png',
-  },
-  {
-    id: 'BREED_LIFE_ORB',
-    name: 'Vidasfera (Life Orb)',
-    type: 'item',
-    floor: 'breeding',
-    cost: 175,
-    description: 'Potencia el daño de todos los ataques un 30% a cambio de 10% de PS.',
-    badge: '+30% DAÑO TOTAL',
-    gbaItemId: 0x0116,
-    pocket: 'ITEMS',
-    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/life-orb.png',
-  },
-  {
-    id: 'BREED_FOCUS_SASH',
-    name: 'Banda Focus (Focus Sash)',
-    type: 'item',
-    floor: 'breeding',
-    cost: 140,
-    description: 'Evita que el Pokémon caiga debilitado de un solo golpe si tenía PS llenos.',
-    badge: 'SUPERVIVENCIA 1-HP',
-    gbaItemId: 0x0117,
-    pocket: 'ITEMS',
-    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/focus-sash.png',
-  },
-  {
-    id: 'BREED_EXP_SHARE',
-    name: 'Repartir Experiencia (Exp. Share)',
-    type: 'item',
-    floor: 'breeding',
-    cost: 110,
-    description: 'Distribuye el 50% de la XP de cada batalla al Pokémon que lo lleve.',
-    badge: 'DISTRIBUCIÓN XP',
-    gbaItemId: 0x00B6,
-    pocket: 'ITEMS',
-    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/exp-share.png',
   },
   {
     id: 'BREED_MACHO_BRACE',
@@ -382,7 +314,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 130,
     description: 'Duplica los puntos de esfuerzo (EVs) obtenidos al derrotar rivales.',
     badge: 'DOBLE EVs ENTRENAMIENTO',
-    gbaItemId: 0x00B7,
+    gbaItemId: HNS_ITEM_IDS.MACHO_BRACE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/macho-brace.png',
   },
@@ -394,7 +326,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 125,
     description: 'Aumenta en 1 nivel el índice de golpes críticos del portador.',
     badge: '+CRÍTICO GOLPES',
-    gbaItemId: 0x00CE,
+    gbaItemId: HNS_ITEM_IDS.SCOPE_LENS,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/scope-lens.png',
   },
@@ -406,7 +338,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 100,
     description: 'Restaura PS equivalentes a 1/8 del daño infligido al oponente.',
     badge: 'ROBO DE VIDA',
-    gbaItemId: 0x00DC,
+    gbaItemId: HNS_ITEM_IDS.SHELL_BELL,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/shell-bell.png',
   },
@@ -414,6 +346,20 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
   // =========================================================================
   // 3F: EJEMPLARES ESPECIALES DE ÉLITE (15 POKÉMON LISTOS CON STATS TOP)
   // =========================================================================
+  {
+    id: 'SHINY_DRATINI',
+    name: 'Dratini Shiny ✦ (Meta de 3 meses)',
+    type: 'pokemon',
+    floor: 'specials',
+    cost: 40000,
+    description: 'El dragón dorado de la Ruta 34. La meta larga del Bazar: constancia diaria, no suerte.',
+    badge: 'META LEGENDARIA',
+    speciesId: 147,
+    level: 10,
+    isShiny: true,
+    perfectIVs: true,
+    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/147.png',
+  },
   {
     id: 'PKMN_SHINY_EEVEE',
     name: 'Eevee Plateado (Shiny)',
@@ -729,7 +675,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 5000,
     description: 'Restaura todos los PP (Puntos de Poder) de los 4 movimientos.',
     badge: 'RECARGA PP TOTAL',
-    gbaItemId: 0x0026,
+    gbaItemId: HNS_ITEM_IDS.MAX_ELIXIR,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/max-elixir.png',
   },
@@ -741,7 +687,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 6000,
     description: 'Eleva los Puntos de Poder (PP) de un movimiento a su límite máximo permanente.',
     badge: '+PP PERMANENTE',
-    gbaItemId: 0x0047,
+    gbaItemId: HNS_ITEM_IDS.PP_MAX,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/pp-max.png',
   },
@@ -753,7 +699,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 50,
     description: 'Desata la evolución de Growlithe a Arcanine o Eevee a Flareon.',
     badge: 'EVOLUCIÓN FUEGO',
-    gbaItemId: 0x005F,
+    gbaItemId: HNS_ITEM_IDS.FIRE_STONE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/fire-stone.png',
   },
@@ -765,7 +711,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 50,
     description: 'Evoluciona a Poliwhirl a Poliwrath, Staryu a Starmie o Eevee a Vaporeon.',
     badge: 'EVOLUCIÓN AGUA',
-    gbaItemId: 0x0060,
+    gbaItemId: HNS_ITEM_IDS.WATER_STONE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/water-stone.png',
   },
@@ -777,7 +723,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 50,
     description: 'Evoluciona a Pikachu en Raichu o a Eevee en el rápido Jolteon.',
     badge: 'EVOLUCIÓN RAYO',
-    gbaItemId: 0x0061,
+    gbaItemId: HNS_ITEM_IDS.THUNDER_STONE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/thunder-stone.png',
   },
@@ -789,7 +735,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 65,
     description: 'Piedra mágica que evoluciona a Nidorino/Nidorina y Clefairy.',
     badge: 'EVOLUCIÓN LUNAR',
-    gbaItemId: 0x005E,
+    gbaItemId: HNS_ITEM_IDS.MOON_STONE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/moon-stone.png',
   },
@@ -801,7 +747,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 65,
     description: 'Premio del Concurso de Bichos de Johto. Evoluciona a Gloom y Sunkern.',
     badge: 'EVOLUCIÓN SOLAR',
-    gbaItemId: 0x005D,
+    gbaItemId: HNS_ITEM_IDS.SUN_STONE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/sun-stone.png',
   },
@@ -813,7 +759,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 45,
     description: 'Entrégasela al Recuerda-Movimientos para re-aprender ataques olvidados.',
     badge: 'RECUERDA-ATAQUES',
-    gbaItemId: 0x006F,
+    gbaItemId: HNS_ITEM_IDS.HEART_SCALE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/heart-scale.png',
   },
@@ -825,7 +771,7 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     cost: 15,
     description: 'Te teletransporta de inmediato a la entrada de cualquier cueva de Johto.',
     badge: 'TELETRANSPORTE',
-    gbaItemId: 0x0055,
+    gbaItemId: HNS_ITEM_IDS.ESCAPE_ROPE,
     pocket: 'ITEMS',
     previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/escape-rope.png',
   },
@@ -1014,5 +960,44 @@ export const EXPANDED_SHOP_CATALOG: ShopProduct[] = [
     badge: skin.badge,
     skinId: skin.id,
     previewImage: skin.spriteUrl,
+  })),
+
+  // =========================================================================
+  // 4F-B: MÁQUINAS TÉCNICAS (MT01 - MT50)
+  // =========================================================================
+  ...HNS_TM_CATALOG.map((tm): ShopProduct => ({
+    id: `GBA_${tm.code}`,
+    name: `${tm.code} · ${tm.moveName}`,
+    type: 'item',
+    floor: 'tms',
+    cost: tm.price,
+    description: tm.description,
+    badge: tm.type.toUpperCase(),
+    gbaItemId: tm.itemId,
+    pocket: 'TMHM',
+    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/tm-normal.png',
+    tmCode: tm.code,
+    moveName: tm.moveName,
+    moveType: tm.type,
+    power: tm.power,
+    accuracy: tm.accuracy,
+    pp: tm.pp,
+  })),
+
+  // =========================================================================
+  // 2F-B: MÁQUINAS DE NATURALEZA (MINTS RAROS)
+  // =========================================================================
+  ...HNS_MINT_CATALOG.map((mint): ShopProduct => ({
+    id: `GBA_${mint.code}`,
+    name: mint.name,
+    type: 'item',
+    floor: 'mints',
+    cost: mint.price,
+    description: mint.description,
+    badge: 'NATURALEZA',
+    gbaItemId: mint.itemId,
+    pocket: 'ITEMS',
+    previewImage: 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/lonely-mint.png',
+    effect: mint.effect,
   })),
 ];

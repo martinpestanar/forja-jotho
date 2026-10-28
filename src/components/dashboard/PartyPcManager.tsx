@@ -14,9 +14,9 @@ import {
   Zap,
 } from 'lucide-react';
 import { useTrainerStore } from '@/store/useTrainerStore';
+import { useEconomyStore } from '@/store/useEconomyStore';
 import { soundFx } from '@/lib/soundFx';
 import { POKEMON_ASSETS, JOHTO_POKEDEX_CATALOG, HNS_ITEMS_CATALOG, ItemAssetMetadata } from '@/lib/pokemonAssets';
-import { triggerGbaItemInjection } from '@/lib/gba/PokemonMemoryBridge';
 import confetti from 'canvas-confetti';
 
 interface BoxedPokemon {
@@ -118,13 +118,31 @@ export const PartyPcManager: React.FC = () => {
     }
   };
 
-  // Inyectar ítem a la mochila GBA
-  const handleInjectItem = () => {
-    soundFx.playCoin();
+  // Inyectar ítem a la mochila GBA desde la Bóveda (nunca gratis)
+  const handleInjectItem = async () => {
+    soundFx.playClick();
+    const snapshot = useEconomyStore.getState().snapshot;
+    const vaultItem = snapshot?.vault?.find(
+      (v) =>
+        v.item_type === 'item' &&
+        Number(v.payload_json?.gba_item_id) === selectedItem.gbaItemId
+    );
+
+    if (!vaultItem) {
+      soundFx.playDamage();
+      showToast(`🔒 No tienes ${selectedItem.name} en la Bóveda. Cómpralo en el Bazar.`);
+      return;
+    }
+
+    const result = await useEconomyStore.getState().dispatchVaultItem(vaultItem.id);
+    if (!result.success) {
+      soundFx.playDamage();
+      showToast(`⚠️ ${result.error}`);
+      return;
+    }
+
     confetti({ particleCount: 25, spread: 45, origin: { y: 0.6 } });
-    const pocket = selectedItem.category === 'ball' ? 'POKEBALLS' : 'ITEMS';
-    triggerGbaItemInjection(selectedItem.gbaItemId, 3, pocket, selectedItem.name);
-    showToast(`🎒 3x ${selectedItem.name} → Mochila GBA! Pulsa CONTINUAR.`);
+    showToast(`🎒 ${vaultItem.display_name} despachado. Pulsa CONTINUAR en el cartucho.`);
   };
 
   const filteredItems = HNS_ITEMS_CATALOG.filter(

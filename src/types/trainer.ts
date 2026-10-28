@@ -10,6 +10,16 @@ export interface TrainerProfile {
   current_level: number;
   xp: number;
   pokedollars: number;
+  in_game_money?: number;
+  tax_debt?: number;
+  last_tax_charge_date?: string | null;
+  economy_started_at?: string | null;
+  rescue_plan_active?: boolean;
+  rescue_until?: string | null;
+  pc_boxes?: number;
+  vault_slots?: number;
+  expedition_week_start?: string | null;
+  expedition_week_paid?: number;
   streak_days: number;
   battery_minutes: number;
   egg_steps: number;

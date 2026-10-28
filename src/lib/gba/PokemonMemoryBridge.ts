@@ -207,14 +207,21 @@ export class PokemonMemoryBridge {
         }
       }
 
-      // 5. Actualizar profiles.gba_party_json y pokedollars en Supabase si es un UUID válido
+      // 5. Actualizar profiles.gba_party_json e in_game_money (NUNCA pokedollars)
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(this.userId);
       if (isUuid) {
+        // El dinero del cartucho vive aparte de la wallet de SynDex.
+        const { error: syncError } = await supabase.rpc('rpc_economy_sync_game_money', {
+          p_in_game_money: money,
+        });
+        if (syncError) {
+          console.warn('[MemoryBridge] Economy sync error:', syncError.message);
+        }
+
         const { error: updateError } = await supabase
           .from('profiles')
           .update({
             gba_party_json: party,
-            pokedollars: money,
             updated_at: new Date().toISOString(),
           })
           .eq('id', this.userId);

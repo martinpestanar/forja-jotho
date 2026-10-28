@@ -14,5 +14,11 @@
         }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/economy/tick",
+      "schedule": "5 5 * * *"
+    }
   ]
 }

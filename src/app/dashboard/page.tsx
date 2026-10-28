@@ -5,6 +5,7 @@ import { useTrainerStore } from '@/store/useTrainerStore';
 import { supabase } from '@/lib/supabase';
 import { ArcadeRoomTheater } from '@/components/arcade/ArcadeRoomTheater';
 import { PartyPcManager } from '@/components/dashboard/PartyPcManager';
+import { EconomySanctuary } from '@/components/economy/EconomySanctuary';
 import { PokedexBagViewer } from '@/components/dashboard/PokedexBagViewer';
 import { MobileTopHud } from '@/components/dashboard/MobileTopHud';
 import { RunicHabitCard } from '@/components/dashboard/RunicHabitCard';
@@ -290,7 +291,8 @@ export default function DashboardPage() {
         console.warn('[seal_daily_habit rpc catch]:', rpcErr);
       }
 
-      // 2. Si el RPC arrojó error de constraint o no existe, registrar directamente en valdr_daily_logs y actualizar perfil
+      // 2. Si el RPC falló, solo registramos la bitácora. Las recompensas
+      //    económicas SOLO las concede el servidor (sin fallback optimista).
       if (!rpcSuccess) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -302,21 +304,12 @@ export default function DashboardPage() {
             proof_text: proof,
             created_at: new Date().toISOString(),
           }, { onConflict: 'user_id,habit_id,log_date' });
-
-          const habitObj = habits.find((h) => h.id === habitId);
-          const addGold = habitObj?.gold_reward || 50;
-          const addBatt = habitObj?.game_battery_reward || 30;
-
-          // Respetar límites seguros para evitar violar check constraints
-          const currentBatt = profileData?.battery_minutes ?? 0;
-          const safeBatt = Math.min(240, Math.max(0, currentBatt + addBatt));
-          const safeGold = Math.max(0, (profileData?.sovereignty_gold ?? 150) + addGold);
-
-          await supabase.from('valdr_profiles').update({
-            sovereignty_gold: safeGold,
-            battery_minutes: safeBatt,
-          }).eq('id', user.id);
         }
+      }
+
+      // 3. Refrescar la economía global (impuestos, deuda, wallet)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('syndex:economy-updated'));
       }
 
       // Disparar números flotantes de dopamina
@@ -372,25 +365,30 @@ export default function DashboardPage() {
     const todayStr = new Date().toISOString().split('T')[0];
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('valdr_profiles')
-          .update({
-            temperance_streak_days: newStreak,
-            temperance_last_date: todayStr,
-            sovereignty_gold: (profileData?.sovereignty_gold ?? 150) + 100,
-          })
-          .eq('id', user.id);
+      const { data, error } = await supabase.rpc('rpc_economy_temperance_reward');
+      if (error) {
+        console.warn('[temperance reward]', error.message);
+        return;
       }
+      const reward = data as any;
+      if (!reward?.success) {
+        setTemperanceConfirmedToday(true);
+        return;
+      }
+
+      const newStreak = reward.streak_days ?? currentStreak + 1;
 
       setTemperanceConfirmedToday(true);
       setProfileData((prev: any) => ({
         ...prev,
         temperance_streak_days: newStreak,
         temperance_last_date: todayStr,
-        sovereignty_gold: (prev?.sovereignty_gold ?? 150) + 100,
+        sovereignty_gold: reward.new_gold ?? prev?.sovereignty_gold,
       }));
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('syndex:economy-updated'));
+      }
 
       // Dopamina visual
       setFloatingRewards((prev) => [
@@ -768,8 +766,10 @@ export default function DashboardPage() {
                   <span className="font-semibold text-[#1F1E1B] mt-0.5 block">{profileData?.leader_name || 'Martín'}</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
-                  <span className="text-[10px] text-[#706E66] block font-mono">Conchas de Trueque</span>
-                  <span className="font-semibold text-[#A6752C] mt-0.5 block">{profileData?.sovereignty_gold ?? 0} 🐚</span>
+                  <span className="text-[10px] text-[#706E66] block font-mono">Pokédólares</span>
+                  <span className="font-semibold text-[#A6752C] mt-0.5 block">
+                    ₽{useTrainerStore.getState().profile?.pokedollars ?? profileData?.pokedollars ?? 0}
+                  </span>
                 </div>
               </div>
 
@@ -880,6 +880,10 @@ export default function DashboardPage() {
               <p className="text-xs text-[#706E66]">
                 Inspecciona tu equipo y despacha suministros a Pokémon Heart & Soul.
               </p>
+            </div>
+
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
+              <EconomySanctuary />
             </div>
 
             <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">

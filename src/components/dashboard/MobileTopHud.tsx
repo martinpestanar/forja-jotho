@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   Waves,
   Coins, 
   Sun,
@@ -10,6 +10,7 @@ import {
   Clock, 
   Sparkles 
 } from 'lucide-react';
+import { useTrainerStore } from '@/store/useTrainerStore';
 
 interface MobileTopHudProps {
   profileData: any;
@@ -22,7 +23,8 @@ export function MobileTopHud({
   timeUntilMidnight,
   completionPercent,
 }: MobileTopHudProps) {
-  const gold = profileData?.sovereignty_gold ?? 0;
+  const wallet = useTrainerStore((s) => s.profile?.pokedollars);
+  const gold = wallet ?? profileData?.sovereignty_gold ?? 0;
   const battery = Math.max(120, profileData?.battery_minutes ?? 120);
   const extraMinutes = Math.max(0, battery - 120);
   const streak = profileData?.streak_fire_days ?? 0;

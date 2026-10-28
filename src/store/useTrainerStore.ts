@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ActiveTab, TrainerProfile } from '@/types/trainer';
 import { supabase } from '@/lib/supabase';
+import { useHqStore } from '@/store/useHqStore';
 
 interface ActivityRewardResult {
   success: boolean;
@@ -61,7 +62,7 @@ interface TrainerState {
     missionId?: string,
     projectUrl?: string
   ) => Promise<ActivityRewardResult | null>;
-  purchaseShopItemRpc: (itemId: string, cost: number) => Promise<PurchaseResult>;
+  purchaseShopItemRpc: (itemId: string, qty?: number) => Promise<PurchaseResult>;
   activateSquadCableRpc: (roomPin: string, squadId: string, cableRole: string) => Promise<CableActivationResult | null>;
 }
 
@@ -251,26 +252,11 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
     }
   },
 
-  // 1. RPC: Consumir 1 minuto de batería en PostgreSQL
+  // 1. Consumir 1 minuto del banco de tiempo del HQ (2h base + tareas)
   consumeBatteryMinuteRpc: async () => {
-    try {
-      const { data, error } = await supabase.rpc('rpc_consume_battery_minute');
-      if (error) {
-        // Fallback optimista si no hay sesión activa en sandbox
-        const currentMins = get().profile?.battery_minutes ?? 0;
-        const fallbackMins = Math.max(0, currentMins - 1);
-        get().updateProfile({ battery_minutes: fallbackMins });
-        return fallbackMins;
-      }
-      const remaining = Number(data);
-      get().updateProfile({ battery_minutes: remaining });
-      return remaining;
-    } catch {
-      const currentMins = get().profile?.battery_minutes ?? 0;
-      const fallbackMins = Math.max(0, currentMins - 1);
-      get().updateProfile({ battery_minutes: fallbackMins });
-      return fallbackMins;
-    }
+    const remaining = useHqStore.getState().consumeMinute();
+    get().updateProfile({ battery_minutes: remaining });
+    return remaining;
   },
 
   // 2. RPC: Otorgar recompensa atómica en PostgreSQL
@@ -283,35 +269,9 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
       });
 
       if (error) {
-        console.warn('RPC reward error, applying optimistic fallback:', error.message);
-        // Fallback optimista
-        const profile = get().profile;
-        if (!profile) return null;
-        const addPokedollars = activityType === 'mission_complete' ? 100 : 25;
-        const addSteps = activityType === 'mission_complete' ? 50 : 20;
-        const newEggSteps = (profile.egg_steps + addSteps) % 100;
-        const hatched = profile.egg_steps + addSteps >= 100;
-
-        const optimisticResult: ActivityRewardResult = {
-          success: true,
-          added_xp: activityType === 'mission_complete' ? 150 : 50,
-          added_pokedollars: addPokedollars,
-          added_battery: 15,
-          added_steps: addSteps,
-          egg_hatched: hatched,
-          is_shiny: profile.streak_days >= 7,
-          new_egg_steps: newEggSteps,
-          current_level: profile.current_level,
-        };
-
-        get().updateProfile({
-          pokedollars: profile.pokedollars + addPokedollars,
-          battery_minutes: profile.battery_minutes + 15,
-          egg_steps: newEggSteps,
-          xp: profile.xp + optimisticResult.added_xp,
-        });
-
-        return optimisticResult;
+        // Sin fallback optimista: la recompensa SOLO existe si el servidor la concede.
+        console.warn('RPC reward error:', error.message);
+        return null;
       }
 
       const res = data as ActivityRewardResult;
@@ -332,23 +292,16 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
     }
   },
 
-  // 3. RPC: Compra en la Poké-tienda validada en PostgreSQL
-  purchaseShopItemRpc: async (itemId, cost) => {
+  // 3. RPC: Compra en el Poké-Bazar validada en PostgreSQL (precio del servidor)
+  purchaseShopItemRpc: async (itemId, qty = 1) => {
     try {
       const { data, error } = await supabase.rpc('rpc_purchase_shop_item', {
         p_item_id: itemId,
-        p_cost: cost,
+        p_qty: qty,
       });
 
       if (error) {
-        // Fallback en cliente si no hay sesión
-        const profile = get().profile;
-        if (!profile || profile.pokedollars < cost) {
-          return { success: false, error: 'Fondos insuficientes' };
-        }
-        const remaining = profile.pokedollars - cost;
-        get().updateProfile({ pokedollars: remaining });
-        return { success: true, item_id: itemId, remaining_pokedollars: remaining };
+        return { success: false, error: error.message };
       }
 
       const res = data as PurchaseResult;

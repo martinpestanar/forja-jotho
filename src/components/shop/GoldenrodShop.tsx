@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { 
@@ -31,9 +31,9 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useTrainerStore } from '@/store/useTrainerStore';
+import { useEconomyStore } from '@/store/useEconomyStore';
 import { soundFx } from '@/lib/soundFx';
 import { LayeredSpriteCanvas } from '@/components/tuning/LayeredSpriteCanvas';
-import { triggerGbaPokemonInjection, triggerGbaItemInjection } from '@/lib/gba/PokemonMemoryBridge';
 import { HNS_ITEM_IDS } from '@/lib/gba/gbaSaveEngine';
 import { POKEMON_ASSETS } from '@/lib/pokemonAssets';
 import { EXPANDED_SHOP_CATALOG, ShopFloor, ShopProduct } from '@/lib/shopCatalog';
@@ -44,8 +44,10 @@ const CATALOG_ITEMS = EXPANDED_SHOP_CATALOG;
 const FLOORS: { id: ShopFloor; label: string; floorNum: string; icon: any }[] = [
   { id: 'eggs', label: 'Huevos de Crianza', floorNum: '1F', icon: Egg },
   { id: 'breeding', label: 'Genética & Crianza', floorNum: '2F', icon: Dna },
+  { id: 'mints', label: 'Máquinas de Naturaleza', floorNum: '2F-B', icon: Sparkles },
   { id: 'specials', label: 'Pokémon Especiales', floorNum: '3F', icon: Sparkles },
   { id: 'supplies', label: 'Bolsillos GBA', floorNum: '4F', icon: Zap },
+  { id: 'tms', label: 'Máquinas Técnicas (MT)', floorNum: '4F-B', icon: Zap },
   { id: 'pokemon_costumes', label: 'Equipamiento & Armaduras', floorNum: '5F', icon: Shield },
   { id: 'trainer_skins', label: 'Skins de Entrenador', floorNum: '6F', icon: UserCheck },
   { id: 'cosmetics', label: 'Auras & Títulos Web', floorNum: '7F', icon: Glasses },
@@ -62,13 +64,29 @@ export const GoldenrodShop: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const [tmFilter, setTmFilter] = useState<string>('todos');
+
+  const economyPrices = useEconomyStore((s) => s.prices);
+  const loadPrices = useEconomyStore((s) => s.loadPrices);
+  const oracleText = useEconomyStore((s) => s.oracleText);
+  const loadOracle = useEconomyStore((s) => s.loadOracle);
+
+  useEffect(() => {
+    loadPrices();
+    loadOracle('greeting');
+  }, [loadPrices, loadOracle]);
+
+  const priceOf = (product: ShopProduct) => economyPrices[product.id] ?? product.cost;
+
 
   // Cosméticos equipados en preview
   const [equippedGlasses, setEquippedGlasses] = useState<boolean>(true);
   const [equippedAura, setEquippedAura] = useState<boolean>(true);
   const [equippedCap, setEquippedCap] = useState<boolean>(false);
 
-  const pokedollars = profile?.pokedollars ?? 0;
+  // La wallet real vive en la economía; el perfil es solo respaldo visual.
+  const economyWallet = useEconomyStore((s) => s.snapshot?.wallet);
+  const pokedollars = economyWallet ?? profile?.pokedollars ?? 0;
   const starter = profile?.starter_pokemon ?? 'cyndaquil';
 
   // Conjunto de especies que el alumno posee actualmente en su inventario / equipo / starter
@@ -88,13 +106,16 @@ export const GoldenrodShop: React.FC = () => {
   ]);
 
   const floorItems = CATALOG_ITEMS.filter((item) => item.floor === currentFloor);
+  const visibleFloorItems =
+    currentFloor === 'tms' && tmFilter !== 'todos'
+      ? floorItems.filter((item) => item.moveType === tmFilter)
+      : floorItems;
+  const tmTypes = Array.from(new Set(CATALOG_ITEMS.filter((i) => i.floor === 'tms').map((i) => i.moveType).filter(Boolean))) as string[];
   const dailyDeal = CATALOG_ITEMS.find((item) => item.isDailyDeal);
 
   // Calcular precio total con multiplicador de cantidad (sólo para ítems apilables)
   const isStackable = selectedProduct.type === 'item';
-  const effectiveCost = selectedProduct.isDailyDeal && selectedProduct.discountPct
-    ? Math.round(selectedProduct.cost * (1 - selectedProduct.discountPct / 100))
-    : selectedProduct.cost;
+  const effectiveCost = priceOf(selectedProduct);
   const totalCost = isStackable ? effectiveCost * quantity : effectiveCost;
   const canAfford = pokedollars >= totalCost;
 
@@ -127,8 +148,8 @@ export const GoldenrodShop: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      // 1. Invocar RPC rpc_purchase_shop_item en Supabase
-      const result = await purchaseShopItemRpc(selectedProduct.id, totalCost);
+      // 1. Invocar RPC: el precio SIEMPRE lo decide el servidor
+      const result = await purchaseShopItemRpc(selectedProduct.id, quantity);
 
       if (!result.success) {
         soundFx.playDamage();
@@ -136,88 +157,24 @@ export const GoldenrodShop: React.FC = () => {
         return;
       }
 
-      // 2. Procesar según la naturaleza del producto
-      if (selectedProduct.type === 'egg' || selectedProduct.type === 'pokemon') {
-        // Inyectar Pokémon o Huevo al Equipo/PC
-        triggerGbaPokemonInjection({
-          speciesId: selectedProduct.speciesId || 175,
-          level: selectedProduct.level || 5,
-          nickname: selectedProduct.type === 'egg' ? 'HUEVO' : selectedProduct.name.toUpperCase(),
-          isShiny: !!selectedProduct.isShiny,
-          perfectIVs: !!selectedProduct.perfectIVs,
-          targetDestination: 'auto',
-        });
+      // 2. Todo lo comprado nace en la Bóveda (nada se pierde si el emulador está cerrado)
+      if (selectedProduct.type === 'item' || selectedProduct.type === 'pokemon' || selectedProduct.type === 'egg') {
         soundFx.playLevelUp();
         confetti({
-          particleCount: 50,
+          particleCount: 45,
           spread: 60,
           origin: { y: 0.6 },
           colors: ['#F59E0B', '#10B981', '#06B6D4', '#E60012'],
         });
-        showToast(`✨ ¡${selectedProduct.name} recibido! Revisa tu Equipo o PC Box 1.`);
-      } else if (selectedProduct.type === 'item' && selectedProduct.gbaItemId) {
-        // Inyectar ítem apilado a la RAM del GBA
-        triggerGbaItemInjection(
-          selectedProduct.gbaItemId,
-          quantity,
-          selectedProduct.pocket || 'ITEMS',
-          selectedProduct.name
-        );
+        showToast(`📦 ${selectedProduct.name} guardado en la Bóveda. Envíalo al juego desde Santuario.`);
+      } else {
         soundFx.playCoin();
         confetti({ particleCount: 30, spread: 45, origin: { y: 0.6 } });
-        showToast(`🎒 ¡${quantity}x ${selectedProduct.name} inyectado a tu mochila GBA!`);
-      } else if (selectedProduct.type === 'cosmetic') {
-        const currentInventory = profile?.cosmetics_inventory || [];
-        const updatedInventory = currentInventory.includes(selectedProduct.id)
-          ? currentInventory
-          : [...currentInventory, selectedProduct.id];
-
-        useTrainerStore.getState().updateProfile({
-          cosmetics_inventory: updatedInventory,
-        });
-
-        if (selectedProduct.id === 'COSMETIC_CYBER_VISOR') setEquippedGlasses(true);
-        if (selectedProduct.id === 'COSMETIC_NEON_AURA') setEquippedAura(true);
-        if (selectedProduct.id === 'COSMETIC_TRAINER_CAP') setEquippedCap(true);
-        soundFx.playCoin();
-        confetti({ particleCount: 40, spread: 50, origin: { y: 0.6 } });
-        showToast(`👑 ¡Cosmético añadido a tu inventario! Pruébalo en el Taller Tuning.`);
-      } else if (selectedProduct.type === 'pokemon_costume') {
-        const currentInventory = profile?.cosmetics_inventory || [];
-        const updatedInventory = currentInventory.includes(selectedProduct.id)
-          ? currentInventory
-          : [...currentInventory, selectedProduct.id];
-
-        useTrainerStore.getState().updateProfile({
-          cosmetics_inventory: updatedInventory,
-        });
-
-        // Equipar automáticamente al Pokémon correspondiente
-        if (selectedProduct.speciesId && selectedProduct.costumeId) {
-          useTrainerStore.getState().setPokemonCostume(selectedProduct.speciesId, selectedProduct.costumeId);
-        }
-
-        soundFx.playLevelUp();
-        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ['#F59E0B', '#10B981', '#E60012'] });
-        showToast(`🛡️ ¡${selectedProduct.name} equipado en tu ${selectedProduct.speciesName || 'Pokémon'}!`);
-      } else if (selectedProduct.type === 'trainer_skin') {
-        const currentInventory = profile?.cosmetics_inventory || [];
-        const updatedInventory = currentInventory.includes(selectedProduct.id)
-          ? currentInventory
-          : [...currentInventory, selectedProduct.id];
-
-        useTrainerStore.getState().updateProfile({
-          cosmetics_inventory: updatedInventory,
-        });
-
-        if (selectedProduct.skinId) {
-          useTrainerStore.getState().setTrainerSkin(selectedProduct.skinId);
-        }
-
-        soundFx.playLevelUp();
-        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 }, colors: ['#06B6D4', '#F59E0B', '#E60012'] });
-        showToast(`👑 ¡Skin equipada: ${selectedProduct.name}!`);
+        showToast(`👑 ${selectedProduct.name} desbloqueado en tu inventario.`);
       }
+
+      await useTrainerStore.getState().loadSessionProfileRpc();
+      await useEconomyStore.getState().loadEconomy();
 
       // Resetear contador
       setQuantity(1);
@@ -313,7 +270,7 @@ export const GoldenrodShop: React.FC = () => {
         </div>
       </div>
 
-      {/* Banner de Oferta Relámpago del Día */}
+      {/* Banner de Destacado del Día */}
       {dailyDeal && (
         <div
           onClick={() => {
@@ -330,17 +287,54 @@ export const GoldenrodShop: React.FC = () => {
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-[#E60012] animate-pulse" />
             <span className="text-xs font-black uppercase text-[#E60012]">
-              ¡OFERTA FLASH DEL DÍA!
+              DESTACADO DEL DÍA
             </span>
             <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              {dailyDeal.name} con -{dailyDeal.discountPct}% de descuento
+              {dailyDeal.name} destacado en el Bazar
             </span>
           </div>
           <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
-            <span>₽{Math.round(dailyDeal.cost * (1 - (dailyDeal.discountPct || 0) / 100))}</span>
-            <span className="line-through text-[10px] text-slate-400">₽{dailyDeal.cost}</span>
+            <span>₽{priceOf(dailyDeal).toLocaleString()}</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </span>
+        </div>
+      )}
+
+      {/* Voz del Oráculo del Bazar */}
+      {oracleText && (
+        <div
+          className={`p-2.5 px-3 rounded-xl border-2 flex items-start gap-2 ${
+            isLight
+              ? 'bg-[#F4F1EA] border-black shadow-[3px_3px_0_#000]'
+              : 'bg-slate-900/70 border-cyan-500/40'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-[#D4A359] mt-0.5 shrink-0" />
+          <p className="text-xs font-bold leading-snug text-slate-800 dark:text-slate-200">
+            <span className="text-[#E60012] dark:text-amber-400 font-black">ORÁCULO: </span>
+            {oracleText}
+          </p>
+        </div>
+      )}
+
+      {/* Filtro de tipos para Máquinas Técnicas */}
+      {currentFloor === 'tms' && (
+        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          {['todos', ...tmTypes].map((type) => (
+            <button
+              key={type}
+              onClick={() => setTmFilter(type)}
+              className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border transition-all cursor-pointer whitespace-nowrap ${
+                tmFilter === type
+                  ? 'bg-[#2563EB] text-white border-black'
+                  : isLight
+                  ? 'bg-white border-black/30 text-slate-600'
+                  : 'bg-slate-900 border-slate-700 text-slate-400'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
         </div>
       )}
 
@@ -389,14 +383,12 @@ export const GoldenrodShop: React.FC = () => {
         {/* Lado Izquierdo: Catálogo de Ítems del Piso Activo (7 Cols) */}
         <div className="lg:col-span-7 overflow-y-auto pr-1 space-y-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {floorItems.map((prod) => {
+            {visibleFloorItems.map((prod) => {
               const isSelected = selectedProduct.id === prod.id;
               const isLocked = prod.type === 'pokemon_costume' &&
                 !!prod.speciesId &&
                 !ownedSpeciesIds.has(prod.speciesId);
-              const price = prod.isDailyDeal && prod.discountPct
-                ? Math.round(prod.cost * (1 - prod.discountPct / 100))
-                : prod.cost;
+              const price = priceOf(prod);
 
               return (
                 <div
@@ -429,7 +421,7 @@ export const GoldenrodShop: React.FC = () => {
                         </span>
                       ) : prod.isDailyDeal ? (
                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#E60012] text-white">
-                          -{prod.discountPct}% OFF
+                          DESTACADO
                         </span>
                       ) : null}
                     </div>

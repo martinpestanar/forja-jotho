@@ -4,10 +4,12 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useTrainerStore } from '@/store/useTrainerStore';
+import { useEconomyStore } from '@/store/useEconomyStore';
 import { soundFx } from '@/lib/soundFx';
 import { supabase } from '@/lib/supabase';
 import { PokemonMemoryBridge, EmulatorInterface } from '@/lib/gba/PokemonMemoryBridge';
 import { patchRomMartPrices } from '@/lib/gba/gbaSaveEngine';
+import { MobileControls } from '@/components/gba/MobileControls';
 import {
   Gamepad2,
   BatteryCharging,
@@ -26,6 +28,8 @@ import {
   X,
   Sliders,
   Zap,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 
 const ROM_PATH_VFS = '/data/games/pokemonHnS.gba';
@@ -118,7 +122,6 @@ interface GbaConsoleWorkerProps {
 
 export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneScreen = false }) => {
   const profile = useTrainerStore((s) => s.profile);
-  const theme = useTrainerStore((s) => s.theme);
   const consumeBatteryMinuteRpc = useTrainerStore((s) => s.consumeBatteryMinuteRpc);
   const updateProfile = useTrainerStore((s) => s.updateProfile);
 
@@ -134,6 +137,15 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
   const [fps, setFps] = useState<number>(60);
   const [emuState, setEmuState] = useState<'idle' | 'loading' | 'running' | 'paused' | 'drained'>('idle');
+
+  // Bandera global para que la Bóveda sepa si el cartucho puede recibir inyecciones
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    (window as any).__SYNDEX_GBA_READY__ = emuState === 'running';
+    return () => {
+      (window as any).__SYNDEX_GBA_READY__ = false;
+    };
+  }, [emuState]);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState<string | null>(null);
@@ -186,16 +198,24 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
   const [rebindingAction, setRebindingAction] = useState<string | null>(null);
 
-  // Escala de pantalla en móviles: 'fit' (relación 3:2 nativa GBA) o 'wide' (pantalla ancha sin bordes)
-  const [screenScaleMode, setScreenScaleMode] = useState<'fit' | 'wide'>('wide');
+  // Escala de pantalla: 'fit' (3:2 nativa, sin recortes) o 'wide' (llenar recortando bordes)
+  const [screenScaleMode, setScreenScaleMode] = useState<'fit' | 'wide'>('fit');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const consoleRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
-      const savedMode = localStorage.getItem('syndex_screen_scale_mode');
+      const savedMode = localStorage.getItem('syndex_screen_scale_mode_v2');
       if (savedMode === 'fit' || savedMode === 'wide') {
         setScreenScaleMode(savedMode);
       }
     } catch {}
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
   const toggleScreenScaleMode = () => {
@@ -203,15 +223,42 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     setScreenScaleMode((prev) => {
       const next = prev === 'wide' ? 'fit' : 'wide';
       try {
-        localStorage.setItem('syndex_screen_scale_mode', next);
+        localStorage.setItem('syndex_screen_scale_mode_v2', next);
       } catch {}
       return next;
     });
   };
 
+  const toggleFullscreen = async () => {
+    const element = consoleRef.current;
+    if (!element) return;
+    soundFx.playClick();
+
+    try {
+      if (!document.fullscreenElement) {
+        await element.requestFullscreen();
+        const orientation = screen.orientation as ScreenOrientation & {
+          lock?: (value: string) => Promise<void>;
+          unlock?: () => void;
+        };
+        try {
+          await orientation.lock?.('landscape');
+        } catch {}
+      } else {
+        const orientation = screen.orientation as ScreenOrientation & {
+          unlock?: () => void;
+        };
+        try {
+          orientation.unlock?.();
+        } catch {}
+        await document.exitFullscreen();
+      }
+    } catch {}
+  };
+
   const batteryMinutes = profile?.battery_minutes ?? 42;
   const isDrained = batteryMinutes <= 0;
-  const isLight = theme === 'light_gbc';
+  const isLight = true;
   const userId = profile?.id ?? 'guest-trainer-id';
   const userIdRef = useRef<string>(userId);
 
@@ -414,10 +461,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       // 5. Sincronizar equipo y dinero del cartucho al perfil Zustand y Supabase en tiempo real
       const liveData = bridgeRef.current?.readTrainerDataFromEmulator();
       if (liveData) {
-        updateProfile({
-          gba_party_json: liveData.party as any,
-          pokedollars: liveData.money,
-        });
+        updateProfile({ gba_party_json: liveData.party as any, in_game_money: liveData.money });
+        useEconomyStore.getState().syncGameMoney(liveData.money);
       }
 
       // 6. Notificación visual estilo Nintendo + sonido retro
@@ -495,10 +540,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         // Sincronizar equipo y dinero del cartucho a la web en tiempo real
         const liveData = bridgeRef.current?.readTrainerDataFromEmulator();
         if (liveData) {
-          updateProfile({
-            gba_party_json: liveData.party as any,
-            pokedollars: liveData.money,
-          });
+          updateProfile({ gba_party_json: liveData.party as any, in_game_money: liveData.money });
+        useEconomyStore.getState().syncGameMoney(liveData.money);
         }
 
         setShowSaveSuccess(`💾 ¡Partida guardada en ${slotId.replace('.sav', '').toUpperCase()}!`);
@@ -823,10 +866,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       try {
         const liveData = bridge.readTrainerDataFromEmulator();
         if (liveData) {
-          updateProfile({
-            gba_party_json: liveData.party as any,
-            pokedollars: liveData.money,
-          });
+          updateProfile({ gba_party_json: liveData.party as any, in_game_money: liveData.money });
+        useEconomyStore.getState().syncGameMoney(liveData.money);
         }
       } catch {}
     } catch (err: any) {
@@ -1169,9 +1210,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           width={240}
           height={160}
           className={`w-full h-full [image-rendering:pixelated] transition-transform duration-300 ${
-            screenScaleMode === 'wide'
-              ? 'object-fill scale-x-[1.08] sm:scale-100 sm:object-contain'
-              : 'object-contain'
+            screenScaleMode === 'wide' ? 'object-cover' : 'object-contain'
           }`}
           style={{ imageRendering: 'pixelated' }}
         />
@@ -1180,9 +1219,9 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         <button
           onClick={toggleScreenScaleMode}
           className="absolute top-2 right-2 z-30 px-2 py-0.5 rounded-full bg-black/75 hover:bg-black/95 text-[9px] font-mono font-bold text-cyan-300 border border-cyan-500/50 backdrop-blur-sm cursor-pointer active:scale-95 transition-all shadow-[0_0_8px_rgba(6,182,212,0.4)]"
-          title="Alternar entre formato GBA original 3:2 y Pantalla Ancha (Edge-to-Edge)"
+          title="Ajustar (sin recortes) o llenar la pantalla (recorta bordes)"
         >
-          {screenScaleMode === 'wide' ? '↔ ANCHA' : '⊡ 3:2'}
+          {screenScaleMode === 'wide' ? 'Llenar' : 'Ajustar'}
         </button>
 
         {/* Pantalla de Carga Inicial */}
@@ -1209,13 +1248,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
   }
 
   return (
-    <div
-      className={`w-full h-full flex flex-col rounded-none sm:rounded-2xl transition-all duration-300 p-1.5 sm:p-3 relative overflow-hidden select-none ${
-        isLight
-          ? 'bg-[#F4F1EA] text-slate-800 border-y-2 sm:border-4 border-black shadow-[6px_6px_0px_0px_#000]'
-          : 'bg-[#121214] text-slate-100 border-y sm:border-2 border-emerald-500/40 shadow-[0_0_25px_rgba(34,197,94,0.15)]'
-      }`}
-    >
+    <div ref={consoleRef} className="relative flex h-full min-h-0 w-full select-none flex-col overflow-hidden rounded-none border-y border-[#E8E5DD] bg-[#FAF9F5] p-1.5 text-[#1F1E1B] transition-all duration-300 sm:rounded-2xl sm:border sm:p-3 sm:shadow-sm">
 
       {/* Modal Personalización de Controles / Teclas */}
       <AnimatePresence>
@@ -1489,7 +1522,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       </AnimatePresence>
 
       {/* Barra Superior Ergonómica Estilo GBA SP */}
-      <div className="flex justify-between items-center px-1 mb-2">
+      <div className="mb-2 flex shrink-0 items-center justify-between gap-1 rounded-xl border border-[#E8E5DD] bg-white px-2 py-1.5">
         {/* Gatillo L (Hombrera Izquierda) */}
         <button
           onMouseDown={() => {
@@ -1506,11 +1539,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
             e.preventDefault();
             handleButton('L', false);
           }}
-          className={`px-3 py-1 font-mono font-black text-xs rounded-t-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-            isLight
-              ? 'bg-slate-300 hover:bg-slate-400 text-slate-900 border-2 border-black border-b-0 shadow-[2px_0_0_#000] active:translate-y-0.5'
-              : 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 border-b-0 active:translate-y-0.5'
-          }`}
+          className="hidden cursor-pointer items-center gap-1.5 rounded-lg border border-[#E8E5DD] bg-[#FAF9F5] px-3 py-1 font-mono text-[10px] font-semibold text-[#5E5C56] transition-all hover:bg-[#F2EFE9] active:translate-y-0.5 lg:flex"
           title={`Gatillo L (Tecla ${formatKeyName(keyBindings['L'] || 'KeyQ')})`}
         >
           <span>L</span>
@@ -1520,8 +1549,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         {/* Clúster Central: Estado, Partidas y Controles */}
         <div className="flex items-center gap-1.5">
           {/* Badge de FPS */}
-          <div className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-mono font-bold rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="flex items-center gap-1 rounded-full border border-[#5A7D62]/25 bg-[#5A7D62]/10 px-2 py-0.5 text-[9px] font-mono font-semibold text-[#4C6151]">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5A7D62]" />
             <span>{emuState === 'running' ? '60 FPS' : emuState.toUpperCase()}</span>
           </div>
 
@@ -1533,14 +1562,10 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
               setShowSlotModal(true);
             }}
             title="Elegir o gestionar partidas guardadas"
-            className={`flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer ${
-              isLight
-                ? 'bg-emerald-200 hover:bg-emerald-300 text-emerald-950 border-2 border-black shadow-[2px_2px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                : 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-500/50 shadow-[0_0_8px_rgba(34,197,94,0.15)] active:scale-95'
-            }`}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#E8E5DD] bg-white px-2 py-0.5 text-[10px] font-mono font-semibold text-[#5E5C56] transition-all hover:bg-[#F2EFE9]"
           >
-            <Save className="w-3 h-3 text-emerald-400" />
-            <span>Partidas</span>
+            <Save className="h-3 w-3 text-[#5A7D62]" />
+            <span className="hidden sm:inline">Partidas</span>
           </button>
 
           {/* Botón Configurar Controles */}
@@ -1550,42 +1575,30 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
               setShowKeyModal(true);
             }}
             title="Personalizar controles del teclado"
-            className={`flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer ${
-              isLight
-                ? 'bg-cyan-200 hover:bg-cyan-300 text-cyan-950 border-2 border-black shadow-[2px_2px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                : 'bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/50 shadow-[0_0_8px_rgba(6,182,212,0.15)] active:scale-95'
-            }`}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#E8E5DD] bg-white px-2 py-0.5 text-[10px] font-mono font-semibold text-[#5E5C56] transition-all hover:bg-[#F2EFE9]"
           >
-            <Gamepad2 className="w-3 h-3 text-cyan-400" />
-            <span>Controles</span>
+            <Gamepad2 className="h-3 w-3 text-[#3B7A87]" />
+            <span className="hidden sm:inline">Controles</span>
           </button>
 
           {/* Botón Reiniciar ROM (Soft Reset a la pantalla de título) */}
           <button
             onClick={restartRom}
             title="Reiniciar a la pantalla de título de Pokémon (Soft Reset oficial)"
-            className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer ${
-              isLight
-                ? 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-2 border-black shadow-[2px_2px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                : 'bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-500/50 shadow-[0_0_8px_rgba(245,158,11,0.15)] active:scale-95'
-            }`}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-[#E8E5DD] bg-white px-2 py-0.5 text-[10px] font-mono font-semibold text-[#5E5C56] transition-all hover:bg-[#F2EFE9]"
           >
-            <RotateCcw className="w-3 h-3 text-amber-400" />
-            <span>Reset</span>
+            <RotateCcw className="h-3 w-3 text-[#C49347]" />
+            <span className="hidden sm:inline">Reset</span>
           </button>
 
           {/* Botón Nueva Partida (Hard Reset: borra partida atascada y arranca de cero) */}
           <button
             onClick={hardResetCleanGame}
             title="Borrar partida atascada y arrancar Nueva Partida limpia desde la intro"
-            className={`flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold rounded-lg transition-all cursor-pointer ${
-              isLight
-                ? 'bg-[#E60012] hover:bg-[#cc0010] text-white border-2 border-black shadow-[2px_2px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                : 'bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.15)] active:scale-95'
-            }`}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-[#D97043] bg-[#D97043] px-2 py-0.5 text-[10px] font-mono font-semibold text-white transition-all hover:bg-[#CC6437]"
           >
-            <RefreshCw className="w-3 h-3 text-rose-400" />
-            <span>Nueva Partida</span>
+            <RefreshCw className="h-3 w-3" />
+            <span className="hidden sm:inline">Nueva Partida</span>
           </button>
         </div>
 
@@ -1605,11 +1618,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
             e.preventDefault();
             handleButton('R', false);
           }}
-          className={`px-3 py-1 font-mono font-black text-xs rounded-t-lg transition-all cursor-pointer flex items-center gap-1.5 ${
-            isLight
-              ? 'bg-slate-300 hover:bg-slate-400 text-slate-900 border-2 border-black border-b-0 shadow-[-2px_0_0_#000] active:translate-y-0.5'
-              : 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 border-b-0 active:translate-y-0.5'
-          }`}
+          className="hidden cursor-pointer items-center gap-1.5 rounded-lg border border-[#E8E5DD] bg-[#FAF9F5] px-3 py-1 font-mono text-[10px] font-semibold text-[#5E5C56] transition-all hover:bg-[#F2EFE9] active:translate-y-0.5 lg:flex"
           title={`Gatillo R (Tecla ${formatKeyName(keyBindings['R'] || 'KeyE')})`}
         >
           <span className="text-[9px] opacity-60 font-sans">[{formatKeyName(keyBindings['R'] || 'KeyE')}]</span>
@@ -1618,22 +1627,24 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       </div>
 
       {/* Pantalla del Emulador (Marco CRT Oficial mGBA) */}
-      <div
-        className={`relative flex-1 min-h-[220px] sm:min-h-[190px] rounded-lg sm:rounded-xl overflow-hidden flex items-center justify-center ${
-          isLight
-            ? 'bg-[#0f172a] border-2 sm:border-4 border-black shadow-inner'
-            : 'bg-black border sm:border-2 border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.2)]'
-        }`}
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent pointer-events-none z-10" />
+      <div className="relative flex min-h-0 max-h-[66.6667vw] flex-1 items-center justify-center overflow-hidden rounded-lg border border-[#2A2723] bg-[#0F1112] sm:rounded-xl lg:max-h-none">
+        <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-transparent via-white/5 to-transparent" />
 
-        {/* Botón flotante para alternar relación de aspecto 3:2 / Ancha */}
+        {/* Controles flotantes de pantalla */}
         <button
           onClick={toggleScreenScaleMode}
-          className="absolute top-2 right-2 z-20 px-2 py-0.5 rounded-full bg-black/75 hover:bg-black/90 text-[9px] font-mono font-bold text-cyan-300 border border-cyan-500/50 backdrop-blur-sm cursor-pointer active:scale-95 transition-all shadow-md flex items-center gap-1"
-          title="Alternar entre relación 3:2 original y Pantalla Ancha (Edge-to-Edge)"
+          className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-full border border-white/15 bg-black/60 px-2 py-0.5 font-mono text-[9px] font-semibold text-white/80 backdrop-blur-sm transition-all hover:bg-black/80 active:scale-95"
+          title="Ajustar (sin recortes) o llenar la pantalla (recorta bordes)"
         >
-          <span>{screenScaleMode === 'wide' ? '↔ ANCHA' : '⊡ 3:2'}</span>
+          <span>{screenScaleMode === 'wide' ? 'Llenar' : 'Ajustar'}</span>
+        </button>
+
+        <button
+          onClick={toggleFullscreen}
+          className="absolute right-2 top-10 z-20 flex items-center gap-1 rounded-full border border-white/15 bg-black/60 px-2 py-1 text-white/80 backdrop-blur-sm transition-all hover:bg-black/80 active:scale-95"
+          title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa (horizontal en móvil)'}
+        >
+          {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
         </button>
 
         {/* Canvas oficial nativo para mGBA WebAssembly con desmontaje limpio en cada reinicio */}
@@ -1643,9 +1654,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           width={240}
           height={160}
           className={`w-full h-full [image-rendering:pixelated] transition-transform duration-300 ${
-            screenScaleMode === 'wide'
-              ? 'object-fill scale-x-[1.08] sm:scale-100 sm:object-contain'
-              : 'object-contain'
+            screenScaleMode === 'wide' ? 'object-cover' : 'object-contain'
           }`}
           style={{ imageRendering: 'pixelated' }}
         />
@@ -1679,21 +1688,17 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       </div>
 
       {/* Barra de Telemetría y Controles de Partida */}
-      <div className="flex items-center justify-between py-1.5 text-xs font-mono">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-1.5 border-t border-[#E8E5DD] pt-1.5 text-xs font-mono">
         <div className="flex items-center gap-1.5">
           <BatteryCharging
-            className={`w-4 h-4 ${batteryMinutes > 0 ? 'text-emerald-400' : 'text-rose-500 animate-pulse'}`}
+            className={`h-4 w-4 ${batteryMinutes > 0 ? 'text-[#5A7D62]' : 'animate-pulse text-[#D9534F]'}`}
           />
           <span
-            className={`font-bold text-[11px] ${
-              batteryMinutes > 0
-                ? isLight
-                  ? 'text-emerald-700'
-                  : 'text-emerald-400'
-                : 'text-rose-500'
+            className={`text-[11px] font-semibold ${
+              batteryMinutes > 0 ? 'text-[#4C6151]' : 'text-[#D9534F]'
             }`}
           >
-            {batteryMinutes}m Batería
+            {batteryMinutes}m disponibles
           </span>
         </div>
 
@@ -1701,11 +1706,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           {/* Botón Reiniciar ROM Rápido */}
           <button
             onClick={restartRom}
-            className={`p-1 rounded-lg font-bold transition-all cursor-pointer ${
-              isLight
-                ? 'bg-rose-100 hover:bg-rose-200 text-rose-800 border-2 border-black active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000]'
-                : 'bg-slate-800 border border-slate-700 hover:border-rose-400 text-rose-400 hover:text-rose-300 active:scale-95'
-            }`}
+            className="cursor-pointer rounded-lg border border-[#E8E5DD] bg-white p-1 text-[#8A877E] transition-all hover:text-[#D9534F]"
             title="Reiniciar ROM / Descongelar"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -1713,11 +1714,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
           <button
             onClick={togglePause}
-            className={`p-1 rounded-lg font-bold transition-all cursor-pointer ${
-              isLight
-                ? 'bg-slate-200 border-2 border-black active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000]'
-                : 'bg-slate-800 border border-slate-700 hover:border-cyan-400 text-cyan-300'
-            }`}
+            className="cursor-pointer rounded-lg border border-[#E8E5DD] bg-white p-1 text-[#5E5C56] transition-all hover:bg-[#F2EFE9]"
             title={emuState === 'running' ? 'Pausar y Guardar' : 'Reanudar'}
           >
             {emuState === 'running' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
@@ -1728,11 +1725,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
               soundFx.playClick();
               setIsMuted(!isMuted);
             }}
-            className={`p-1 rounded-lg font-bold transition-all cursor-pointer ${
-              isLight
-                ? 'bg-slate-200 border-2 border-black active:translate-x-0.5 active:translate-y-0.5 shadow-[2px_2px_0px_#000]'
-                : 'bg-slate-800 border border-slate-700 hover:border-cyan-400 text-cyan-300'
-            }`}
+            className="cursor-pointer rounded-lg border border-[#E8E5DD] bg-white p-1 text-[#5E5C56] transition-all hover:bg-[#F2EFE9]"
           >
             {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
           </button>
@@ -1740,14 +1733,10 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           {/* Botón Guardado Rápido Instantáneo desde afuera */}
           <button
             onClick={() => quickSaveState(1)}
-            className={`px-2 py-1 text-[10px] font-black rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
-              isLight
-                ? 'bg-amber-300 hover:bg-amber-400 text-slate-950 border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30'
-            }`}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-[#C49347]/30 bg-[#C49347]/10 px-2 py-1 text-[10px] font-semibold text-[#A6752C] transition-all hover:bg-[#C49347]/20"
             title="Guardar Estado Rápido: Guarda la partida desde afuera al instante con 1 clic."
           >
-            <Zap className="w-3 h-3 text-amber-500" />
+            <Zap className="h-3 w-3" />
             <span className="hidden sm:inline">⚡ Rápido</span>
           </button>
 
@@ -1755,260 +1744,20 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           <button
             onClick={() => saveToSlot(currentSlot)}
             disabled={isSaving}
-            className={`px-2.5 py-1 text-[10px] font-black rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
-              isLight
-                ? 'bg-[#2563EB] text-white border-2 border-black shadow-[2px_2px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
-            }`}
+            className="flex cursor-pointer items-center gap-1 rounded-lg border border-[#1F1E1B] bg-[#1F1E1B] px-2.5 py-1 text-[10px] font-semibold text-white transition-all hover:bg-black disabled:opacity-50"
             title="Respaldar archivo .SAV en Supabase e IndexedDB. Guarda primero dentro del juego con START -> GUARDAR."
           >
             {isSaving ? (
-              <RefreshCw className="w-3 h-3 animate-spin text-white" />
+              <RefreshCw className="h-3 w-3 animate-spin text-white" />
             ) : (
-              <Save className="w-3 h-3" />
+              <Save className="h-3 w-3" />
             )}
-            <span>{isSaving ? 'Guardando...' : 'Respaldar .SAV'}</span>
+            <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Respaldar .SAV'}</span>
           </button>
         </div>
       </div>
 
-      {/* Controles Físicos Táctiles Estilo Game Boy Advance */}
-      <div className="pt-1.5 border-t border-slate-700/50 flex items-center justify-between px-1">
-        {/* D-Pad */}
-        <div className="relative w-24 h-24 flex items-center justify-center">
-          <div
-            className={`w-7 h-7 rounded-sm ${
-              isLight ? 'bg-slate-800' : 'bg-slate-900 border border-slate-700'
-            }`}
-          />
-
-          {/* Arriba */}
-          <button
-            onMouseDown={() => {
-              soundFx.playClick();
-              handleButton('Up', true);
-            }}
-            onMouseUp={() => handleButton('Up', false)}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              soundFx.playClick();
-              handleButton('Up', true);
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              handleButton('Up', false);
-            }}
-            className={`absolute top-0 w-7 h-8 rounded-t-md flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer ${
-              activeKeys.has('Up') ? 'scale-95 bg-emerald-500 text-white' : ''
-            } ${
-              isLight
-                ? 'bg-slate-800 text-slate-300 active:bg-slate-900 shadow-[0_2px_0_#000]'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-t border-x border-slate-600'
-            }`}
-          >
-            ▲
-          </button>
-
-          {/* Abajo */}
-          <button
-            onMouseDown={() => {
-              soundFx.playClick();
-              handleButton('Down', true);
-            }}
-            onMouseUp={() => handleButton('Down', false)}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              soundFx.playClick();
-              handleButton('Down', true);
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              handleButton('Down', false);
-            }}
-            className={`absolute bottom-0 w-7 h-8 rounded-b-md flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer ${
-              activeKeys.has('Down') ? 'scale-95 bg-emerald-500 text-white' : ''
-            } ${
-              isLight
-                ? 'bg-slate-800 text-slate-300 active:bg-slate-900 shadow-[0_2px_0_#000]'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-b border-x border-slate-600'
-            }`}
-          >
-            ▼
-          </button>
-
-          {/* Izquierda */}
-          <button
-            onMouseDown={() => {
-              soundFx.playClick();
-              handleButton('Left', true);
-            }}
-            onMouseUp={() => handleButton('Left', false)}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              soundFx.playClick();
-              handleButton('Left', true);
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              handleButton('Left', false);
-            }}
-            className={`absolute left-0 h-7 w-8 rounded-l-md flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer ${
-              activeKeys.has('Left') ? 'scale-95 bg-emerald-500 text-white' : ''
-            } ${
-              isLight
-                ? 'bg-slate-800 text-slate-300 active:bg-slate-900 shadow-[2px_0_0_#000]'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-l border-y border-slate-600'
-            }`}
-          >
-            ◀
-          </button>
-
-          {/* Derecha */}
-          <button
-            onMouseDown={() => {
-              soundFx.playClick();
-              handleButton('Right', true);
-            }}
-            onMouseUp={() => handleButton('Right', false)}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              soundFx.playClick();
-              handleButton('Right', true);
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              handleButton('Right', false);
-            }}
-            className={`absolute right-0 h-7 w-8 rounded-r-md flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer ${
-              activeKeys.has('Right') ? 'scale-95 bg-emerald-500 text-white' : ''
-            } ${
-              isLight
-                ? 'bg-slate-800 text-slate-300 active:bg-slate-900 shadow-[2px_0_0_#000]'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-r border-y border-slate-600'
-            }`}
-          >
-            ▶
-          </button>
-        </div>
-
-        {/* Start / Select Pills */}
-        <div className="flex flex-col gap-1.5 items-center justify-center">
-          <div className="flex gap-2">
-            <button
-              onMouseDown={() => {
-                soundFx.playClick();
-                handleButton('Select', true);
-              }}
-              onMouseUp={() => handleButton('Select', false)}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                soundFx.playClick();
-                handleButton('Select', true);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                handleButton('Select', false);
-              }}
-              className={`w-11 h-3 -rotate-12 rounded-full text-[7px] font-black font-mono transition-all flex items-center justify-center cursor-pointer ${
-                isLight
-                  ? 'bg-slate-400 text-slate-900 border border-black shadow-[1px_1px_0_#000] active:translate-x-0.5 active:translate-y-0.5'
-                  : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700'
-              }`}
-            >
-              SELECT
-            </button>
-            <button
-              onMouseDown={() => {
-                soundFx.playClick();
-                handleButton('Start', true);
-              }}
-              onMouseUp={() => handleButton('Start', false)}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                soundFx.playClick();
-                handleButton('Start', true);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                handleButton('Start', false);
-              }}
-              className={`w-11 h-3 -rotate-12 rounded-full text-[7px] font-black font-mono transition-all flex items-center justify-center cursor-pointer ${
-                isLight
-                  ? 'bg-slate-400 text-slate-900 border border-black shadow-[1px_1px_0_#000] active:translate-x-0.5 active:translate-y-0.5'
-                  : 'bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700'
-              }`}
-            >
-              START
-            </button>
-          </div>
-          <span className="text-[8px] font-mono text-slate-500 uppercase tracking-widest">
-            {romTitle.slice(0, 18)}
-          </span>
-        </div>
-
-        {/* Botones B y A (Nintendo Rojo) */}
-        <div className="flex gap-2.5 items-center -rotate-12">
-          {/* Botón B */}
-          <div className="flex flex-col items-center">
-            <button
-              onMouseDown={() => {
-                soundFx.playClick();
-                handleButton('B', true);
-              }}
-              onMouseUp={() => handleButton('B', false)}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                soundFx.playClick();
-                handleButton('B', true);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                handleButton('B', false);
-              }}
-              className={`w-10 h-10 rounded-full font-black text-xs flex items-center justify-center transition-all cursor-pointer ${
-                isLight
-                  ? 'bg-[#E60012] text-white border-2 border-black shadow-[3px_3px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none'
-                  : 'bg-[#E60012] text-white border border-rose-400/50 shadow-[0_0_10px_rgba(230,0,18,0.4)] active:scale-95'
-              }`}
-            >
-              B
-            </button>
-            <span className="text-[8px] font-mono font-bold mt-0.5 text-slate-400">
-              [{formatKeyName(keyBindings['B'] || 'KeyX')}]
-            </span>
-          </div>
-
-          {/* Botón A */}
-          <div className="flex flex-col items-center -mt-3.5">
-            <button
-              onMouseDown={() => {
-                soundFx.playClick();
-                handleButton('A', true);
-              }}
-              onMouseUp={() => handleButton('A', false)}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                soundFx.playClick();
-                handleButton('A', true);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                handleButton('A', false);
-              }}
-              className={`w-10 h-10 rounded-full font-black text-xs flex items-center justify-center transition-all cursor-pointer ${
-                isLight
-                  ? 'bg-[#E60012] text-white border-2 border-black shadow-[3px_3px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none'
-                  : 'bg-[#E60012] text-white border border-rose-400/50 shadow-[0_0_10px_rgba(230,0,18,0.4)] active:scale-95'
-              }`}
-            >
-              A
-            </button>
-            <span className="text-[8px] font-mono font-bold mt-0.5 text-slate-400">
-              [{formatKeyName(keyBindings['A'] || 'KeyZ')}]
-            </span>
-          </div>
-        </div>
-      </div>
+      <MobileControls onButton={handleButton} activeKeys={activeKeys} />
     </div>
   );
 };
