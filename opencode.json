@@ -1,0 +1,59 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "supabase": {
+      "type": "local",
+      "command": [
+        "cmd",
+        "/c",
+        "npx",
+        "-y",
+        "@supabase/mcp-server-supabase",
+        "--project-ref",
+        "hywlytsbogbassecflbw"
+      ],
+      "enabled": true,
+      "environment": {
+        "SUPABASE_ACCESS_TOKEN": "{env:SUPABASE_ACCESS_TOKEN}"
+      }
+    },
+    "github": {
+      "type": "local",
+      "command": [
+        "cmd",
+        "/c",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "enabled": true,
+      "environment": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "n8n-mcp": {
+      "type": "local",
+      "command": [
+        "node",
+        "c:/Users/Martin/Documents/Korat-Flow-Agencia/Korat_MVP/_ai_tools/n8n-mcp/dist/mcp/index.js"
+      ],
+      "enabled": true,
+      "environment": {
+        "N8N_API_KEY": "{env:N8N_API_KEY}",
+        "N8N_API_URL": "{env:N8N_API_URL}"
+      }
+    },
+    "tiktok-hq": {
+      "type": "local",
+      "command": [
+        "node",
+        "c:/Users/Martin/Documents/Korat-Flow-Agencia/SynDex/tools/tiktok-mcp/index.mjs"
+      ],
+      "enabled": true,
+      "environment": {
+        "HQ_API_BASE": "{env:HQ_API_BASE}",
+        "HQ_CRON_SECRET": "{env:HQ_CRON_SECRET}"
+      }
+    }
+  }
+}

@@ -1,12 +1,12 @@
 {
-  "name": "Forja Johto - RPG de Hábitos",
-  "short_name": "Forja Johto",
-  "description": "Plataforma estoica de hábitos y contratos inviolables con integración Pokémon Heart & Soul",
-  "start_url": "/dashboard",
+  "name": "Korat Flow HQ",
+  "short_name": "Korat HQ",
+  "description": "Panel operativo del fundador: roles CEO, CTO y CMO, jornada, proyectos y recompensas.",
+  "start_url": "/hq",
   "display": "standalone",
-  "background_color": "#0B0C0E",
-  "theme_color": "#0B0C0E",
-  "orientation": "portrait-primary",
+  "background_color": "#FAF9F5",
+  "theme_color": "#FAF9F5",
+  "orientation": "any",
   "icons": [
     {
       "src": "/icon-192.svg",

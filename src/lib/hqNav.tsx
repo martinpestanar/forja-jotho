@@ -1,10 +1,12 @@
 import {
   Bot,
   CalendarDays,
+  Compass,
   FolderKanban,
   Gamepad2,
   GraduationCap,
   Home,
+  ListChecks,
   Settings,
   Share2,
   ShoppingBag,
@@ -47,6 +49,22 @@ export const HQ_NAV: HqNavItem[] = [
     short: 'Jornada',
     description: 'Estructura de 8 horas, bloques y días sagrados',
     icon: CalendarDays,
+    group: 'operacion',
+  },
+  {
+    href: '/hq/pendientes',
+    label: 'Pendientes',
+    short: 'Cola',
+    description: 'Relevos, arrastre, visión y decisiones para mañana',
+    icon: ListChecks,
+    group: 'operacion',
+  },
+  {
+    href: '/hq/dia-cero',
+    label: 'Día Cero',
+    short: 'Día 0',
+    description: 'Aprende los tres roles y arma tu primera cola',
+    icon: Compass,
     group: 'operacion',
   },
   {
@@ -115,12 +133,9 @@ export const HQ_NAV: HqNavItem[] = [
   },
 ];
 
-export const HQ_DOCK: HqNavItem[] = [
-  HQ_NAV[0],
-  HQ_NAV[1],
-  HQ_NAV[3],
-  HQ_NAV[6],
-];
+export const HQ_DOCK: HqNavItem[] = ['/hq', '/hq/roles', '/hq/pendientes', '/hq/agentes']
+  .map((href) => HQ_NAV.find((item) => item.href === href))
+  .filter((item): item is HqNavItem => Boolean(item));
 
 export const NAV_GROUPS: { key: NavGroup; label: string }[] = [
   { key: 'operacion', label: 'Operación' },

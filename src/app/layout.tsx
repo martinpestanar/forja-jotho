@@ -22,13 +22,14 @@ const loraSerif = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Forja Johto - RPG de Hábitos",
-  description: "Plataforma estoica de hábitos reales y contratos inviolables con integración Pokémon Heart & Soul",
+  title: "Korat Flow HQ",
+  description:
+    "Panel operativo del fundador: roles CEO, CTO y CMO, jornada, proyectos y recompensas.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Forja Johto",
+    statusBarStyle: "default",
+    title: "Korat Flow HQ",
   },
   icons: {
     icon: "/icon-192.svg",
@@ -39,8 +40,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   themeColor: "#FAF9F5",
 };
 
