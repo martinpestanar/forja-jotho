@@ -77,9 +77,11 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
     setTimeout(() => setNotice(null), 3200);
   };
 
-  const wallet = snapshot?.wallet ?? 0;
-  const debt = snapshot?.tax_debt ?? 0;
+  const wallet = snapshot?.wallet;
+  const debt = snapshot?.tax_debt;
   const progress = Math.min(100, snapshot?.dratini_progress_pct ?? 0);
+  // Antes de cargar, no mostramos ₽0: es un dato falso, no un saldo.
+  const pending = <span className="text-[#B8B4A8]">—</span>;
 
   const sortedMarket = useMemo(() => {
     const rows = snapshot?.market ?? [];
@@ -103,15 +105,27 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
     <div className="@container space-y-4">
       {/* HUD económico */}
       <div className="grid grid-cols-2 gap-2.5 @min-[520px]:grid-cols-3">
-        <Stat label="Wallet" value={currency(wallet)} icon={Coins} accent="var(--hq-gold)" hint="Pokédólares" />
+        <Stat
+          label="Wallet"
+          value={wallet === undefined ? pending : currency(wallet)}
+          icon={Coins}
+          accent="var(--hq-gold)"
+          hint="Pokédólares"
+        />
         <Stat
           label="Deuda"
-          value={currency(debt)}
+          value={debt === undefined ? pending : currency(debt)}
           icon={Landmark}
-          accent={debt > 0 ? 'var(--hq-danger)' : 'var(--hq-ink-3)'}
-          hint={debt > 0 ? 'bloquea compras' : 'al día'}
+          accent={debt && debt > 0 ? 'var(--hq-danger)' : 'var(--hq-ink-3)'}
+          hint={debt === undefined ? 'cargando' : debt > 0 ? 'bloquea compras' : 'al día'}
         />
-        <Stat label="Dratini" value={`${progress.toFixed(0)}%`} icon={Target} accent="var(--hq-cto)" hint="de la meta" />
+        <Stat
+          label="Dratini"
+          value={snapshot ? `${progress.toFixed(0)}%` : pending}
+          icon={Target}
+          accent="var(--hq-cto)"
+          hint="de la meta"
+        />
       </div>
 
       {/* Barra de la meta */}
@@ -366,7 +380,7 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
                   <span className="hq-label">Objetivo legendario</span>
                   <div className="hq-title mt-1 text-xl text-[#1F1E1B]">Dratini Shiny</div>
                   <div className="hq-mono mt-1 text-xs tabular-nums text-[#5E5C56]">
-                    {currency(wallet)} de {currency(snapshot?.dratini_price ?? 40000)}
+                    {currency(wallet ?? 0)} de {currency(snapshot?.dratini_price ?? 40000)}
                   </div>
                   <ElasticProgress value={progress} accent="var(--hq-gold)" className="mt-3" />
                 </div>

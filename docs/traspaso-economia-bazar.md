@@ -8,7 +8,7 @@
 ## 0. Contexto en 30 segundos
 
 - Repo: `C:\Users\Martin\Documents\Korat-Flow-Agencia\SynDex` · rama `main`.
-- **El código ya está commiteado.** No hay nada pendiente de aplicar en el working tree (salvo cambios de otra sesión en `src/lib/hqNav.tsx`).
+- **El código ya está commiteado.** Working tree limpio; `src/lib/hqNav.tsx` ya quedó resuelto (conviven Bazar, Pendientes y Día Cero).
 - **Las migraciones ya están aplicadas en producción** (Supabase). Falta únicamente verificar y pulir UI.
 - Una sola moneda: `profiles.pokedollars`. `valdr_profiles.sovereignty_gold` quedó como legado (solo se sincroniza en Templanza).
 
@@ -32,6 +32,11 @@ f08b1ea  fix(economy): wallet real en Bazar, invitados sin ruido y labels de una
 | `supabase/migrations/20261028_economy_core.sql` | Columnas, tablas, RLS, triggers y 9 RPCs |
 | `supabase/migrations/20261028_economy_shop_seed.sql` | 128 precios del Bazar (50 MT · 5 Mints · 35 huevos/breeding/shiny/especiales · 23 consumibles · 15 cosméticos) |
 | `supabase/migrations/20261028_economy_temperance.sql` | Recompensa diaria de Templanza |
+| `supabase/migrations/20261029_valdr_dispatch_vault_item.sql` | Versiona la RPC de despacho de la Bóveda + hardening |
+
+> **Total real de precios: 147**, no 128. `economy_core.sql` siembra 19 precios base
+> (15 bayas de `market`, 2 de `expansion`, y los `SHINY_*` / `PKMN_SHINY_*`), y el seed
+> generado aporta los otros 128. Contar solo el seed da un falso negativo.
 
 ### 1.2 Columnas nuevas en `profiles`
 
@@ -70,11 +75,19 @@ expedition_week_start DATE, expedition_week_paid INT, cosmetics_inventory JSONB
 - `shop_inventory`: se cerró el `INSERT` directo del cliente. Se añadieron las columnas que el panel admin ya esperaba (`item_key`, `item_category`, `gba_item_id`, `gba_pocket`, `quantity`, `injection_status`, `delivered_at`).
 - `economy_shop_prices`, `economy_market_prices`, `economy_config`: lectura pública autenticada, escritura solo admin.
 
-### 1.6 Dependencia externa que NO está en el repo
+### 1.6 `rpc_valdr_dispatch_vault_item` — ya versionada
 
-`rpc_valdr_dispatch_vault_item(p_vault_id UUID)` **no está definida en `supabase/migrations`**; viene de la fase anterior (Templanza/valdr) y ya existe en la base. Se usa desde `src/store/useEconomyStore.ts:193`.
+Antes vivía **solo** en producción (fase Templanza/valdr) y se usa desde `src/store/useEconomyStore.ts:193`. Ahora está en `supabase/migrations/20261029_valdr_dispatch_vault_item.sql`.
 
-> ⚠️ Si se recrea el proyecto de Supabase desde cero, la Bóveda dejará de despachar. Hay que versionar esa función.
+Al versionarla se endureció:
+
+| Antes | Ahora |
+|---|---|
+| `SECURITY DEFINER` sin `search_path` | `SET search_path = public` (evita secuestro de funciones) |
+| `SELECT` y luego `UPDATE` | un solo `UPDATE ... WHERE status='in_vault' RETURNING` (no despacha dos veces) |
+| `EXECUTE` abierto a `PUBLIC` (incluía `anon`) | `REVOKE` de `PUBLIC`/`anon`, `GRANT` solo a `authenticated` |
+
+Aplicada en producción y verificada: `proconfig = {search_path=public}` y `acl = {postgres, authenticated, service_role}`.
 
 ---
 
@@ -91,35 +104,52 @@ where table_schema = 'public' and table_name like 'economy%';
 
 -- b) precios del Bazar cargados
 select category, count(*) from public.economy_shop_prices group by category order by 2 desc;
--- esperado (total 128): tms 50, egg 15, cosmetics 15, special 12, cure 9,
---                       breeding 8, mints 5, evolution 5, shiny 4, supplies 3, balls 2
+-- esperado (total 147): tms 50, egg 15, market 15, cosmetics 15, special 12,
+--   cure 9, breeding 8, shiny 6, evolution 5, mints 5, supplies 3, balls 2, expansion 2
 
 -- c) el trigger de protección existe
 select tgname from pg_trigger where tgname = 'tr_protect_economy_columns';
 
--- d) la RPC de despacho existe
-select proname from pg_proc where proname = 'rpc_valdr_dispatch_vault_item';
+-- d) la RPC de despacho existe y está endurecida
+select proname, proconfig, proacl from pg_proc
+where proname = 'rpc_valdr_dispatch_vault_item';
+-- esperado: proconfig = {search_path=public}
+--           proacl SIN "=X/" (eso sería EXECUTE público) y sin anon
 
--- e) estado de la economía de cada perfil
-select p.username, p.pokedollars, p.tax_debt, p.in_grace, p.grace_until
-from public.rpc_economy_state() p;  -- requiere sesión; si no, consultar profiles
+-- e) estado de la economía (devuelve un jsonb, no filas)
+select jsonb_pretty(public.rpc_economy_state());
 
 -- f) RLS de la bóveda: solo debe haber política de SELECT
-select polname, cmd from pg_policies
+select policyname, cmd from pg_policies
 where schemaname='public' and tablename='valdr_vault';
 ```
 
 ### Prueba funcional segura (con rollback)
 
+`rpc_purchase_shop_item` usa `auth.uid()`. En el SQL Editor **no hay JWT**, así que hay que simular la sesión o la prueba falla aunque todo esté bien:
+
 ```sql
 begin;
-  select public.rpc_economy_market_tick();          -- mueve 15 precios
+  select public.rpc_economy_market_tick();          -- mueve 15 precios (service_role)
+
+  select set_config('request.jwt.claims',
+    json_build_object('sub', (select id from auth.users limit 1),
+                      'role','authenticated')::text, true);
+  set local role authenticated;
+
   select public.rpc_purchase_shop_item('GBA_MT26', 1);
-  select * from public.valdr_vault order by created_at desc limit 1;
+  select public.rpc_valdr_dispatch_vault_item(
+    (select id from public.valdr_vault order by created_at desc limit 1));
+  select status, dispatched_at is not null as tiene_fecha
+  from public.valdr_vault order by created_at desc limit 1;
 rollback;
 ```
 
-Si `rpc_purchase_shop_item` devuelve `{"success":true}` y aparece la fila en `valdr_vault`, el circuito compra → Bóveda está sano.
+Esperado: compra `success:true`, y `status = 'dispatched_to_save'` con fecha.
+
+> Ojo: no metas el `status_after` como subconsulta del mismo `SELECT` que llama a la
+> función. Postgres no garantiza el orden de evaluación dentro del target list y puedes
+> leer el estado **antes** del despacho.
 
 ---
 
@@ -173,7 +203,8 @@ curl -H "Authorization: Bearer $HQ_CRON_SECRET" https://<dominio>/api/economy/ti
 | `src/lib/gba/PokemonMemoryBridge.ts` | Sync del `.sav` sin sobrescribir la wallet |
 | `src/components/dashboard/PartyPcManager.tsx` | **Se eliminó la inyección gratis**; ahora despacha desde la Bóveda |
 | `src/types/trainer.ts`, `MobileTopHud.tsx`, `VigorHeaderSummary.tsx`, `OracleForgeModal.tsx`, `dashboard/page.tsx` | Labels unificados a Pokédólares ₽ |
-| `src/lib/hqNav.tsx` | Ítem "Bazar" (**revisar conflicto con la otra sesión**) |
+| `src/lib/hqNav.tsx` | Ítem "Bazar", convive con "Pendientes" y "Día Cero" (sin conflicto) |
+| `src/components/layout/CentralViewContainer.tsx` | **Eliminado**: código muerto, sin referencias |
 | `src/app/hq/tiempo/page.tsx` | Botón "Bazar" |
 | `vercel.json` | cron diario |
 
@@ -190,11 +221,11 @@ curl -H "Authorization: Bearer $HQ_CRON_SECRET" https://<dominio>/api/economy/ti
 
 ## 6. Pendientes reales (lo que falta)
 
-1. **Verificar `/hq/tienda` con sesión iniciada.** No se pudo hacer: `HqGuard` redirige a `/login` y el login es de sesión única (iniciar sesión cerraba la del usuario). `/dashboard` → Santuario → Bazar **sí** fue verificado visualmente, sin overflow y sin errores de consola.
-2. **Probar el flujo completo con el emulador abierto:** compra → Bóveda → "Enviar" → `CONTINUAR` en el juego. Requiere `window.__SYNDEX_GBA_READY__ === true`.
-3. **Decidir sobre `src/components/layout/CentralViewContainer.tsx`**: es código muerto pero todavía importa `GoldenrodShop`. Borrarlo o dejarlo.
-4. **Confirmar el ítem "Bazar" en `src/lib/hqNav.tsx`** tras la edición concurrente de la otra sesión (sigue presente, pero el archivo está modificado sin commit).
-5. **Versionar `rpc_valdr_dispatch_vault_item`** en una migración (ver §1.6).
+1. ~~**Verificar `/hq/tienda` con sesión iniciada.**~~ — **hecho**: se validó la ruta con la sesión existente (sin re-loguear, así no se cerró la del usuario). HUD ₽999.999 / deuda al día / 100 %, Catálogo, Oráculo y SALDO coinciden. Sin errores de consola.
+2. **Probar el flujo completo con el emulador abierto:** compra → Bóveda → "Enviar" → `CONTINUAR` en el juego. Requiere `window.__SYNDEX_GBA_READY__ === true`. **El lado servidor ya está verificado** (compra → fila en Bóveda → despacho → `dispatched_to_save`, con rollback).
+3. ~~**Decidir sobre `CentralViewContainer.tsx`**~~ — **hecho**: eliminado, no tenía referencias.
+4. ~~**Confirmar el ítem "Bazar" en `hqNav.tsx`**~~ — **hecho**: Bazar, Pendientes y Día Cero conviven en el commit `254a3b0`.
+5. ~~**Versionar `rpc_valdr_dispatch_vault_item`**~~ — **hecho**: `20261029_valdr_dispatch_vault_item.sql`, aplicada y verificada (ver §1.6).
 6. Revisar si el panel admin de ítems debe seguir usando `shop_inventory` ahora que su `INSERT` directo está cerrado.
 
 ---
@@ -221,3 +252,19 @@ curl -H "Authorization: Bearer $HQ_CRON_SECRET" https://<dominio>/api/economy/ti
 - `npm run build` → OK, incluye `○ /hq/tienda`.
 - `npx eslint` en los dos componentes del Bazar → sin errores tras quitar el `setState` síncrono dentro del efecto.
 - Consola del navegador en `/dashboard` → sin errores.
+- **Circuito económico verificado contra producción** (transacción con `rollback`, sin dejar rastro):
+  `market_tick` → `purchase_shop_item('GBA_MT26')` debita 1.800 ₽ → fila en `valdr_vault` → `rpc_valdr_dispatch_vault_item` → `dispatched_to_save` con fecha. Un segundo despacho del mismo ítem **lanza excepción** (correcto).
+- Precios en producción: **147** filas (no 128). Trigger de protección presente. `valdr_vault` solo tiene política `SELECT`.
+
+---
+
+## 9. Correcciones posteriores al traspaso
+
+Tres defectos encontrados al verificar `/hq/tienda` de verdad:
+
+1. **Oráculo mutilado.** Gemini 2.5 Flash gastaba los 120 tokens de presupuesto en *thinking* y devolvía textos de 4 caracteres (`"¡Sal"`, `"Joven viajero,"`). Estaban cacheados así en `economy_oracle_cache`.
+   - `thinkingConfig: { thinkingBudget: 0 }` + `maxOutputTokens: 300`.
+   - Si `finishReason === 'MAX_TOKENS'`, se descarta y cae al texto determinista.
+   - `cacheKey` pasó a `v2:…` y se borraron las entradas truncadas (`length(text) < 20`).
+2. **HUD con ceros falsos.** Mientras `rpc_economy_state` no respondía, el HUD mostraba `WALLET ₽0 · DEUDA ₽0 · DRATINI 0%` — indistinguible de "estás en bancarrota". Ahora muestra `—` / "cargando" hasta que hay snapshot.
+3. **SALDO desincronizado en ese instante.** `GoldenrodShop` cae a `profile.pokedollars` (persistido) cuando no hay snapshot, así que por un segundo podía mostrar un saldo viejo. Se acepta como respaldo visual, pero conviene revisarlo si se nota.

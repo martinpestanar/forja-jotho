@@ -90,15 +90,24 @@ REGLAS ESTRICTAS:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 120 },
+          generationConfig: {
+            temperature: 0.9,
+            maxOutputTokens: 300,
+            // Gemini 2.5 gasta el presupuesto en "thinking" y deja la respuesta
+            // visible cortada al mínimo (llegó a devolver "¡Sal").
+            thinkingConfig: { thinkingBudget: 0 },
+          },
         }),
       }
     );
     if (!res.ok) return null;
     const data = await res.json();
-    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const candidate = data?.candidates?.[0];
+    // Si se agotó el presupuesto, mejor el fallback determinista que una frase mutilada.
+    if (candidate?.finishReason === 'MAX_TOKENS') return null;
+    const text: string | undefined = candidate?.content?.parts?.[0]?.text;
     const clean = text?.replace(/[*_`#"]/g, '').trim();
-    return clean && clean.length > 0 ? clean.slice(0, 220) : null;
+    return clean && clean.length > 20 ? clean.slice(0, 220) : null;
   } catch (err) {
     console.warn('[economy/oracle] Gemini error:', err);
     return null;
@@ -115,7 +124,8 @@ export async function POST(req: Request) {
 
   const action = body.action === 'greeting' ? 'greeting' : 'bulletin';
   const today = bogotaToday();
-  const cacheKey = `${action}:${today}`;
+  // v2: invalida entradas cacheadas con la respuesta truncada de Gemini.
+  const cacheKey = `v2:${action}:${today}`;
 
   try {
     const admin = getSupabaseAdmin();
@@ -143,7 +153,7 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json(payload);
-  } catch (err: any) {
+  } catch (err) {
     console.error('[economy/oracle]', err);
     return NextResponse.json({
       text: deterministicCopy(action, body),
