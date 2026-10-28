@@ -50,8 +50,8 @@ function TypeLine({ text }: { text: string }) {
   return <span>{shown}</span>;
 }
 
-export function EconomySanctuary() {
-  const [tab, setTab] = useState<EcoTab>('boveda');
+export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTab } = {}) {
+  const [tab, setTab] = useState<EcoTab>(initialTab);
   const snapshot = useEconomyStore((s) => s.snapshot);
   const loading = useEconomyStore((s) => s.loading);
   const oracleText = useEconomyStore((s) => s.oracleText);
