@@ -123,15 +123,19 @@ dataView.setUint16(sectorBase + 0x0FF6, checksum16, true);
 
 ---
 
-## 👑 6. Torre de Control SuperAdmin (`/admin`)
-- **Modos de Operación:**
-  - 🤖 **Automático:** Reglas dinámicas por XP y misiones cumplidas.
-  - 🕹️ **Manual:** Desbloqueo forzado por botón desde el aula.
-  - ⚡ **Híbrido (Recomendado):** Automático por defecto + 1-Click overrides por estudiante.
+## 👑 6. Torre de Control SuperAdmin (`/admin`) y Filosofía del Proyecto
+> [!IMPORTANT]
+> **Pivote Oficial del Proyecto (App Personal de Productividad):**
+> Esta app NO es una plataforma escolar para alumnos de 11 a 14 años (eso pertenecía a una versión anterior).
+> Es una **herramienta personal de Martin** para trackear hábitos, objetivos de su agencia/SaaS y productividad diaria, donde el emulador mGBA (Pokémon Heart & Soul) actúa como recompensa estricta gamificada ("Code-to-Play"):
+> 1. **La Batería es el motor real:** Las tareas SaaS y hábitos completados otorgan minutos de juego (+15m / +30m).
+> 2. **Economía in-game sin tocar:** La ROM penaliza las derrotas automáticamente con `sWhiteOutBadgeMoney[medallas] * maxLevel`. No se necesita Money Governor ni modificar el C del juego para restringir dinero a estudiantes; el filtro es el tiempo real de batería.
+> 3. **Panel Admin:** Actúa como centro de control personal y testing para inyectar recompensas de prueba o ajustar métricas con 1-clic.
+
 - **Acciones Rápidas (1 Clic):**
-  - `grant_battery`: +15m / +30m tiempo de emulador.
-  - `set_level`: Desbloqueo de nivel / gimnasio (1 al 12).
-  - `grant_pokedollars`: +₽100 dinero para la tienda.
+  - `grant_battery`: +15m / +30m tiempo de emulador ganado por tareas.
+  - `set_level`: Progreso de nivel / gimnasios (1 al 12).
+  - `grant_pokedollars`: Dinero para la tienda web de recompensas.
   - `inject_item`: Encola ítems clave o Master Balls en `shop_inventory`.
 - **Ruta del Panel:** `/admin` o pestaña `SuperAdmin` en el dashboard.
 

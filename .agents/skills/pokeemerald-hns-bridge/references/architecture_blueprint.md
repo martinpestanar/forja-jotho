@@ -1,6 +1,6 @@
 # 🗺️ Master Blueprint & Arquitectura: SynDex Cyber-Johto
 
-Este documento es la **Fuente Única de Verdad (SSOT)** y mapa integral de ingeniería para el MVP de SynDex, integrando la plataforma educativa Next.js 15, la base de datos Supabase y la emulación GBA WebAssembly de *Pokémon Heart & Soul* (`pokemonHnS`).
+Este documento es la **Fuente Única de Verdad (SSOT)** y mapa integral de ingeniería para SynDex, integrando la app personal de Next.js 15, la base de datos Supabase y la emulación GBA WebAssembly de *Pokémon Heart & Soul* (`pokemonHnS`) como recompensa de productividad ("Code-to-Play").
 
 ---
 
@@ -73,8 +73,8 @@ flowchart LR
 
 ---
 
-## ⚙️ 5. Módulo SuperAdmin ("Torre de Control")
+## ⚙️ 5. Módulo de Control Personal (`/admin`)
 
-Diseño de control manual y automático para el profesor:
-- **Modo Manual:** Habilitar/deshabilitar candados de nivel o inyectar batería/Pokémon directamente a un alumno por su ID.
-- **Modo Automático:** Reglas dinámicas en PostgreSQL/Supabase (`admin_game_rules`) que condicionan las puertas de Johto al progreso académico.
+Panel de control de Martin para testear y ajustar el sistema de recompensas:
+- **Modo de Inyección:** Habilitar/deshabilitar candados de nivel o inyectar batería/Pokémon directamente a tu partida por ID.
+- **Modo Automático:** Reglas dinámicas en PostgreSQL/Supabase (`admin_game_rules`) que condicionan las puertas de Johto al progreso de hábitos y tareas completadas.
