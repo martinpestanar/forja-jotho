@@ -129,9 +129,9 @@ export function VigorHeaderSummary({
           <div className="p-2.5 rounded-xl bg-[#F7F5F0] border border-[#E8E5DD] flex items-center justify-between">
             <div className="flex items-center gap-1.5 text-[#A6752C]">
               <Coins className="w-4 h-4" />
-              <span className="font-medium">CONCHAS:</span>
+              <span className="font-medium">POKÉDÓLARES:</span>
             </div>
-            <span className="text-[#1F1E1B] font-bold tabular-nums">+{earnedGoldToday}</span>
+            <span className="text-[#1F1E1B] font-bold tabular-nums">+{earnedGoldToday} ₽</span>
           </div>
 
           <div className="p-2.5 rounded-xl bg-[#F7F5F0] border border-[#E8E5DD] flex items-center justify-between">

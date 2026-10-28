@@ -130,6 +130,7 @@ export default function DashboardPage() {
   const [timeUntilMidnight, setTimeUntilMidnight] = useState('');
 
   const openArcadeRoom = useTrainerStore((s) => s.openArcadeRoom);
+  const walletPokedollars = useTrainerStore((s) => s.profile?.pokedollars ?? 0);
 
   // 1. Contador de Asedio (Medianoche)
   useEffect(() => {
@@ -725,7 +726,7 @@ export default function DashboardPage() {
                 <span>
                   {temperanceConfirmedToday
                     ? '✓ ¡Hoy Permaneciste Invicto!'
-                    : 'Marcar Victoria: Hoy no caí (+100 Conchas)'}
+                    : 'Marcar Victoria: Hoy no caí (+100 ₽)'}
                 </span>
               </button>
 
@@ -768,7 +769,7 @@ export default function DashboardPage() {
                 <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
                   <span className="text-[10px] text-[#706E66] block font-mono">Pokédólares</span>
                   <span className="font-semibold text-[#A6752C] mt-0.5 block">
-                    ₽{useTrainerStore.getState().profile?.pokedollars ?? profileData?.pokedollars ?? 0}
+                    ₽{walletPokedollars.toLocaleString('es-CO')}
                   </span>
                 </div>
               </div>

@@ -178,9 +178,9 @@ export function OracleForgeModal({
             {/* Veredicto de Tasación */}
             <div className="grid grid-cols-2 gap-2 text-center font-mono text-xs">
               <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
-                <span className="text-[10px] text-[#706E66] block">CONCHAS</span>
+                <span className="text-[10px] text-[#706E66] block">POKÉDÓLARES</span>
                 <span className="text-sm font-semibold text-[#A6752C] tabular-nums">
-                  +{oracleResult.gold_reward} 🐚
+                  +{oracleResult.gold_reward} ₽
                 </span>
               </div>
               <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD]">
