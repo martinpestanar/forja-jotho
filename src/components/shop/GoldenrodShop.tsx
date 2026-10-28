@@ -3,41 +3,32 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
-import { 
-  ShoppingBag, 
-  Coins, 
-  Sparkles, 
-  CheckCircle2, 
-  Zap, 
-  Glasses, 
-  Crown, 
-  Sun,
+import {
+  ShoppingBag,
+  Coins,
+  Sparkles,
+  Zap,
+  Glasses,
   Flame,
   Egg,
-  Heart,
   Dna,
-  ShieldAlert,
-  ArrowUpRight,
-  TrendingUp,
-  Tag,
-  Plus,
-  Minus,
-  RefreshCw,
-  Gift,
-  Package,
   Shield,
   UserCheck,
   Lock,
-  AlertTriangle
+  Tag,
+  Plus,
+  Minus,
+  Package,
+  ArrowUpRight,
+  Check,
 } from 'lucide-react';
 import { useTrainerStore } from '@/store/useTrainerStore';
 import { useEconomyStore } from '@/store/useEconomyStore';
 import { soundFx } from '@/lib/soundFx';
 import { LayeredSpriteCanvas } from '@/components/tuning/LayeredSpriteCanvas';
-import { HNS_ITEM_IDS } from '@/lib/gba/gbaSaveEngine';
 import { POKEMON_ASSETS } from '@/lib/pokemonAssets';
 import { EXPANDED_SHOP_CATALOG, ShopFloor, ShopProduct } from '@/lib/shopCatalog';
-import { POKEMON_COSTUMES_CATALOG, TRAINER_SKINS_CATALOG } from '@/types/cosmetics';
+import { POKEMON_COSTUMES_CATALOG } from '@/types/cosmetics';
 
 const CATALOG_ITEMS = EXPANDED_SHOP_CATALOG;
 
@@ -53,11 +44,13 @@ const FLOORS: { id: ShopFloor; label: string; floorNum: string; icon: any }[] = 
   { id: 'cosmetics', label: 'Auras & Títulos Web', floorNum: '7F', icon: Glasses },
 ];
 
+function currency(value: number) {
+  return `₽${Math.round(value || 0).toLocaleString('es-CO')}`;
+}
+
 export const GoldenrodShop: React.FC = () => {
   const profile = useTrainerStore((s) => s.profile);
   const purchaseShopItemRpc = useTrainerStore((s) => s.purchaseShopItemRpc);
-  const theme = useTrainerStore((s) => s.theme);
-  const isLight = theme === 'light_gbc';
 
   const [currentFloor, setCurrentFloor] = useState<ShopFloor>('eggs');
   const [selectedProduct, setSelectedProduct] = useState<ShopProduct>(CATALOG_ITEMS[0]);
@@ -78,11 +71,10 @@ export const GoldenrodShop: React.FC = () => {
 
   const priceOf = (product: ShopProduct) => economyPrices[product.id] ?? product.cost;
 
-
   // Cosméticos equipados en preview
-  const [equippedGlasses, setEquippedGlasses] = useState<boolean>(true);
-  const [equippedAura, setEquippedAura] = useState<boolean>(true);
-  const [equippedCap, setEquippedCap] = useState<boolean>(false);
+  const [equippedGlasses] = useState<boolean>(true);
+  const [equippedAura] = useState<boolean>(true);
+  const [equippedCap] = useState<boolean>(false);
 
   // La wallet real vive en la economía; el perfil es solo respaldo visual.
   const economyWallet = useEconomyStore((s) => s.snapshot?.wallet);
@@ -100,18 +92,18 @@ export const GoldenrodShop: React.FC = () => {
     .map((p: any) => Number(p?.speciesId))
     .filter((id: number) => !isNaN(id) && id > 0);
 
-  const ownedSpeciesIds = new Set<number>([
-    starterSpeciesId,
-    ...partySpeciesIds,
-  ]);
+  const ownedSpeciesIds = new Set<number>([starterSpeciesId, ...partySpeciesIds]);
 
   const floorItems = CATALOG_ITEMS.filter((item) => item.floor === currentFloor);
   const visibleFloorItems =
     currentFloor === 'tms' && tmFilter !== 'todos'
       ? floorItems.filter((item) => item.moveType === tmFilter)
       : floorItems;
-  const tmTypes = Array.from(new Set(CATALOG_ITEMS.filter((i) => i.floor === 'tms').map((i) => i.moveType).filter(Boolean))) as string[];
+  const tmTypes = Array.from(
+    new Set(CATALOG_ITEMS.filter((i) => i.floor === 'tms').map((i) => i.moveType).filter(Boolean))
+  ) as string[];
   const dailyDeal = CATALOG_ITEMS.find((item) => item.isDailyDeal);
+  const activeFloor = FLOORS.find((floor) => floor.id === currentFloor);
 
   // Calcular precio total con multiplicador de cantidad (sólo para ítems apilables)
   const isStackable = selectedProduct.type === 'item';
@@ -120,7 +112,8 @@ export const GoldenrodShop: React.FC = () => {
   const canAfford = pokedollars >= totalCost;
 
   // Validación de posesión previa del Pokémon para equipamientos
-  const isCostumeLocked = selectedProduct.type === 'pokemon_costume' &&
+  const isCostumeLocked =
+    selectedProduct.type === 'pokemon_costume' &&
     !!selectedProduct.speciesId &&
     !ownedSpeciesIds.has(selectedProduct.speciesId);
 
@@ -134,13 +127,13 @@ export const GoldenrodShop: React.FC = () => {
 
     if (isCostumeLocked) {
       soundFx.playDamage();
-      showToast(`🔒 Requiere tener a ${selectedProduct.speciesName || 'este Pokémon'} en tu equipo o inventario.`);
+      showToast(`Requiere tener a ${selectedProduct.speciesName || 'este Pokémon'} en tu equipo o inventario.`);
       return;
     }
 
     if (!canAfford) {
       soundFx.playDamage();
-      showToast(`⚠️ Saldo insuficiente: necesitas ₽${totalCost.toLocaleString()} Pokédólares.`);
+      showToast(`Saldo insuficiente: necesitas ${currency(totalCost)}.`);
       return;
     }
 
@@ -158,25 +151,28 @@ export const GoldenrodShop: React.FC = () => {
       }
 
       // 2. Todo lo comprado nace en la Bóveda (nada se pierde si el emulador está cerrado)
-      if (selectedProduct.type === 'item' || selectedProduct.type === 'pokemon' || selectedProduct.type === 'egg') {
+      if (
+        selectedProduct.type === 'item' ||
+        selectedProduct.type === 'pokemon' ||
+        selectedProduct.type === 'egg'
+      ) {
         soundFx.playLevelUp();
         confetti({
           particleCount: 45,
           spread: 60,
           origin: { y: 0.6 },
-          colors: ['#F59E0B', '#10B981', '#06B6D4', '#E60012'],
+          colors: ['#C49347', '#5A7D62', '#3B7A87', '#D97043'],
         });
-        showToast(`📦 ${selectedProduct.name} guardado en la Bóveda. Envíalo al juego desde Santuario.`);
+        showToast(`${selectedProduct.name} guardado en la Bóveda. Envíalo al juego desde Santuario.`);
       } else {
         soundFx.playCoin();
-        confetti({ particleCount: 30, spread: 45, origin: { y: 0.6 } });
-        showToast(`👑 ${selectedProduct.name} desbloqueado en tu inventario.`);
+        confetti({ particleCount: 30, spread: 45, origin: { y: 0.6 }, colors: ['#C49347', '#D97043'] });
+        showToast(`${selectedProduct.name} desbloqueado en tu inventario.`);
       }
 
       await useTrainerStore.getState().loadSessionProfileRpc();
       await useEconomyStore.getState().loadEconomy();
 
-      // Resetear contador
       setQuantity(1);
     } catch (err: any) {
       console.error(err);
@@ -188,148 +184,169 @@ export const GoldenrodShop: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col gap-3 font-mono select-none">
-      {/* Toast Notificación con Sonido */}
+    <div className="@container space-y-4">
+      {/* Aviso flotante */}
       <AnimatePresence>
         {notification && (
           <motion.div
-            initial={{ opacity: 0, y: -15 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className={`p-2.5 rounded-xl text-xs font-black flex items-center justify-between gap-2 border-2 shadow-[4px_4px_0_#000] z-20 ${
-              isLight
-                ? 'bg-amber-300 text-slate-950 border-black'
-                : 'bg-emerald-950 text-emerald-300 border-emerald-500 shadow-[0_0_15px_rgba(34,197,94,0.3)]'
-            }`}
+            exit={{ opacity: 0, y: -8 }}
+            className="hq-card flex items-start gap-2 p-3"
+            role="status"
           >
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500 animate-spin" />
-              <span>{notification}</span>
-            </div>
-            <span className="text-[10px] opacity-75 font-mono">PULSA CONTINUAR EN GBA</span>
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#5A7D62]" />
+            <span className="text-xs leading-relaxed text-[#1F1E1B]">{notification}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Header Departamental: Ciudad Trigal + Saldo + Avatar Preview */}
-      <div
-        className={`p-3 rounded-xl border-2 flex flex-col md:flex-row items-center justify-between gap-3 transition-all ${
-          isLight
-            ? 'bg-[#FFFFFF] border-black shadow-[4px_4px_0_#000]'
-            : 'bg-[#121214] border-slate-800'
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          <div
-            className={`p-2.5 rounded-xl border-2 flex items-center justify-center ${
-              isLight
-                ? 'bg-[#E60012] text-white border-black shadow-[2px_2px_0_#000]'
-                : 'bg-amber-500/20 text-amber-400 border-amber-500/50'
-            }`}
-          >
-            <ShoppingBag className="w-6 h-6 animate-bounce" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-black/10">
-                GOLDENROD DEPT. STORE
-              </span>
-              <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1">
-                <Flame className="w-3 h-3 fill-amber-500" /> Crianza & Mercado Negro GBA
-              </span>
-            </div>
-            <h2 className="text-base font-black tracking-tight uppercase">
-              Centro Comercial de Ciudad Trigal
-            </h2>
-          </div>
-        </div>
-
-        {/* Saldo y Avatar Tuneado */}
-        <div className="flex items-center gap-3 self-end md:self-center">
-          <div className="text-right">
-            <span className="text-[10px] text-slate-400 font-bold block">SALDO POKÉDÓLARES:</span>
-            <span className="text-xl font-black text-amber-400 flex items-center justify-end gap-1">
-              <Coins className="w-4 h-4 text-amber-500 fill-amber-400" />
-              <span>₽{pokedollars.toLocaleString()}</span>
+      {/* Encabezado del Bazar */}
+      <div className="hq-card relative overflow-hidden p-4">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full"
+          style={{
+            background:
+              'radial-gradient(circle, color-mix(in srgb, var(--hq-gold) 18%, transparent), transparent 70%)',
+          }}
+        />
+        <div className="relative flex flex-col gap-3 @min-[560px]:flex-row @min-[560px]:items-center @min-[560px]:justify-between">
+          <div className="flex items-center gap-3">
+            <span
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border"
+              style={{
+                color: 'var(--hq-gold)',
+                borderColor: 'color-mix(in srgb, var(--hq-gold) 25%, transparent)',
+                backgroundColor: 'color-mix(in srgb, var(--hq-gold) 10%, white)',
+              }}
+            >
+              <ShoppingBag className="h-5 w-5" />
             </span>
+            <div className="min-w-0">
+              <span className="hq-label">Bazar de Ciudad Trigal</span>
+              <h2 className="hq-title text-lg leading-tight text-[#1F1E1B] sm:text-xl">
+                Departamento Goldenrod
+              </h2>
+              <p className="mt-0.5 text-[11px] text-[#8A877E]">
+                Todo lo que compras nace en tu Bóveda y viaja al cartucho.
+              </p>
+            </div>
           </div>
 
-          <div
-            className={`p-1 rounded-xl border-2 ${
-              isLight ? 'bg-slate-100 border-black' : 'bg-slate-950 border-slate-700'
-            }`}
-          >
-            <LayeredSpriteCanvas
-              starter={starter}
-              size="sm"
-              cosmeticGlasses={equippedGlasses}
-              cosmeticAura={equippedAura}
-              cosmeticHat={equippedCap}
-            />
+          <div className="flex items-center gap-3 self-start sm:self-center">
+            <div className="text-right">
+              <span className="hq-label">Saldo</span>
+              <div className="hq-mono text-lg font-semibold tabular-nums text-[#1F1E1B]">
+                {currency(pokedollars)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-[#E8E5DD] bg-[#FAF9F5] p-1">
+              <LayeredSpriteCanvas
+                starter={starter}
+                size="sm"
+                cosmeticGlasses={equippedGlasses}
+                cosmeticAura={equippedAura}
+                cosmeticHat={equippedCap}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Banner de Destacado del Día */}
-      {dailyDeal && (
-        <div
-          onClick={() => {
-            soundFx.playClick();
-            setSelectedProduct(dailyDeal);
-            setCurrentFloor(dailyDeal.floor);
-          }}
-          className={`p-2 px-3 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${
-            isLight
-              ? 'bg-gradient-to-r from-amber-200 via-rose-100 to-amber-200 border-black shadow-[3px_3px_0_#000] hover:translate-x-0.5'
-              : 'bg-gradient-to-r from-amber-950/60 via-purple-950/40 to-slate-900 border-amber-500/50 hover:border-amber-400'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Tag className="w-4 h-4 text-[#E60012] animate-pulse" />
-            <span className="text-xs font-black uppercase text-[#E60012]">
-              DESTACADO DEL DÍA
+      {/* Destacado del día + Oráculo */}
+      <div className="grid gap-2.5 @min-[700px]:grid-cols-2">
+        {dailyDeal && (
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playClick();
+              setSelectedProduct(dailyDeal);
+              setCurrentFloor(dailyDeal.floor);
+            }}
+            className="hq-card hq-card-interactive flex items-center justify-between gap-3 p-3 text-left"
+          >
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border"
+                style={{
+                  color: 'var(--hq-gold)',
+                  borderColor: 'color-mix(in srgb, var(--hq-gold) 25%, transparent)',
+                  backgroundColor: 'color-mix(in srgb, var(--hq-gold) 10%, white)',
+                }}
+              >
+                <Tag className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <span className="hq-label">Destacado del día</span>
+                <div className="truncate text-xs font-semibold text-[#1F1E1B]">{dailyDeal.name}</div>
+              </div>
+            </div>
+            <span className="hq-mono flex shrink-0 items-center gap-1 text-xs font-semibold text-[#1F1E1B]">
+              {currency(priceOf(dailyDeal))}
+              <ArrowUpRight className="h-3.5 w-3.5 text-[#8A877E]" />
             </span>
-            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              {dailyDeal.name} destacado en el Bazar
-            </span>
+          </button>
+        )}
+
+        {oracleText && (
+          <div className="hq-panel flex items-start gap-2 p-3">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--hq-cmo)' }} />
+            <div className="min-w-0">
+              <span className="hq-label">Oráculo del Bazar</span>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-[#5E5C56]">{oracleText}</p>
+            </div>
           </div>
-          <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
-            <span>₽{priceOf(dailyDeal).toLocaleString()}</span>
-            <ArrowUpRight className="w-3.5 h-3.5" />
-          </span>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Voz del Oráculo del Bazar */}
-      {oracleText && (
-        <div
-          className={`p-2.5 px-3 rounded-xl border-2 flex items-start gap-2 ${
-            isLight
-              ? 'bg-[#F4F1EA] border-black shadow-[3px_3px_0_#000]'
-              : 'bg-slate-900/70 border-cyan-500/40'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-[#D4A359] mt-0.5 shrink-0" />
-          <p className="text-xs font-bold leading-snug text-slate-800 dark:text-slate-200">
-            <span className="text-[#E60012] dark:text-amber-400 font-black">ORÁCULO: </span>
-            {oracleText}
-          </p>
+      {/* Selector de pisos */}
+      <div className="hq-card p-2">
+        <div className="hq-scroll flex items-center gap-1.5 overflow-x-auto">
+          {FLOORS.map((floor) => {
+            const Icon = floor.icon;
+            const isActive = currentFloor === floor.id;
+            return (
+              <button
+                key={floor.id}
+                type="button"
+                onClick={() => {
+                  soundFx.playClick();
+                  setCurrentFloor(floor.id);
+                  const first = CATALOG_ITEMS.find((i) => i.floor === floor.id);
+                  if (first) setSelectedProduct(first);
+                  setQuantity(1);
+                }}
+                className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                  isActive
+                    ? 'border-[#1F1E1B] bg-[#1F1E1B] text-[#FAF9F5]'
+                    : 'border-[#E8E5DD] bg-white text-[#5E5C56] hover:border-[#D5D1C5] hover:text-[#1F1E1B]'
+                }`}
+              >
+                <span className={`hq-mono text-[9px] ${isActive ? 'text-[#FAF9F5]/60' : 'text-[#8A877E]'}`}>
+                  {floor.floorNum}
+                </span>
+                <Icon className="h-3.5 w-3.5" />
+                <span>{floor.label}</span>
+              </button>
+            );
+          })}
         </div>
-      )}
+      </div>
 
-      {/* Filtro de tipos para Máquinas Técnicas */}
+      {/* Filtro de tipos para MT */}
       {currentFloor === 'tms' && (
-        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        <div className="flex flex-wrap items-center gap-1.5">
           {['todos', ...tmTypes].map((type) => (
             <button
               key={type}
-              onClick={() => setTmFilter(type)}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border transition-all cursor-pointer whitespace-nowrap ${
-                tmFilter === type
-                  ? 'bg-[#2563EB] text-white border-black'
-                  : isLight
-                  ? 'bg-white border-black/30 text-slate-600'
-                  : 'bg-slate-900 border-slate-700 text-slate-400'
+              type="button"
+              onClick={() => {
+                soundFx.playClick();
+                setTmFilter(type);
+              }}
+              className={`hq-chip text-[10px] capitalize transition-colors ${
+                tmFilter === type ? 'border-[#1F1E1B] text-[#1F1E1B]' : 'hover:border-[#D5D1C5]'
               }`}
             >
               {type}
@@ -338,109 +355,79 @@ export const GoldenrodShop: React.FC = () => {
         </div>
       )}
 
-      {/* Selector de Pisos (Estilo Ascensor Departamental de Pokémon) */}
-      <div
-        className={`flex items-center gap-1.5 overflow-x-auto pb-1 border-b-2 ${
-          isLight ? 'border-black/20' : 'border-slate-800'
-        }`}
-      >
-        {FLOORS.map((floor) => {
-          const Icon = floor.icon;
-          const isActive = currentFloor === floor.id;
-          return (
-            <button
-              key={floor.id}
-              onClick={() => {
-                soundFx.playClick();
-                setCurrentFloor(floor.id);
-                // Preseleccionar el primer ítem del piso
-                const first = CATALOG_ITEMS.find((i) => i.floor === floor.id);
-                if (first) setSelectedProduct(first);
-                setQuantity(1);
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap border-2 ${
-                isActive
-                  ? isLight
-                    ? 'bg-[#E60012] text-white border-black shadow-[2px_2px_0_#000]'
-                    : 'bg-amber-500 text-slate-950 border-black font-black shadow-[0_0_10px_rgba(245,158,11,0.3)]'
-                  : isLight
-                  ? 'bg-white border-black/30 text-slate-700 hover:border-black'
-                  : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <span className="px-1 py-0.2 rounded bg-black/20 text-[10px] font-mono">
-                {floor.floorNum}
-              </span>
-              <Icon className="w-3.5 h-3.5" />
-              <span>{floor.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Catálogo + inspector */}
+      <div className="grid gap-4 @min-[880px]:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-2.5">
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <span className="hq-label">{activeFloor?.floorNum} · catálogo</span>
+              <h3 className="hq-title truncate text-base text-[#1F1E1B]">{activeFloor?.label}</h3>
+            </div>
+            <span className="hq-mono shrink-0 text-[10px] text-[#8A877E]">
+              {visibleFloorItems.length} productos
+            </span>
+          </div>
 
-      {/* Contenido Principal: Catálogo de Productos + Inspector de Compra */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 overflow-hidden">
-        {/* Lado Izquierdo: Catálogo de Ítems del Piso Activo (7 Cols) */}
-        <div className="lg:col-span-7 overflow-y-auto pr-1 space-y-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2.5 @min-[520px]:grid-cols-2">
             {visibleFloorItems.map((prod) => {
               const isSelected = selectedProduct.id === prod.id;
-              const isLocked = prod.type === 'pokemon_costume' &&
-                !!prod.speciesId &&
-                !ownedSpeciesIds.has(prod.speciesId);
+              const isLocked =
+                prod.type === 'pokemon_costume' && !!prod.speciesId && !ownedSpeciesIds.has(prod.speciesId);
               const price = priceOf(prod);
 
               return (
-                <div
+                <button
                   key={prod.id}
+                  type="button"
                   onClick={() => {
                     soundFx.playClick();
                     setSelectedProduct(prod);
                     setQuantity(1);
                   }}
-                  className={`p-3 rounded-xl border-2 flex flex-col justify-between cursor-pointer transition-all relative ${
-                    isLocked
-                      ? 'opacity-60 bg-black/5 border-slate-700/40 grayscale-30'
-                      : isSelected
-                      ? isLight
-                        ? 'bg-amber-100 border-black shadow-[3px_3px_0_#000]'
-                        : 'bg-amber-500/15 border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)]'
-                      : isLight
-                      ? 'bg-white border-black/30 hover:border-black'
-                      : 'bg-[#18181b] border-slate-800 hover:border-slate-700'
-                  }`}
+                  className={`hq-card hq-card-interactive flex flex-col justify-between p-3 text-left ${
+                    isSelected ? 'border-[#1F1E1B]' : ''
+                  } ${isLocked ? 'opacity-60' : ''}`}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-black/10 uppercase">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="hq-mono truncate text-[9px] uppercase tracking-wide text-[#8A877E]">
                         {prod.badge}
                       </span>
                       {isLocked ? (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-500/50 flex items-center gap-1">
-                          <Lock className="w-2.5 h-2.5" /> NO POSEÍDO
+                        <span className="hq-mono flex shrink-0 items-center gap-1 text-[9px] uppercase text-[#8A877E]">
+                          <Lock className="h-2.5 w-2.5" /> Bloqueado
                         </span>
                       ) : prod.isDailyDeal ? (
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#E60012] text-white">
-                          DESTACADO
+                        <span
+                          className="hq-mono shrink-0 rounded-full px-1.5 py-0.5 text-[9px] uppercase"
+                          style={{
+                            color: 'var(--hq-gold)',
+                            backgroundColor: 'color-mix(in srgb, var(--hq-gold) 12%, white)',
+                          }}
+                        >
+                          Destacado
                         </span>
                       ) : null}
                     </div>
 
-                    <div className="flex items-center gap-3 my-2">
-                      <div className="w-14 h-14 flex items-center justify-center shrink-0 bg-black/5 rounded-lg border border-black/10">
+                    <div className="mt-2.5 flex items-center gap-3">
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-[#E8E5DD] bg-[#FAF9F5]">
                         {prod.type === 'pokemon_costume' && prod.costumeId ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
-                            src={POKEMON_COSTUMES_CATALOG.find((c) => c.id === prod.costumeId)?.costumeSpriteUrl || prod.previewImage}
+                            src={
+                              POKEMON_COSTUMES_CATALOG.find((c) => c.id === prod.costumeId)?.costumeSpriteUrl ||
+                              prod.previewImage
+                            }
                             alt={prod.name}
-                            className="max-h-12 max-w-12 object-contain filter drop-shadow-md"
+                            className="max-h-12 max-w-12 object-contain"
                           />
                         ) : prod.type === 'trainer_skin' && prod.previewImage ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
                             src={prod.previewImage}
                             alt={prod.name}
-                            className="max-h-12 max-w-12 object-contain filter drop-shadow-md"
+                            className="max-h-12 max-w-12 object-contain"
                           />
                         ) : prod.speciesId ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
@@ -458,240 +445,233 @@ export const GoldenrodShop: React.FC = () => {
                           <img
                             src={prod.previewImage}
                             alt={prod.name}
-                            className="w-10 h-10 object-contain"
+                            className="h-10 w-10 object-contain"
                           />
                         ) : (
-                          <Package className="w-8 h-8 text-amber-500" />
+                          <Package className="h-7 w-7 text-[#C49347]" />
                         )}
                       </div>
 
                       <div className="min-w-0">
-                        <h4 className="font-black text-xs uppercase leading-tight truncate">
-                          {prod.name}
-                        </h4>
-                        <p className="text-[10px] text-slate-400 line-clamp-2 mt-0.5">
+                        <h4 className="truncate text-xs font-semibold text-[#1F1E1B]">{prod.name}</h4>
+                        <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#8A877E]">
                           {prod.description}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-black/10">
-                    <span className="text-xs font-black text-amber-500 flex items-center gap-1">
-                      <Coins className="w-3.5 h-3.5" />
-                      <span>₽{price.toLocaleString()}</span>
+                  <div className="mt-3 flex items-center justify-between border-t border-[#E8E5DD] pt-2">
+                    <span className="hq-mono flex items-center gap-1 text-xs font-semibold tabular-nums text-[#1F1E1B]">
+                      <Coins className="h-3.5 w-3.5" style={{ color: 'var(--hq-gold)' }} />
+                      {currency(price)}
                     </span>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase">
+                    <span className="hq-mono text-[9px] uppercase tracking-wide text-[#8A877E]">
                       {prod.type}
                     </span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* Lado Derecho: Inspector de Compra Dopamínico (5 Cols) */}
-        <div
-          className={`lg:col-span-5 rounded-xl p-4 border-2 flex flex-col justify-between ${
-            isLight
-              ? 'bg-[#FFFFFF] border-black shadow-[4px_4px_0_#000]'
-              : 'bg-[#0f172a] border-slate-700'
-          }`}
-        >
-          <div>
-            <div className="flex items-center justify-between pb-2 border-b border-black/15">
-              <div>
-                <span className="text-[10px] font-black uppercase text-amber-500">
-                  {selectedProduct.badge}
-                </span>
-                <h3 className="font-black text-base uppercase leading-tight">
-                  {selectedProduct.name}
-                </h3>
-              </div>
-              <span className="text-xs font-black px-2 py-0.5 rounded bg-black/10 uppercase">
-                {selectedProduct.type}
+        {/* Inspector de compra */}
+        <div className="hq-card self-start p-4 @min-[880px]:sticky @min-[880px]:top-4">
+          <div className="flex items-start justify-between gap-2 border-b border-[#E8E5DD] pb-3">
+            <div className="min-w-0">
+              <span className="hq-label">{selectedProduct.badge}</span>
+              <h3 className="hq-title mt-0.5 text-base leading-tight text-[#1F1E1B]">
+                {selectedProduct.name}
+              </h3>
+            </div>
+            <span className="hq-chip shrink-0 text-[9px] uppercase">{selectedProduct.type}</span>
+          </div>
+
+          {/* Escaparate */}
+          <div
+            className="relative mt-3 flex h-40 w-full items-center justify-center overflow-hidden rounded-2xl border border-[#E8E5DD]"
+            style={{
+              background:
+                'radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--hq-gold) 10%, white), #FAF9F5 70%)',
+            }}
+          >
+            {selectedProduct.type === 'pokemon_costume' && selectedProduct.costumeId ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={
+                  POKEMON_COSTUMES_CATALOG.find((c) => c.id === selectedProduct.costumeId)?.costumeSpriteUrl ||
+                  selectedProduct.previewImage
+                }
+                alt={selectedProduct.name}
+                className="h-32 object-contain transition-transform duration-300 hover:scale-105"
+              />
+            ) : selectedProduct.type === 'trainer_skin' && selectedProduct.previewImage ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={selectedProduct.previewImage}
+                alt={selectedProduct.name}
+                className="h-32 object-contain transition-transform duration-300 hover:scale-105"
+              />
+            ) : selectedProduct.speciesId ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={
+                  selectedProduct.type === 'egg'
+                    ? 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/lucky-egg.png'
+                    : POKEMON_ASSETS.getAnimatedSprite(selectedProduct.speciesId, selectedProduct.isShiny)
+                }
+                alt={selectedProduct.name}
+                className="h-28 object-contain transition-transform duration-300 hover:scale-105"
+              />
+            ) : selectedProduct.previewImage ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={selectedProduct.previewImage}
+                alt={selectedProduct.name}
+                className="h-20 w-20 object-contain transition-transform duration-300 hover:scale-110"
+              />
+            ) : (
+              <Package className="h-14 w-14 text-[#C49347]" />
+            )}
+
+            {selectedProduct.isShiny && (
+              <span
+                className="hq-mono absolute right-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] uppercase"
+                style={{
+                  color: 'var(--hq-gold)',
+                  backgroundColor: 'color-mix(in srgb, var(--hq-gold) 14%, white)',
+                  border: '1px solid color-mix(in srgb, var(--hq-gold) 30%, transparent)',
+                }}
+              >
+                <Sparkles className="h-2.5 w-2.5" />
+                Shiny
               </span>
-            </div>
+            )}
+          </div>
 
-            {/* Escaparate Visual del Producto */}
-            <div
-              className={`h-40 w-full flex items-center justify-center my-3 rounded-2xl border-2 border-dashed relative ${
-                isLight
-                  ? 'bg-amber-50 border-amber-300'
-                  : 'bg-black/30 border-amber-500/30'
-              }`}
-            >
-              {selectedProduct.type === 'pokemon_costume' && selectedProduct.costumeId ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={POKEMON_COSTUMES_CATALOG.find((c) => c.id === selectedProduct.costumeId)?.costumeSpriteUrl || selectedProduct.previewImage}
-                  alt={selectedProduct.name}
-                  className="h-32 object-contain filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.6)] transition-transform hover:scale-110"
-                />
-              ) : selectedProduct.type === 'trainer_skin' && selectedProduct.previewImage ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={selectedProduct.previewImage}
-                  alt={selectedProduct.name}
-                  className="h-32 object-contain filter drop-shadow-[0_8px_14px_rgba(0,0,0,0.6)] transition-transform hover:scale-110"
-                />
-              ) : selectedProduct.speciesId ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={
-                    selectedProduct.type === 'egg'
-                      ? 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/lucky-egg.png'
-                      : POKEMON_ASSETS.getAnimatedSprite(
-                          selectedProduct.speciesId,
-                          selectedProduct.isShiny
-                        )
-                  }
-                  alt={selectedProduct.name}
-                  className="h-28 object-contain filter drop-shadow-[0_8px_10px_rgba(0,0,0,0.5)] transition-transform hover:scale-110"
-                />
-              ) : selectedProduct.previewImage ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={selectedProduct.previewImage}
-                  alt={selectedProduct.name}
-                  className="w-20 h-20 object-contain filter drop-shadow-md transition-transform hover:scale-125"
-                />
-              ) : (
-                <Package className="w-16 h-16 text-amber-500" />
-              )}
-
-              {/* Insignia Shiny si aplica */}
-              {selectedProduct.isShiny && (
-                <div className="absolute top-2 right-2 px-2 py-0.5 bg-amber-400 text-black text-[10px] font-black rounded flex items-center gap-1 border border-black shadow-[1px_1px_0_#000]">
-                  <Sparkles className="w-3 h-3 fill-black" />
-                  <span>SHINY</span>
-                </div>
-              )}
-            </div>
-
-            {/* Descripción y Especificaciones */}
-            <div
-              className={`p-3 rounded-xl text-xs leading-relaxed mb-3 ${
-                isLight
-                  ? 'bg-slate-100 text-slate-700 border border-black/10'
-                  : 'bg-black/20 text-slate-300 border border-slate-800'
-              }`}
-            >
-              <p className="mb-2">{selectedProduct.description}</p>
-              {selectedProduct.perfectIVs && (
-                <div className="flex items-center gap-1.5 text-[11px] text-emerald-500 font-bold">
-                  <Dna className="w-3.5 h-3.5" />
-                  <span>Genética: 31 IVs en PS, Ataque, Defensa, Velocidad.</span>
-                </div>
-              )}
-              {selectedProduct.gbaItemId && (
-                <div className="text-[11px] text-slate-400 font-mono mt-1">
-                  <span>Offset GBA: 0x{selectedProduct.gbaItemId.toString(16).toUpperCase()}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Selector de Cantidad Dinámico (Para Ítems Apilables) */}
-            {isStackable && (
-              <div className="flex items-center justify-between p-2 rounded-xl bg-black/5 border border-black/10 mb-3">
-                <span className="text-xs font-bold text-slate-400">CANTIDAD:</span>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      soundFx.playClick();
-                      setQuantity((q) => Math.max(1, q - 1));
-                    }}
-                    className={`w-7 h-7 rounded-lg font-black flex items-center justify-center border transition-all ${
-                      isLight
-                        ? 'bg-white border-black text-black hover:bg-slate-200'
-                        : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'
-                    }`}
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="w-8 text-center font-black text-sm">{quantity}</span>
-                  <button
-                    onClick={() => {
-                      soundFx.playClick();
-                      setQuantity((q) => Math.min(20, q + 1));
-                    }}
-                    className={`w-7 h-7 rounded-lg font-black flex items-center justify-center border transition-all ${
-                      isLight
-                        ? 'bg-white border-black text-black hover:bg-slate-200'
-                        : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-700'
-                    }`}
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-
-                  <div className="flex gap-1 ml-1">
-                    {[5, 10].map((batch) => (
-                      <button
-                        key={batch}
-                        onClick={() => {
-                          soundFx.playClick();
-                          setQuantity(batch);
-                        }}
-                        className="px-2 py-1 text-[10px] font-black rounded bg-black/10 hover:bg-black/20"
-                      >
-                        x{batch}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          <div className="hq-panel mt-3 p-3">
+            <p className="text-[11px] leading-relaxed text-[#5E5C56]">{selectedProduct.description}</p>
+            {selectedProduct.perfectIVs && (
+              <div className="mt-2 flex items-start gap-1.5 text-[10px] font-medium text-[#5A7D62]">
+                <Dna className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>Genética: 31 IVs en PS, Ataque, Defensa y Velocidad.</span>
+              </div>
+            )}
+            {selectedProduct.gbaItemId && (
+              <div className="hq-mono mt-1.5 text-[10px] text-[#8A877E]">
+                ID de bolsillo GBA: 0x{selectedProduct.gbaItemId.toString(16).toUpperCase()}
               </div>
             )}
           </div>
 
-          {/* Desglose de Pago & Botón Dopamínico de Compra */}
-          <div className="pt-2 border-t border-black/10 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-400">TOTAL A DEBITAR:</span>
-              <span className="text-lg font-black text-amber-500 flex items-center gap-1">
-                <Coins className="w-4 h-4 fill-amber-500" />
-                <span>₽{totalCost.toLocaleString()}</span>
+          {/* Cantidad */}
+          {isStackable && (
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-[#E8E5DD] bg-white px-2.5 py-2">
+              <span className="hq-label">Cantidad</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playClick();
+                    setQuantity((q) => Math.max(1, q - 1));
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E8E5DD] bg-white text-[#1F1E1B] transition-colors hover:bg-[#F2EFE9]"
+                  aria-label="Restar una unidad"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <span className="hq-mono w-7 text-center text-sm font-semibold tabular-nums text-[#1F1E1B]">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playClick();
+                    setQuantity((q) => Math.min(20, q + 1));
+                  }}
+                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E8E5DD] bg-white text-[#1F1E1B] transition-colors hover:bg-[#F2EFE9]"
+                  aria-label="Sumar una unidad"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+                {[5, 10].map((batch) => (
+                  <button
+                    key={batch}
+                    type="button"
+                    onClick={() => {
+                      soundFx.playClick();
+                      setQuantity(batch);
+                    }}
+                    className="hq-mono rounded-lg border border-[#E8E5DD] px-1.5 py-1 text-[10px] text-[#5E5C56] transition-colors hover:bg-[#F2EFE9]"
+                  >
+                    x{batch}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 space-y-2 border-t border-[#E8E5DD] pt-3">
+            <div className="flex items-center justify-between">
+              <span className="hq-label">Total a debitar</span>
+              <span className="hq-mono flex items-center gap-1 text-lg font-semibold tabular-nums text-[#1F1E1B]">
+                <Coins className="h-4 w-4" style={{ color: 'var(--hq-gold)' }} />
+                {currency(totalCost)}
               </span>
             </div>
 
             {isCostumeLocked && (
-              <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/40 text-rose-400 text-xs font-bold flex items-center gap-2">
-                <Lock className="w-4 h-4 shrink-0 text-rose-500" />
-                <span>Requiere tener a <strong>{selectedProduct.speciesName}</strong> en tu equipo o PC para desbloquear esta armadura.</span>
+              <div
+                className="flex items-start gap-2 rounded-xl p-2.5 text-[11px] leading-relaxed"
+                style={{
+                  color: 'var(--hq-danger)',
+                  backgroundColor: 'color-mix(in srgb, var(--hq-danger) 8%, white)',
+                  border: '1px solid color-mix(in srgb, var(--hq-danger) 25%, transparent)',
+                }}
+              >
+                <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>
+                  Requiere tener a <strong>{selectedProduct.speciesName}</strong> en tu equipo o PC para
+                  desbloquear esta armadura.
+                </span>
               </div>
             )}
 
             <button
+              type="button"
               disabled={isCostumeLocked || !canAfford || isProcessing}
               onClick={handleBuy}
-              className={`w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                isCostumeLocked
-                  ? 'bg-rose-950/60 text-rose-400 border-rose-600/50'
-                  : canAfford
-                  ? isLight
-                    ? 'bg-amber-400 hover:bg-amber-500 text-black border-black shadow-[3px_3px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                    : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 border-black shadow-[0_0_15px_rgba(245,158,11,0.3)]'
-                  : 'bg-slate-800 text-slate-500 border-slate-700'
-              }`}
+              className="hq-btn hq-btn-primary w-full justify-center"
             >
               {isCostumeLocked ? (
                 <>
-                  <Lock className="w-4 h-4" />
-                  <span>POKÉMON NO OBTENIDO</span>
+                  <Lock className="h-4 w-4" />
+                  Pokémon no obtenido
+                </>
+              ) : isProcessing ? (
+                <>
+                  <Flame className="h-4 w-4" />
+                  Procesando…
+                </>
+              ) : canAfford ? (
+                <>
+                  <ShoppingBag className="h-4 w-4" />
+                  Confirmar compra · {currency(totalCost)}
                 </>
               ) : (
                 <>
-                  <Zap className="w-4 h-4 fill-current" />
-                  <span>
-                    {isProcessing
-                      ? 'TRANFIRIENDO A RAM...'
-                      : canAfford
-                      ? `CONFIRMAR COMPRA (${selectedProduct.type.toUpperCase()})`
-                      : 'SALDO INSUFICIENTE'}
-                  </span>
+                  <Coins className="h-4 w-4" />
+                  Saldo insuficiente
                 </>
               )}
             </button>
+
+            {selectedProduct.type !== 'cosmetic' && !isCostumeLocked && (
+              <p className="text-center text-[10px] leading-relaxed text-[#8A877E]">
+                Se guarda en la Bóveda. Desde ahí lo envías al cartucho.
+              </p>
+            )}
           </div>
         </div>
       </div>
