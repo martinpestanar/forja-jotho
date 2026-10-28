@@ -226,7 +226,13 @@ curl -H "Authorization: Bearer $HQ_CRON_SECRET" https://<dominio>/api/economy/ti
 3. ~~**Decidir sobre `CentralViewContainer.tsx`**~~ — **hecho**: eliminado, no tenía referencias.
 4. ~~**Confirmar el ítem "Bazar" en `hqNav.tsx`**~~ — **hecho**: Bazar, Pendientes y Día Cero conviven en el commit `254a3b0`.
 5. ~~**Versionar `rpc_valdr_dispatch_vault_item`**~~ — **hecho**: `20261029_valdr_dispatch_vault_item.sql`, aplicada y verificada (ver §1.6).
-6. Revisar si el panel admin de ítems debe seguir usando `shop_inventory` ahora que su `INSERT` directo está cerrado.
+6. ~~**Revisar si el panel admin de ítems debe seguir usando `shop_inventory`**~~ — **hecho, y era peor de lo que parecía**:
+   - La migración `20261017_admin_game_rules.sql` **nunca se aplicó**. En producción no existían ni `admin_game_rules` ni ninguna de las 4 RPC: `/admin` estaba muerto (todas las llamadas fallaban).
+   - Al revisarla antes de aplicarla aparecieron tres agujeros, ya corregidos: promovía a admin al *primer perfil* de la tabla; la política de escritura era `FOR ALL TO authenticated USING (true)`; y las 4 RPC no tenían comprobación de `is_admin`.
+   - `inject_item` fallaba **siempre** por `shop_inventory.item_id NOT NULL` (columna legada que el INSERT no rellenaba).
+   - Ya aplicada y verificada: no-admin recibe `Solo administradores`; admin inyecta y el ítem queda `pending`.
+
+7. **Trampa pendiente (no tocada):** `PokemonMemoryBridge.processPendingInjections()` recorre **todo** `shop_inventory` del usuario, sin filtrar por `injection_status = 'pending'`, ignora `gba_item_id` y **nunca marca lo entregado**. Consecuencia: cada arranque del emulador reinyecta los mismos ítems. Está en la ruta GBA, que no se puede probar sin emulador, así que no se tocó.
 
 ---
 

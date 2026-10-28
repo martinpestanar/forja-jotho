@@ -5,8 +5,10 @@
 -- 1. Agregar columna is_admin a profiles si no existe
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
 
--- Marcar al menos un admin por defecto si existe algún perfil
-UPDATE public.profiles SET is_admin = TRUE WHERE id IN (SELECT id FROM public.profiles LIMIT 1);
+-- NOTA: la versión original promovía a admin al "primer perfil" de la tabla.
+-- Eso era un agujero: en un proyecto nuevo, el primer usuario en registrarse
+-- se volvía administrador solo. El admin se marca a mano:
+--   update public.profiles set is_admin = true where id = '<uuid>';
 
 -- 2. Tabla centralizada de Reglas del Juego (admin_game_rules)
 CREATE TABLE IF NOT EXISTS public.admin_game_rules (
@@ -120,16 +122,36 @@ ON CONFLICT (id) DO NOTHING;
 -- Habilitar RLS en admin_game_rules
 ALTER TABLE public.admin_game_rules ENABLE ROW LEVEL SECURITY;
 
+-- Helper de autorización. SECURITY DEFINER para poder leer profiles.is_admin
+-- sin depender de la RLS del que llama.
+CREATE OR REPLACE FUNCTION public.is_hq_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT COALESCE(
+    (SELECT p.is_admin FROM public.profiles p WHERE p.id = auth.uid()),
+    false
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.is_hq_admin() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_hq_admin() TO authenticated;
+
 DROP POLICY IF EXISTS "Public read admin rules" ON public.admin_game_rules;
 CREATE POLICY "Public read admin rules" ON public.admin_game_rules
   FOR SELECT TO authenticated, anon
   USING (true);
 
+-- Antes: FOR ALL TO authenticated USING (true) WITH CHECK (true).
+-- Cualquier usuario autenticado podía reescribir las reglas del juego.
 DROP POLICY IF EXISTS "Admin update admin rules" ON public.admin_game_rules;
 CREATE POLICY "Admin update admin rules" ON public.admin_game_rules
   FOR ALL TO authenticated
-  USING (true)
-  WITH CHECK (true);
+  USING (public.is_hq_admin())
+  WITH CHECK (public.is_hq_admin());
 
 -- ==============================================================================
 -- FUNCIONES RPC SUPERADMIN
@@ -173,6 +195,10 @@ AS $$
 DECLARE
   v_result JSONB;
 BEGIN
+  IF NOT public.is_hq_admin() THEN
+    RAISE EXCEPTION 'Solo administradores';
+  END IF;
+
   UPDATE public.admin_game_rules
   SET 
     mode = COALESCE(p_mode, mode),
@@ -208,6 +234,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  IF NOT public.is_hq_admin() THEN
+    RAISE EXCEPTION 'Solo administradores';
+  END IF;
+
   RETURN QUERY
   SELECT 
     p.id,
@@ -247,6 +277,10 @@ DECLARE
   v_gba_id INT;
   v_pocket TEXT;
 BEGIN
+  IF NOT public.is_hq_admin() THEN
+    RAISE EXCEPTION 'Solo administradores';
+  END IF;
+
   v_amount := COALESCE((p_payload->>'amount')::INT, 15);
 
   IF p_action = 'grant_battery' THEN
@@ -290,8 +324,10 @@ BEGIN
     v_gba_id := COALESCE((p_payload->>'gba_item_id')::INT, 68);
     v_pocket := COALESCE(p_payload->>'gba_pocket', 'ITEMS');
 
-    INSERT INTO public.shop_inventory (user_id, item_key, item_category, gba_item_id, gba_pocket, quantity, injection_status)
-    VALUES (p_student_id, v_item_key, 'gba_injectable', v_gba_id, v_pocket, COALESCE((p_payload->>'quantity')::INT, 1), 'pending');
+    -- item_id es NOT NULL desde el esquema viejo; si no se rellena, el INSERT
+    -- revienta y la acción "inyectar ítem" del panel admin no funcionaba nunca.
+    INSERT INTO public.shop_inventory (user_id, item_id, item_key, item_category, gba_item_id, gba_pocket, quantity, injection_status)
+    VALUES (p_student_id, v_item_key, v_item_key, 'gba_injectable', v_gba_id, v_pocket, COALESCE((p_payload->>'quantity')::INT, 1), 'pending');
 
     SELECT * INTO v_updated FROM public.profiles WHERE id = p_student_id;
 
@@ -302,3 +338,19 @@ BEGIN
   RETURN to_jsonb(v_updated);
 END;
 $$;
+
+-- ==============================================================================
+-- Permisos
+-- Sin esto, PostgreSQL deja EXECUTE a PUBLIC en cada función nueva:
+-- cualquier `anon` podía llamar al override y regalarse Pokédólares.
+-- ==============================================================================
+REVOKE ALL ON FUNCTION public.rpc_get_admin_game_rules() FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.rpc_update_admin_game_rules(TEXT, JSONB, JSONB) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.rpc_admin_get_students() FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.rpc_admin_override_student(UUID, TEXT, JSONB) FROM PUBLIC, anon;
+
+-- `rpc_get_admin_game_rules` lo usa el mapa para todos; el resto valida is_admin adentro.
+GRANT EXECUTE ON FUNCTION public.rpc_get_admin_game_rules() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_update_admin_game_rules(TEXT, JSONB, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_admin_get_students() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.rpc_admin_override_student(UUID, TEXT, JSONB) TO authenticated;
