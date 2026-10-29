@@ -39,3 +39,17 @@ Actúa bajo el estándar obligatorio de diseño: **"Nintendo Visual UI & Dopamin
 - **Web Audio 8-bit:** Disparar efectos de audio retro sintetizados de 8-bits/16-bits para clics de menú, monedas recolectadas y fanfarrias de nivel superado (`soundFx`).
 - **Feedback Numérico Flotante:** Cada vez que se sume XP o Pokédólares, mostrar números flotantes animados verdes o dorados (ej. `+25 💰`, `+15m 🔋`) que suben y se desvanecen hacia la barra superior.
 <!-- END:nintendo-visual-ui-rule -->
+
+
+<!-- BEGIN:syndex-mcp-connections -->
+# CONEXIONES MCP SIEMPRE DISPONIBLES (Supabase / GitHub / n8n)
+
+Este proyecto tiene 3 MCPs conectados que se cargan automáticamente en cada sesión. **Antes de improvisar soluciones manuales, verifica si un MCP resuelve la tarea:**
+
+- **`supabase`** → BD de producción REAL (SQL directo, esquema, RPCs, storage, logs). REGLA CRÍTICA: las migraciones en `supabase/migrations/` NO garantizan que existan en producción (histórico de divergencias: `rpc_grant_activity_reward`, `missions_progress`, tablas `valdr_*`). Antes de asumir que algo existe o no existe en la BD, VERIFÍCALO contra producción con este MCP.
+- **`github`** → issues, PRs, commits y búsqueda de código del repo remoto.
+- **`n8n-mcp`** → nodos y plantillas para automatizaciones de la agencia (n8n.koratflow.agency).
+
+Guía completa, diagnóstico y reglas de secretos: skill `syndex-mcp-connection`. Si un MCP no aparece en tu catálogo de tools, esa skill explica cómo arreglarlo (variables de entorno de usuario vía `setx`, nunca tokens crudos en `opencode.json` porque es git-tracked).
+
+<!-- END:syndex-mcp-connections -->

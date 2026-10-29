@@ -4,8 +4,6 @@
  * (Mega-Armaduras, Formas Ancestrales, Gorras de Campeón y Trajes de Élite).
  */
 
-export type TuningTarget = 'trainer' | 'pokemon';
-
 export interface TrainerSkin {
   id: string;
   name: string;

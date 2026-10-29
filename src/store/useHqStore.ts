@@ -5,6 +5,21 @@ import { persist } from 'zustand/middleware';
 import { HQ_ROLES, type RoleKey } from '@/lib/hqRoles';
 import { DEFAULT_SCHEDULE, getScheduleState, timeToMinutes } from '@/lib/hqSchedule';
 import { soundFx } from '@/lib/soundFx';
+import { supabase } from '@/lib/supabase';
+
+async function claimHqWorkReward(claimKey: string, kind: 'block_checkout' | 'daily_bonus', minutes: number, label: string) {
+  try {
+    const { data } = await supabase.rpc('rpc_hq_claim_work_reward', {
+      p_claim_key: claimKey,
+      p_kind: kind,
+      p_minutes: minutes,
+      p_label: label,
+    });
+    if (typeof window !== 'undefined' && (data as any)?.success) {
+      window.dispatchEvent(new CustomEvent('syndex:economy-updated', { detail: data }));
+    }
+  } catch {}
+}
 
 export interface ActiveSession {
   id: string;
@@ -123,10 +138,6 @@ export function dayKey(date: Date = new Date()): string {
 
 export function getBalance(ledger: LedgerEntry[]): number {
   return ledger.reduce((total, entry) => total + entry.delta, 0);
-}
-
-export function getTodayCheckouts(checkouts: Record<string, RoleKey[]>): RoleKey[] {
-  return checkouts[dayKey()] ?? [];
 }
 
 function resolveNowRole(): { role: RoleKey; blockId: string; blockLabel: string } {
@@ -284,6 +295,12 @@ export const useHqStore = create<HqStore>()(
             reason: 'task',
             label: `Tarea cumplida: ${HQ_ROLES[active.role].label}`,
           });
+          void claimHqWorkReward(
+            `hq_checkout:${date}:${active.role}`,
+            'block_checkout',
+            minutes,
+            `Bloque ${HQ_ROLES[active.role].label} cerrado`
+          );
         }
 
         if (nextCheckouts.length >= 3 && !bonusAwarded[date]) {
@@ -298,6 +315,12 @@ export const useHqStore = create<HqStore>()(
             reason: 'bonus',
             label: 'Bonus 3 check-outs',
           });
+          void claimHqWorkReward(
+            `hq_daily_bonus:${date}`,
+            'daily_bonus',
+            60,
+            'Tríada diaria HQ (CEO + CTO + CMO)'
+          );
         }
 
         const handoffs = { ...state.handoffs };
@@ -373,6 +396,12 @@ export const useHqStore = create<HqStore>()(
             reason: 'task',
             label: `Tarea registrada: ${HQ_ROLES[role].label}`,
           });
+          void claimHqWorkReward(
+            `hq_checkout:${date}:${role}`,
+            'block_checkout',
+            safeMinutes,
+            `Bloque ${HQ_ROLES[role].label} registrado`
+          );
         }
 
         if (nextCheckouts.length >= 3 && !bonusAwarded[date]) {
@@ -387,6 +416,12 @@ export const useHqStore = create<HqStore>()(
             reason: 'bonus',
             label: 'Bonus 3 check-outs',
           });
+          void claimHqWorkReward(
+            `hq_daily_bonus:${date}`,
+            'daily_bonus',
+            60,
+            'Tríada diaria HQ (CEO + CTO + CMO)'
+          );
         }
 
         const handoffs = { ...state.handoffs };
@@ -557,6 +592,3 @@ export const useHqStore = create<HqStore>()(
   )
 );
 
-export function roleLabel(role: RoleKey): string {
-  return HQ_ROLES[role].label;
-}

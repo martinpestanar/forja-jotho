@@ -861,10 +861,6 @@ export function lessonsForTrack(track: AcademyTrackKey): AcademyLesson[] {
   return ACADEMY_LESSONS.filter((lesson) => lesson.track === track);
 }
 
-export function getLesson(id: string): AcademyLesson | undefined {
-  return ACADEMY_LESSONS.find((lesson) => lesson.id === id);
-}
-
 export function trackMeta(track: AcademyTrackKey): AcademyTrack {
   return ACADEMY_TRACKS.find((item) => item.key === track) ?? ACADEMY_TRACKS[0];
 }

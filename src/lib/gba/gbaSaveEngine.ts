@@ -98,6 +98,7 @@ export interface PartyPokemonSummary {
 
 export interface InjectionPayload {
   addMoney?: number;
+  setExactMoney?: number;
   itemsToInject?: Array<{
     pocket: BagPocketType;
     itemId: number;
@@ -411,8 +412,11 @@ export class GbaSaveManipulator {
     const encryptionKey = this.view.getUint32(sec0Base + OFFSETS.SB2_ENCRYPTION_KEY, true);
     const key16 = encryptionKey & 0xFFFF;
 
-    // 1. Inyección de Dinero
-    if (payload.addMoney && payload.addMoney > 0) {
+    // 1. Inyección o Espejo Exacto de Dinero
+    if (typeof payload.setExactMoney === 'number' && payload.setExactMoney >= 0) {
+      const exact = Math.min(999999, Math.max(0, Math.round(payload.setExactMoney)));
+      this.view.setUint32(sec1Base + OFFSETS.SB1_MONEY, (exact ^ encryptionKey) >>> 0, true);
+    } else if (payload.addMoney && payload.addMoney > 0) {
       const currentEncrypted = this.view.getUint32(sec1Base + OFFSETS.SB1_MONEY, true);
       const currentMoney = (currentEncrypted ^ encryptionKey) >>> 0;
       const newMoney = Math.min(999999, currentMoney + payload.addMoney);

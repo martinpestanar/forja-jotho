@@ -232,7 +232,29 @@ curl -H "Authorization: Bearer $HQ_CRON_SECRET" https://<dominio>/api/economy/ti
    - `inject_item` fallaba **siempre** por `shop_inventory.item_id NOT NULL` (columna legada que el INSERT no rellenaba).
    - Ya aplicada y verificada: no-admin recibe `Solo administradores`; admin inyecta y el ítem queda `pending`.
 
-7. **Trampa pendiente (no tocada):** `PokemonMemoryBridge.processPendingInjections()` recorre **todo** `shop_inventory` del usuario, sin filtrar por `injection_status = 'pending'`, ignora `gba_item_id` y **nunca marca lo entregado**. Consecuencia: cada arranque del emulador reinyecta los mismos ítems. Está en la ruta GBA, que no se puede probar sin emulador, así que no se tocó.
+7. ~~**Trampa pendiente (no tocada):** `PokemonMemoryBridge.processPendingInjections()`~~ — **resuelto en Economy v2**: ahora filtra por `injection_status = 'pending'`, marca cada ítem entregado como `'delivered'`, y sincroniza la billetera exacta (`setExactMoney`) contra `profiles.pokedollars`.
+
+---
+
+## 11. Fase Economy v2 (28 de Octubre de 2026) — Wall Street Johto + Hardcore GBA
+
+Se implementó el ecosistema completo de mercado especulativo, rentas pasivas condicionadas a productividad y reforma económica C en la ROM de GBA:
+
+1. **Migración BD (`supabase/migrations/20261030_economy_v2_market_and_rents.sql` — Aplicada en Producción):**
+   - Nuevas tablas: `economy_market_events` (régimen semanal, titular y rumor), `economy_bot_orders` (órdenes flash del Bot Market Maker con stock limitado), `economy_passive_assets` (activos generadores de renta diaria), `economy_work_claims` (idempotencia de salarios HQ).
+   - `valdr_vault` ahora guarda `avg_buy_price` (Precio Medio Ponderado / WAP) para calcular P&L real (`+%` / `-%`) en la Bóveda.
+   - Nuevas RPCs: `rpc_hq_claim_work_reward`, `rpc_economy_trade_bot_order`, `rpc_economy_buy_passive_asset`, `rpc_economy_harvest_passive_rents`, `rpc_economy_emergency_work`, y `rpc_economy_weekly_upkeep`.
+   - Catálogo Shiny expandido a 12 especies en 3 Tiers (`50,000 ₽`, `35,000 ₽`, `25,000 ₽`, `22,000 ₽`).
+2. **Conexión Salarial HQ → Economía (`useHqTasksStore.ts`, `useHqStore.ts`):**
+   - Completar tareas paga `40 ₽` / `75 ₽` / `130 ₽` según prioridad (`low` / `medium` / `high`).
+   - Hacer Check-out de un rol paga `60 ₽` + bono por tareas del bloque.
+   - Regla anti-vagos: los activos pasivos (Huerta Kurt, Vaca Miltank, Bono Silph, Staking PC) solo pagan dividendos los días con al menos 1 tarea completada en el HQ (`daily_tasks_completed >= 1`).
+3. **Cerebro IA de Mercado (`src/app/api/economy/oracle/route.ts`):**
+   - Modo `director` con Gemini 2.5 Flash JSON (`1 llamada/día` cacheada en `economy_oracle_cache`) que lee el inventario del jugador y decide crashes de Bonguris, rebotes y ofertas relámpago del Bot.
+4. **Reforma C en la ROM (`martinpestanar/pokemonHnS` commit `8fe46e3b`):**
+   - `src/item.c`: hiperinflación `x50` en PokéMarts (tope `60,000 ₽`) para obligar a abastecerse en el Bazar de la App.
+   - `src/item_menu.c`: venta de objetos en PokéMart fijada en `1 ₽` por unidad para bloquear exploits de arbitraje.
+   - `src/battle_setup.c`, `src/battle_main.c`, `src/battle_script_commands.c`: entrenadores de ruta con `+3` niveles base, **cooldown de revancha de 5 minutos** (`300s` de tiempo de juego) y **escalado incremental Tier 1..5** (`+4` niveles, `+5` IVs y `+35 ₽` adicionales por cada revancha ganada).
 
 ---
 

@@ -190,32 +190,27 @@ export class PokemonMemoryBridge {
       }
 
       // 3. Extraer equipo y metadata del jugador
-      const { party, money, trainerName } = manipulator.extractPlayerProfileAndTeam();
+      let { party, money, trainerName } = manipulator.extractPlayerProfileAndTeam();
+      let finalSavToUpload = rawSav;
 
-      // 4. Subir .sav al bucket bajo AMBOS nombres (slot activo + savegame.sav)
-      const uploadTargets = Array.from(new Set([this.activeSlotPath, this.storagePath]));
-      for (const target of uploadTargets) {
-        const { error: uploadError } = await supabase.storage
-          .from(SAV_BUCKET)
-          .upload(target, rawSav, {
-            contentType: 'application/octet-stream',
-            upsert: true,
-          });
-
-        if (uploadError) {
-          console.error(`[MemoryBridge] Upload error (${target}):`, uploadError.message);
-        }
-      }
-
-      // 5. Actualizar profiles.gba_party_json e in_game_money (NUNCA pokedollars)
+      // 4. Sincronizar Moneda Única Espejo App <-> Cartucho GBA y actualizar perfil
       const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(this.userId);
       if (isUuid) {
-        // El dinero del cartucho vive aparte de la wallet de SynDex.
-        const { error: syncError } = await supabase.rpc('rpc_economy_sync_game_money', {
+        const { data: syncData, error: syncError } = await supabase.rpc('rpc_economy_sync_game_money', {
           p_in_game_money: money,
         });
         if (syncError) {
           console.warn('[MemoryBridge] Economy sync error:', syncError.message);
+        } else if (syncData && typeof (syncData as any).wallet === 'number') {
+          const authoritativeWallet = Number((syncData as any).wallet);
+          if (authoritativeWallet !== money) {
+            finalSavToUpload = manipulator.injectRewards({ setExactMoney: authoritativeWallet });
+            this.emulator.writeSaveFile(finalSavToUpload);
+            money = authoritativeWallet;
+          }
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('syndex:economy-updated', { detail: syncData }));
+          }
         }
 
         const { error: updateError } = await supabase
@@ -228,6 +223,21 @@ export class PokemonMemoryBridge {
 
         if (updateError) {
           console.error('[MemoryBridge] Profile update error:', updateError.message);
+        }
+      }
+
+      // 5. Subir .sav al bucket bajo AMBOS nombres (slot activo + savegame.sav)
+      const uploadTargets = Array.from(new Set([this.activeSlotPath, this.storagePath]));
+      for (const target of uploadTargets) {
+        const { error: uploadError } = await supabase.storage
+          .from(SAV_BUCKET)
+          .upload(target, finalSavToUpload, {
+            contentType: 'application/octet-stream',
+            upsert: true,
+          });
+
+        if (uploadError) {
+          console.error(`[MemoryBridge] Upload error (${target}):`, uploadError.message);
         }
       }
 
@@ -370,30 +380,46 @@ export class PokemonMemoryBridge {
   }
 
   /**
-   * Procesa ítems pendientes de inyección desde shop_inventory
-   * (Patrón "Buzón de Correo de Ciudad Trigal")
+   * Procesa ítems pendientes de inyección desde shop_inventory filtrando estrictamente
+   * por injection_status = 'pending' y marcándolos como 'delivered' (Punto Ciego 6).
    */
   public async processPendingInjections(): Promise<number> {
     try {
       const { data: pending, error } = await supabase
         .from('shop_inventory')
-        .select('id, item_id')
-        .eq('user_id', this.userId);
+        .select('id, item_id, gba_item_id, gba_pocket, quantity, injection_status')
+        .eq('user_id', this.userId)
+        .eq('injection_status', 'pending');
 
       if (error || !pending || pending.length === 0) return 0;
 
       let injectedCount = 0;
       for (const item of pending) {
-        // Determinar pocket y gba_item_id basado en item_id string
-        const mapping = this.resolveItemMapping(item.item_id);
+        const mapping = item.gba_item_id
+          ? {
+              gbaItemId: Number(item.gba_item_id),
+              quantity: Number(item.quantity || 1),
+              pocket: (item.gba_pocket || 'ITEMS') as BagPocketType,
+            }
+          : this.resolveItemMapping(item.item_id);
+
         if (mapping) {
           const injection = await this.injectItemToGbaRam(
             mapping.gbaItemId,
             mapping.quantity,
             mapping.pocket,
-            false // No sync individual, sync al final
+            false
           );
-          if (injection.success) injectedCount++;
+          if (injection.success) {
+            injectedCount++;
+            await supabase
+              .from('shop_inventory')
+              .update({
+                injection_status: 'delivered',
+                delivered_at: new Date().toISOString(),
+              })
+              .eq('id', item.id);
+          }
         }
       }
 

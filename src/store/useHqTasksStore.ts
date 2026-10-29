@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { soundFx } from '@/lib/soundFx';
+import { supabase } from '@/lib/supabase';
 import { HQ_ROLES, type RoleKey } from '@/lib/hqRoles';
 import { DEFAULT_SCHEDULE } from '@/lib/hqSchedule';
 import {
@@ -20,6 +21,20 @@ function makeId(prefix: string): string {
     return `${prefix}_${crypto.randomUUID()}`;
   }
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+async function claimTaskPokedollars(task: HqTask) {
+  try {
+    const { data } = await supabase.rpc('rpc_hq_claim_work_reward', {
+      p_claim_key: `hq_task:${task.id}`,
+      p_kind: 'task',
+      p_minutes: task.minutes || 30,
+      p_label: `Tarea HQ: ${task.title.slice(0, 48)}`,
+    });
+    if (typeof window !== 'undefined' && (data as any)?.success) {
+      window.dispatchEvent(new CustomEvent('syndex:economy-updated', { detail: data }));
+    }
+  } catch {}
 }
 
 export interface NewTaskInput {
@@ -149,13 +164,18 @@ export const useHqTasksStore = create<HqTasksStore>()(
       },
 
       setTaskStatus: (id, status) => {
+        const target = get().tasks.find((t) => t.id === id);
         set((state) => ({
           tasks: state.tasks.map((task) =>
             task.id === id ? { ...task, status, updatedAt: new Date().toISOString() } : task
           ),
         }));
-        if (status === 'done') soundFx.playCoin();
-        else soundFx.playClick();
+        if (status === 'done') {
+          soundFx.playCoin();
+          if (target) void claimTaskPokedollars(target);
+        } else {
+          soundFx.playClick();
+        }
       },
 
       completeTask: (id) => get().setTaskStatus(id, 'done'),
@@ -197,6 +217,7 @@ export const useHqTasksStore = create<HqTasksStore>()(
 
           if (outcome === 'done') {
             done += 1;
+            void claimTaskPokedollars(task);
             return { ...task, status: 'done' as TaskStatus, updatedAt: now };
           }
           if (outcome === 'dropped') {
@@ -351,27 +372,10 @@ export const useHqTasksStore = create<HqTasksStore>()(
   )
 );
 
-/** Tareas abiertas de un rol para un día concreto (incluye las del día sin bloque asignado). */
-export function tasksForRoleDay(tasks: HqTask[], role: RoleKey, day: string): HqTask[] {
-  return tasks.filter(
-    (task) => task.role === role && task.day === day && task.status !== 'done' && task.status !== 'dropped'
-  );
-}
-
 export function openTasksForDay(tasks: HqTask[], day: string): HqTask[] {
   return tasks.filter(
     (task) => task.status !== 'done' && task.status !== 'dropped' && (!task.day || task.day <= day)
   );
-}
-
-export function tasksByLane(tasks: HqTask[], lane: TaskLane): HqTask[] {
-  return tasks.filter(
-    (task) => task.lane === lane && task.status !== 'done' && task.status !== 'dropped'
-  );
-}
-
-export function inboxTasks(tasks: HqTask[]): HqTask[] {
-  return tasks.filter((task) => task.status === 'inbox' || !task.role);
 }
 
 export function todayTaskKey(): string {

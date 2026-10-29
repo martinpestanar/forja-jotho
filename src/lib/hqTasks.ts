@@ -61,15 +61,6 @@ export const TASK_LANE_META: Record<TaskLane, { label: string; hint: string; acc
   },
 };
 
-export const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
-  inbox: 'Bandeja',
-  planned: 'En cola',
-  doing: 'En curso',
-  done: 'Hecha',
-  parked: 'Algún día',
-  dropped: 'Descartada',
-};
-
 export const TASK_PROJECTS = ['Nilah AI', 'Vegi / Suna', 'Farmacia Familiar', 'Personal'] as const;
 
 export const TASK_MINUTES = [15, 30, 45, 60, 90] as const;

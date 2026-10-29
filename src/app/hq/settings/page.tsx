@@ -11,7 +11,7 @@ import { useHqStore } from '@/store/useHqStore';
 const INTEGRATIONS = [
   {
     name: 'Supabase',
-    detail: 'hywlytsbogbassecflbw',
+    detail: 'wquuhycqbdeysqxzwlun',
     icon: Database,
     accent: 'var(--hq-cto)',
   },

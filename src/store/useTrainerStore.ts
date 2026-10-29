@@ -3,32 +3,11 @@ import { ActiveTab, TrainerProfile } from '@/types/trainer';
 import { supabase } from '@/lib/supabase';
 import { useHqStore } from '@/store/useHqStore';
 
-interface ActivityRewardResult {
-  success: boolean;
-  added_xp: number;
-  added_pokedollars: number;
-  added_battery: number;
-  added_steps: number;
-  egg_hatched: boolean;
-  is_shiny: boolean;
-  new_egg_steps: number;
-  current_level: number;
-}
-
 interface PurchaseResult {
   success: boolean;
   item_id?: string;
   remaining_pokedollars?: number;
   error?: string;
-}
-
-interface CableActivationResult {
-  success: boolean;
-  boss_hp: number;
-  damage_dealt: number;
-  combo_triggered: boolean;
-  status: string;
-  cables: Record<string, boolean>;
 }
 
 interface TrainerState {
@@ -57,13 +36,7 @@ interface TrainerState {
   ) => void;
   loadSessionProfileRpc: () => Promise<TrainerProfile | null>;
   consumeBatteryMinuteRpc: () => Promise<number>;
-  grantActivityRewardRpc: (
-    activityType: 'trivia_win' | 'pokegear_fix' | 'mission_complete',
-    missionId?: string,
-    projectUrl?: string
-  ) => Promise<ActivityRewardResult | null>;
   purchaseShopItemRpc: (itemId: string, qty?: number) => Promise<PurchaseResult>;
-  activateSquadCableRpc: (roomPin: string, squadId: string, cableRole: string) => Promise<CableActivationResult | null>;
 }
 
 const DEFAULT_PROFILE: TrainerProfile = {
@@ -259,40 +232,7 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
     return remaining;
   },
 
-  // 2. RPC: Otorgar recompensa atómica en PostgreSQL
-  grantActivityRewardRpc: async (activityType, missionId, projectUrl) => {
-    try {
-      const { data, error } = await supabase.rpc('rpc_grant_activity_reward', {
-        p_activity_type: activityType,
-        p_mission_id: missionId || null,
-        p_project_url: projectUrl || null,
-      });
-
-      if (error) {
-        // Sin fallback optimista: la recompensa SOLO existe si el servidor la concede.
-        console.warn('RPC reward error:', error.message);
-        return null;
-      }
-
-      const res = data as ActivityRewardResult;
-      const currentProfile = get().profile;
-      if (currentProfile) {
-        get().updateProfile({
-          pokedollars: currentProfile.pokedollars + res.added_pokedollars,
-          battery_minutes: currentProfile.battery_minutes + res.added_battery,
-          egg_steps: res.new_egg_steps,
-          xp: currentProfile.xp + res.added_xp,
-          current_level: res.current_level,
-        });
-      }
-      return res;
-    } catch (err) {
-      console.error('Error invoking rpc_grant_activity_reward:', err);
-      return null;
-    }
-  },
-
-  // 3. RPC: Compra en el Poké-Bazar validada en PostgreSQL (precio del servidor)
+  // 2. RPC: Compra en el Poké-Bazar validada en PostgreSQL (precio del servidor)
   purchaseShopItemRpc: async (itemId, qty = 1) => {
     try {
       const { data, error } = await supabase.rpc('rpc_purchase_shop_item', {
@@ -315,24 +255,4 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
     }
   },
 
-  // 4. RPC: Activar cable de escuadrón y combo en Arena de Jefes
-  activateSquadCableRpc: async (roomPin, squadId, cableRole) => {
-    try {
-      const { data, error } = await supabase.rpc('rpc_activate_squad_cable', {
-        p_room_pin: roomPin,
-        p_squad_id: squadId,
-        p_cable_role: cableRole,
-      });
-
-      if (error) {
-        console.error('Error invoking rpc_activate_squad_cable:', error.message);
-        return null;
-      }
-
-      return data as CableActivationResult;
-    } catch (err) {
-      console.error('Error activating squad cable:', err);
-      return null;
-    }
-  },
 }));

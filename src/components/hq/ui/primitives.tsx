@@ -20,16 +20,6 @@ export function Card({
   );
 }
 
-export function RoleAccentBar({ role }: { role: RoleKey }) {
-  return (
-    <span
-      aria-hidden
-      className="absolute left-0 top-0 h-full w-1 rounded-l-[1.125rem]"
-      style={{ backgroundColor: HQ_ROLES[role].accent }}
-    />
-  );
-}
-
 export function RoleBadge({
   role,
   className,

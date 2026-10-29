@@ -139,3 +139,15 @@ dataView.setUint16(sectorBase + 0x0FF6, checksum16, true);
   - `inject_item`: Encola ítems clave o Master Balls en `shop_inventory`.
 - **Ruta del Panel:** `/admin` o pestaña `SuperAdmin` en el dashboard.
 
+---
+
+## 🏆 7. Modding Hackrom Hardcore (Líderes, Secuaces y Liga)
+- **Estado:** ✅ Compilado e instalado en `public/roms/pokemonHnS.gba` (SHA256: `D38A731292C13D3562F438FBEEEAEB4F8171E9765AE5BA5CEB6D5BFD8D0DE3AC`).
+- **Repositorio C:** `martinpestanar/pokemonHnS` en branch `main` (commit `acd983e`).
+- **Especificación Completa:** [diseno_lideres_dificil_johto_kanto.md](file:///c:/Users/Martin/Documents/Korat-Flow-Agencia/SynDex/docs/diseno_lideres_dificil_johto_kanto.md).
+- **Resumen de Cambios:**
+  - **16 Líderes (Johto + Kanto) y Revanchas:** Todos con equipos completos de 6 Pokémon completamente evolucionados, combinando Gen 1, 2 y 3, con held items competitivos y movesets optimizados.
+  - **47 Secuaces de Gimnasio:** Escalados con 3 a 4 Pokémon evolucionados acordes a la curva de nivel de cada gimnasio.
+  - **Compatibilidad Toolchain:** `Makefile` con flags `-std=gnu17` para compilación limpia bajo GCC 16 (devkitARM) en GitHub Actions.
+
+
