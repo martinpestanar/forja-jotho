@@ -10,6 +10,7 @@ import { RPGDialog } from '@/components/hq/ui/RPGDialog';
 import { HQ_ROLES, HQ_ROLE_LIST, type RoleKey } from '@/lib/hqRoles';
 import { DEFAULT_SCHEDULE } from '@/lib/hqSchedule';
 import { useHqStore, dayKey } from '@/store/useHqStore';
+import { SurfAvatar } from '@/components/hq/ui/SurfAvatar';
 
 const ROLE_ICON: Record<RoleKey, LucideIcon> = {
   ceo: Crown,
@@ -81,17 +82,19 @@ export default function RolesPage() {
                 style={{ backgroundColor: item.accent }}
               />
               <div className="flex items-start justify-between gap-3">
-                <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border"
-                  style={{ color: item.accent, borderColor: 'var(--hq-border)', backgroundColor: item.soft }}
-                >
-                  <Icon className="h-5 w-5" strokeWidth={2} />
-                </span>
+                <div className="flex items-center gap-3">
+                  <SurfAvatar role={item.key} size="md" active={active?.role === item.key} />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: item.accent }}>
+                      Vibe Surf
+                    </span>
+                    <h2 className="hq-title text-xl text-[#1F1E1B]">{item.label}</h2>
+                  </div>
+                </div>
                 <span className="hq-chip text-[9px]">{minutes} min/día</span>
               </div>
 
-              <h2 className="hq-title mt-3 text-lg text-[#1F1E1B]">{item.label}</h2>
-              <p className="text-[11px] font-medium" style={{ color: item.accent }}>
+              <p className="mt-2 text-[11px] font-medium" style={{ color: item.accent }}>
                 {item.title}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-[#5E5C56]">{item.mission}</p>
