@@ -50,6 +50,11 @@ Este proyecto tiene 3 MCPs conectados que se cargan automáticamente en cada ses
 - **`github`** → issues, PRs, commits y búsqueda de código del repo remoto.
 - **`n8n-mcp`** → nodos y plantillas para automatizaciones de la agencia (n8n.koratflow.agency).
 
+### Operaciones Git / Push Remoto
+El token de autenticación de GitHub vive en la variable de entorno del sistema `$env:GITHUB_PERSONAL_ACCESS_TOKEN` (o `$env:GITHUB_TOKEN`).
+**REGLA OBLIGATORIA:** Al hacer `git push` o interactuar con el repo remoto `origin`, NUNCA pedir credenciales ni esperar en un prompt interactivo. Ejecuta siempre el comando autenticado automáticamente:
+`git push https://$($env:GITHUB_PERSONAL_ACCESS_TOKEN)@github.com/martinpestanar/forja-jotho.git <rama>` y luego sincroniza con `git fetch origin`.
+
 Guía completa, diagnóstico y reglas de secretos: skill `syndex-mcp-connection`. Si un MCP no aparece en tu catálogo de tools, esa skill explica cómo arreglarlo (variables de entorno de usuario vía `setx`, nunca tokens crudos en `opencode.json` porque es git-tracked).
 
 <!-- END:syndex-mcp-connections -->

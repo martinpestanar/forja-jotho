@@ -22,6 +22,20 @@ Definidos en `opencode.json` (raíz del repo, **rastreado por git** → solo ref
 | `github` (`@modelcontextprotocol/server-github`) | Issues, PRs, commits, búsqueda de código del repo | `GITHUB_PERSONAL_ACCESS_TOKEN` |
 | `n8n-mcp` (script local en `Korat_MVP/_ai_tools/n8n-mcp`) | Nodos y plantillas de n8n para automatizaciones de la agencia | `N8N_API_KEY`, `N8N_API_URL` |
 
+---
+
+## 🚀 2. Git Push y Operaciones de Repositorio Remoto
+
+Para hacer push sin depender de credenciales interactivas de Git en Windows, utiliza directamente el token disponible en el entorno del proceso:
+
+```powershell
+git push https://$($env:GITHUB_PERSONAL_ACCESS_TOKEN)@github.com/martinpestanar/forja-jotho.git <rama>
+git fetch origin
+```
+**Regla:** Jamás pedir el token al usuario; siempre está cargado en `$env:GITHUB_PERSONAL_ACCESS_TOKEN`.
+
+---
+
 ## 🔑 2. Dónde viven los secretos (cadena de resolución)
 
 ```
