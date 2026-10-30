@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { HabitItem, INITIAL_HABITS, PillarKey } from '@/lib/pillars';
 import { soundFx } from '@/lib/soundFx';
+import { supabase } from '@/lib/supabase';
 import confetti from 'canvas-confetti';
 
 export function getTodayKey(date: Date = new Date()): string {
@@ -29,7 +30,7 @@ interface HabitsStore {
   
   // Actions
   completeOnboarding: (selectedHabits: HabitItem[], dominantPillar: PillarKey) => void;
-  toggleHabit: (habitId: string, dateKey?: string, proof?: string) => { completed: boolean; minutesEarned: number; moneyEarned: number };
+  toggleHabit: (habitId: string, dateKey?: string, proof?: string) => Promise<{ completed: boolean; minutesEarned: number; moneyEarned: number; itemGranted?: string }>;
   addHabit: (habit: Omit<HabitItem, 'id' | 'history' | 'createdAt'>) => void;
   deleteHabit: (habitId: string) => void;
 }
@@ -60,7 +61,7 @@ export const useHabitsStore = create<HabitsStore>()(
         } as any);
       },
 
-      toggleHabit: (habitId, dateKey = getTodayKey(), proof) => {
+      toggleHabit: async (habitId, dateKey = getTodayKey(), proof) => {
         const today = dateKey;
         const state = get();
         const habit = state.habits.find((h) => h.id === habitId);
@@ -69,7 +70,7 @@ export const useHabitsStore = create<HabitsStore>()(
         const currentlyDone = Boolean(habit.history[today]?.completed);
         const willBeDone = !currentlyDone;
 
-        // Sound + Haptic
+        // Sound + Haptic inmediato
         if (willBeDone) {
           if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
             navigator.vibrate([15, 30, 20]);
@@ -98,7 +99,7 @@ export const useHabitsStore = create<HabitsStore>()(
           h.id === habitId ? { ...h, history: newHistory } : h
         );
 
-        // Calculate if today all habits are completed
+        // Actualizar huevo
         const activeToday = updatedHabits.filter((h) => h.active);
         const allDoneToday = activeToday.length > 0 && activeToday.every((h) => h.history[today]?.completed);
 
@@ -109,7 +110,6 @@ export const useHabitsStore = create<HabitsStore>()(
             eggUpdate.stage = 'hatched';
             eggUpdate.daysCompleted = nextDays;
             eggUpdate.hatchedAt = new Date().toISOString();
-            // Determine species
             const speciesMap: Record<PillarKey, string> = {
               cuerpo: 'Riolu',
               mente: 'Beldum',
@@ -131,14 +131,41 @@ export const useHabitsStore = create<HabitsStore>()(
           egg: eggUpdate,
         });
 
-        // Earn rewards: 15-25 min + Pokédollars
-        const minutesEarned = willBeDone ? Math.round(habit.targetMinutes * 0.35) : 0;
-        const moneyEarned = willBeDone ? 50 : 0;
+        let itemGrantedName: string | undefined;
+        let finalMinutes = willBeDone ? Math.round(habit.targetMinutes * 0.35) : 0;
+        let finalMoney = willBeDone ? 50 : 0;
+
+        // Conectar con el Cerebro de Supabase en Modo Difícil
+        if (willBeDone) {
+          try {
+            const { data } = await supabase.rpc('rpc_complete_habit_v2', {
+              p_habit_id: habit.id,
+              p_pillar: habit.pillar,
+              p_habit_title: habit.title,
+              p_target_minutes: habit.targetMinutes,
+              p_proof: proof ?? null,
+            });
+
+            if (data?.success) {
+              finalMinutes = data.battery_earned ?? finalMinutes;
+              finalMoney = data.pokedollars_earned ?? finalMoney;
+              itemGrantedName = data.item_name;
+
+              // Disparar evento para que la UI de la billetera y el bazar se sincronicen
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('syndex:economy-updated', { detail: data }));
+              }
+            }
+          } catch (err) {
+            console.warn('Sync con Supabase no completado, operando en modo local:', err);
+          }
+        }
 
         return {
           completed: willBeDone,
-          minutesEarned,
-          moneyEarned,
+          minutesEarned: finalMinutes,
+          moneyEarned: finalMoney,
+          itemGranted: itemGrantedName,
         };
       },
 

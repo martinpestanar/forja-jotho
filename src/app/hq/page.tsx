@@ -44,8 +44,8 @@ export default function HqTodayPage() {
   const progressPercent = activeHabits.length > 0 ? Math.round((completedCount / activeHabits.length) * 100) : 0;
 
   // Acción de marcar hábito
-  const handleToggle = (habitId: string) => {
-    const res = toggleHabit(habitId, selectedDate);
+  const handleToggle = async (habitId: string) => {
+    const res = await toggleHabit(habitId, selectedDate);
     if (res.completed && res.minutesEarned > 0) {
       addMinutes(res.minutesEarned, 'Hábito cumplido en SynDex');
     }
