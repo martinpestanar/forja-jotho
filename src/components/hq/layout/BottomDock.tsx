@@ -33,10 +33,15 @@ export function BottomDock() {
               <li key={item.href} className="flex-1">
                 <Link
                   href={item.href}
-                  onClick={() => soundFx.playClick()}
+                  onClick={() => {
+                    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+                      navigator.vibrate(10);
+                    }
+                    soundFx.playClick();
+                  }}
                   aria-current={active ? 'page' : undefined}
                   className={clsx(
-                    'hq-focus relative flex flex-col items-center justify-center rounded-xl px-1 py-2 transition-colors',
+                    'hq-focus relative flex flex-col items-center justify-center rounded-xl px-1 py-2 active:scale-95 transition-all',
                     active ? 'text-[#1F1E1B]' : 'text-[#8A877E]'
                   )}
                 >

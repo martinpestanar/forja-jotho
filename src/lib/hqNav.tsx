@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Bot,
   CalendarDays,
   Compass,
@@ -33,6 +34,14 @@ export const HQ_NAV: HqNavItem[] = [
     short: 'Hoy',
     description: 'Bloque actual, jornada y foco del día',
     icon: Home,
+    group: 'operacion',
+  },
+  {
+    href: '/hq/manual',
+    label: 'Manual & Guía',
+    short: 'Guía',
+    description: 'Rutina paso a paso de Martín y mapa de módulos',
+    icon: BookOpen,
     group: 'operacion',
   },
   {
