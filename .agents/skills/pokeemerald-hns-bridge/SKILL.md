@@ -2,12 +2,12 @@
 name: pokeemerald-hns-bridge
 description: >-
   Guía técnica y runbook para modificar, auditar e inyectar ítems, Pokémon (Equipo y PC Box 1)
-  o Pokédólares en el emulador mGBA WebAssembly y archivos .sav de Pokémon Heart & Soul (ROM base Emerald BPEE) en SynDex.
+  o Pokédólares en el emulador mGBA WebAssembly y archivos .sav de Pokémon Heart & Soul v2.0.6 (ROM base Emerald BPEE) en SynDex.
 ---
 
-# 🎮 Pokeemerald H&S Bridge Runbook (SynDex)
+# 🎮 Pokeemerald H&S Bridge Runbook (SynDex - Exclusivo v2.0.6)
 
-Este documento es la referencia técnica obligatoria para cualquier modificación del motor de guardado GBA (`gbaSaveEngine.ts`), el puente de memoria (`PokemonMemoryBridge.ts`) y la consola web (`GbaConsoleWorker.tsx`).
+Este documento es la referencia técnica obligatoria para cualquier modificación del motor de guardado GBA (`gbaSaveEngine.ts`), el puente de memoria (`PokemonMemoryBridge.ts`) y la consola web (`GbaConsoleWorker.tsx`) calibrado **exclusivamente para la versión 2.0.6** de Pokémon Heart & Soul.
 
 ---
 
@@ -28,40 +28,37 @@ El sistema opera en tres capas de datos que deben mantenerse sincronizadas:
 2. **Reinicio por Recreación de Canvas (`rebootEmulator`):**
    - Nunca llamar a `mod.pauseMainLoop()` o `mod.quitGame()` esperando reutilizar el mismo módulo con `loadGame()` (esto congela el canvas WebGL).
    - Para recargar el `.sav` inyectado, pasar los bytes a `pendingSavBytesRef.current` y ejecutar `setBootCount(prev => prev + 1)`.
-   - El canvas usa `key={`gba-canvas-${bootCount}`}`, lo que remonta un canvas nuevo con contexto WebGL limpio y carga el `.sav` inyectado en <200ms sin requerir F5 del navegador.
+   - El canvas usa `key={'gba-canvas-' + bootCount}`, lo que remonta un canvas nuevo con contexto WebGL limpio y carga el `.sav` inyectado en <200ms sin requerir F5 del navegador.
 3. **Eliminar Autosaves Residuales:**
    - mGBA crea `/autosave/pokemonHnS_auto.ss`. Siempre debe eliminarse (`unlink`) antes de arrancar para evitar que el emulador restaure un save state viejo sobre la partida inyectada.
 
 ---
 
-## 🔑 2. Offsets Binarios Oficiales (pokeemerald / BPEE)
+## 🔑 2. Offsets Binarios Oficiales (HnS v2.0.6 / BPEE)
 
 Flash de 128 KB (131,072 bytes) en Ring Buffer rotativo de 14 sectores lógicos por slot (Slot A: 0-13, Slot B: 14-27).
 
-### Section 0: SaveBlock2 (`SECTION_SIZES[0] = 0x0F2C`)
+### Section 0: SaveBlock2
 | Campo | Offset | Tamaño | Descripción |
 | :--- | :--- | :--- | :--- |
 | `SB2_PLAYER_NAME` | `0x0000` | 7 bytes | Nombre del entrenador codificado en GBA Charmap |
 | `SB2_TRAINER_ID` | `0x000A` | 4 bytes (u32) | TID (16 bits low) + SID (16 bits high) |
-| `SB2_ENCRYPTION_KEY` | `0x00BC` | 4 bytes (u32) | **Llave XOR real para dinero e ítems de mochila** |
+| `SB2_ENCRYPTION_KEY` | `0x00AC` | 4 bytes (u32) | **Llave XOR real para dinero e ítems de mochila en v2.0.6** |
 
-> [!IMPORTANT]
-> **Offset de Encriptación:** En Emerald/BPEE la `encryptionKey` está en `0x00BC` (NUNCA usar `0x00A8` de Ruby/Sapphire). Usar la llave incorrecta corrompe el dinero y descarta los ítems inyectados.
-
-### Section 1: SaveBlock1 (`SECTION_SIZES[1] = 0x0F80`)
+### Section 1: SaveBlock1
 | Campo | Offset | Tamaño | Descripción |
 | :--- | :--- | :--- | :--- |
-| `SB1_PARTY_COUNT` | `0x0234` | 4 bytes (u32) | Cantidad de Pokémon en el equipo (0 a 6) |
-| `SB1_PARTY_DATA` | `0x0238` | 6 * 100 bytes | Array de `struct Pokemon` del equipo |
-| `SB1_MONEY` | `0x0490` | 4 bytes (u32) | Dinero cifrado: `money ^ encryptionKey` |
-| `SB1_COINS` | `0x0494` | 2 bytes (u16) | Monedas Casino cifradas: `coins ^ (encryptionKey & 0xFFFF)` |
-| `SB1_BAG_ITEMS` | `0x0560` | 30 * 4 bytes | Bolsillo Ítems (ItemId u16, Cantidad u16 ^ key16) |
-| `SB1_BAG_KEY_ITEMS` | `0x05D8` | 30 * 4 bytes | Bolsillo Objetos Clave |
-| `SB1_BAG_POKEBALLS` | `0x0650` | 16 * 4 bytes | Bolsillo Poké Balls |
-| `SB1_BAG_TMHM` | `0x0690` | 64 * 4 bytes | Bolsillo MT/MO |
-| `SB1_BAG_BERRIES` | `0x0790` | 46 * 4 bytes | Bolsillo Bayas |
+| `SB1_PARTY_COUNT` | `0x0238` | 4 bytes (u32) | Cantidad de Pokémon en el equipo (0 a 6) |
+| `SB1_PARTY_DATA` | `0x023C` | 6 * 100 bytes | Array de `struct Pokemon` del equipo |
+| `SB1_MONEY` | `0x0494` | 4 bytes (u32) | Dinero cifrado: `money ^ encryptionKey` |
+| `SB1_BAG_ITEMS` | `0x0564` | 30 * 4 bytes | Bolsillo Ítems |
+| `SB1_BAG_KEY_ITEMS` | `0x05DC` | 34 * 4 bytes | Bolsillo Objetos Clave |
+| `SB1_BAG_POKEBALLS` | `0x0664` | 16 * 4 bytes | Bolsillo Poké Balls |
+| `SB1_BAG_TMHM` | `0x06A4` | 64 * 4 bytes | Bolsillo MT/MO |
+| `SB1_BAG_BERRIES` | `0x07A4` | 46 * 4 bytes | Bolsillo Bayas |
+| `SB1_BAG_MEDICINE` | `0x085C` | 40 * 4 bytes | Bolsillo Medicina |
 
-### Section 5: PokemonStorage Parte 1 (`SECTION_SIZES[5] = 0x0F80`)
+### Section 5: PokemonStorage Parte 1
 | Campo | Offset | Tamaño | Descripción |
 | :--- | :--- | :--- | :--- |
 | `currentBox` | `0x0000` | 1 byte (u8) | Caja activa actualmente en la PC |
