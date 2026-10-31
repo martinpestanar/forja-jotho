@@ -28,12 +28,15 @@ import { GoldenrodShop } from '@/components/shop/GoldenrodShop';
 import { ElasticProgress, Stat } from '@/components/hq/ui/primitives';
 import { soundFx } from '@/lib/soundFx';
 
-type EcoTab = 'boveda' | 'mercado' | 'rentas' | 'impuestos' | 'meta' | 'bazar';
+import { RanchSection } from '@/components/economy/RanchSection';
+
+type EcoTab = 'rancho' | 'boveda' | 'mercado' | 'rentas' | 'impuestos' | 'meta' | 'bazar';
 
 const TABS: { id: EcoTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'rancho', label: 'Rancho 4h', icon: Sprout },
   { id: 'boveda', label: 'Bóveda', icon: Package },
   { id: 'mercado', label: 'Bolsa & Bot', icon: TrendingUp },
-  { id: 'rentas', label: 'Rentas & Staking', icon: Sprout },
+  { id: 'rentas', label: 'Rentas & Staking', icon: Building2 },
   { id: 'impuestos', label: 'Facturas Bill', icon: Receipt },
   { id: 'meta', label: 'Meta 50K', icon: Target },
   { id: 'bazar', label: 'Bazar', icon: ShoppingBag },
@@ -218,6 +221,9 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
       </div>
 
       <div key={tab} className="hq-fade-up space-y-3">
+        {/* ================= PESTAÑA 0: EL RANCHO SYNDEX (4H WORK-LOCK) ================= */}
+        {tab === 'rancho' && <RanchSection />}
+
         {/* ================= PESTAÑA 1: BÓVEDA ================= */}
         {tab === 'boveda' && (
           <div className="space-y-2">
