@@ -48,4 +48,6 @@ next-env.d.ts
 scratch_*
 *.sav
 *.ups
+clean_emerald.gba
+/pokehns-expansion/
 
