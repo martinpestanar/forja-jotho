@@ -157,13 +157,18 @@ La v2.0.6 utiliza un layout específico en la flash de 128 KB (Ring Buffer de 14
 
 ---
 
-## ⚡ 5. Comandos de Emergencia / Rutina Rápida
+## 📜 6. Registro Histórico de Modificaciones Realizadas (Changelog Vivo)
 
-| Tarea | Comando / Acción |
-| :--- | :--- |
-| **Ver estado del fork** | `cd pokehns-expansion; git status` |
-| **Ver commits remotos** | `gh run list --repo martinpestanar/pokehns-expansion` |
-| **Correr servidor local SynDex** | `npm run dev` (Port 3005) |
-| **Test de Build Plataforma** | `npm run build` |
-| **Push directo al fork** | `git push "https://$($env:GITHUB_PERSONAL_ACCESS_TOKEN)@github.com/martinpestanar/pokehns-expansion.git" syndex-v2` |
-| **Push directo a SynDex** | `git push "https://$($env:GITHUB_PERSONAL_ACCESS_TOKEN)@github.com/martinpestanar/forja-jotho.git" main` |
+Antes de realizar o proponer cualquier nueva modificación en el juego, **debes consultar obligatoriamente el archivo complementario**:
+👉 [`.agents/skills/hns-v2-game-modding/CHANGELOG_V2.md`](file:///c:/Users/Martin/Documents/Korat-Flow-Agencia/SynDex/.agents/skills/hns-v2-game-modding/CHANGELOG_V2.md)
+
+### Resumen de lo que ya está implementado (¡NO REPETIR NI SOBREESCRIBIR ACCIDENTALMENTE!):
+1. **Líderes de Gimnasio Johto y Kanto (16 Líderes):** Todos con 6 Pokémon evolucionados, táctica y `aiFlags = 0x07`.
+2. **Alto Mando y Campeón Lance (5 Entrenadores):** Todos con 6 Pokémon e ítems competitivos.
+3. **Red (Monte Plateado):** Nivel 85–88 con Pikachu Bola Luminosa y equipo legendario competitivo.
+4. **Rival Silver (7 Fases x 3 Starters = 21 Combates):** Todos con 6 Pokémon y hold items.
+5. **Bypass del Menú Oak/Elm:** Desactivado el menú de randomizer y nuzlocke en `src/oak_speech_hns.c`.
+6. **Economía Médica Prohibitiva:** Precios de Pociones, Revivir y Curas aumentados en `src/data/items.h`.
+7. **Hierba Alta:** Se mantuvo 100% original por instrucción del usuario.
+
+*Cualquier nueva mejora que realices al juego debe agregarse al historial de `CHANGELOG_V2.md` con su respectivo commit y archivo fuente alterado.*
