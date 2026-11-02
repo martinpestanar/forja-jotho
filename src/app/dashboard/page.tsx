@@ -169,8 +169,27 @@ export default function DashboardPage() {
       .single();
 
     if (prof) {
-      setProfileData(prof);
       const todayStr = new Date().toISOString().split('T')[0];
+      
+      // Chequeo de Recarga Diaria de 2 Horas (120 min)
+      // Si la fecha de última recarga es anterior a hoy o no existe, restaurar a mínimo 120 minutos
+      const lastResetDate = localStorage.getItem(`syndex_battery_reset_${user.id}`);
+      if (lastResetDate !== todayStr) {
+        const currentBattery = prof.battery_minutes ?? 0;
+        const newBattery = Math.max(currentBattery, 120);
+        try {
+          await supabase
+            .from('valdr_profiles')
+            .update({ battery_minutes: newBattery })
+            .eq('id', user.id);
+          prof.battery_minutes = newBattery;
+          localStorage.setItem(`syndex_battery_reset_${user.id}`, todayStr);
+        } catch (e) {
+          console.warn('Battery daily reset update failed:', e);
+        }
+      }
+
+      setProfileData(prof);
       if (prof.temperance_last_date === todayStr) {
         setTemperanceConfirmedToday(true);
       }

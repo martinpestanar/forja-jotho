@@ -12,15 +12,41 @@ export function HqGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    const checkAccess = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (!mounted) return;
-      if (data.session) {
-        setStatus('authenticated');
-      } else {
+
+      if (!session) {
         setStatus('anonymous');
         router.replace('/login');
+        return;
       }
-    });
+
+      // Blindaje de Seguridad: Verificar si es Administrador / Fundador
+      try {
+        const { data: profile } = await supabase
+          .from('valdr_profiles')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (!mounted) return;
+
+        // Si no es admin, expulsar al dashboard de jugador
+        if (!profile?.is_admin) {
+          router.replace('/dashboard');
+          return;
+        }
+
+        setStatus('authenticated');
+      } catch {
+        // En caso de fallo o perfil de usuario normal, expulsar a dashboard
+        if (!mounted) return;
+        router.replace('/dashboard');
+      }
+    };
+
+    checkAccess();
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
@@ -43,7 +69,7 @@ export function HqGuard({ children }: { children: React.ReactNode }) {
             <Waves className="h-6 w-6" strokeWidth={2.2} />
           </span>
           <span className="hq-mono text-[11px] uppercase tracking-widest text-[#8A877E]">
-            {status === 'anonymous' ? 'Redirigiendo al acceso…' : 'Abriendo el HQ…'}
+            {status === 'anonymous' ? 'Redirigiendo al acceso…' : 'Verificando credenciales de fundador…'}
           </span>
         </div>
       </div>
