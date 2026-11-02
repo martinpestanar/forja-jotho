@@ -28,29 +28,36 @@ export const LayeredSpriteCanvas: React.FC<LayeredSpriteCanvasProps> = ({
 
   const getStarterStyle = () => {
     switch (starter) {
-      case 'cyndaquil':
-        return {
-          bg: 'from-amber-600 via-orange-500 to-amber-700',
-          border: 'border-amber-400',
-          icon: <Flame className="w-1/2 h-1/2 fill-amber-300 text-amber-950" />,
-          auraColor: 'rgba(245, 158, 11, 0.6)',
-          label: 'Cyndaquil Neo',
-        };
-      case 'totodile':
-        return {
-          bg: 'from-blue-600 via-cyan-500 to-blue-700',
-          border: 'border-cyan-400',
-          icon: <Droplets className="w-1/2 h-1/2 fill-cyan-300 text-blue-950" />,
-          auraColor: 'rgba(6, 182, 212, 0.6)',
-          label: 'Totodile Cyber',
-        };
+      case 'bulbasaur':
+      case 'treecko':
       case 'chikorita':
         return {
           bg: 'from-emerald-600 via-green-500 to-emerald-700',
           border: 'border-emerald-400',
           icon: <Sprout className="w-1/2 h-1/2 fill-emerald-300 text-emerald-950" />,
           auraColor: 'rgba(34, 197, 94, 0.6)',
-          label: 'Chikorita Bot',
+          label: `${starter.toUpperCase()} Shiny`,
+        };
+      case 'charmander':
+      case 'torchic':
+      case 'cyndaquil':
+        return {
+          bg: 'from-amber-600 via-orange-500 to-amber-700',
+          border: 'border-amber-400',
+          icon: <Flame className="w-1/2 h-1/2 fill-amber-300 text-amber-950" />,
+          auraColor: 'rgba(245, 158, 11, 0.6)',
+          label: `${starter.toUpperCase()} Shiny`,
+        };
+      case 'squirtle':
+      case 'mudkip':
+      case 'totodile':
+      default:
+        return {
+          bg: 'from-blue-600 via-cyan-500 to-blue-700',
+          border: 'border-cyan-400',
+          icon: <Droplets className="w-1/2 h-1/2 fill-cyan-300 text-blue-950" />,
+          auraColor: 'rgba(6, 182, 212, 0.6)',
+          label: `${(starter || 'starter').toUpperCase()} Shiny`,
         };
     }
   };

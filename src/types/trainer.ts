@@ -1,4 +1,14 @@
-export type StarterPokemon = 'cyndaquil' | 'totodile' | 'chikorita';export type NatureRole = 'fuego_ui' | 'agua_data' | 'planta_bots';
+export type StarterPokemon =
+  | 'bulbasaur'
+  | 'charmander'
+  | 'squirtle'
+  | 'chikorita'
+  | 'cyndaquil'
+  | 'totodile'
+  | 'treecko'
+  | 'torchic'
+  | 'mudkip';
+export type NatureRole = 'fuego_ui' | 'agua_data' | 'planta_bots';
 export type ActiveTab = 'map' | 'party' | 'pokedex' | 'tuning' | 'minigames' | 'arena' | 'shop' | 'admin';
 
 export interface TrainerProfile {

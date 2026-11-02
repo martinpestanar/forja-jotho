@@ -370,6 +370,14 @@ export const REWARD_POKEMON_PRESETS: Record<number, {
   152: { name: 'CHIKORITA', baseHp: 45, baseAtk: 49, baseDef: 65, baseSpd: 45, baseSpAtk: 49, baseSpDef: 65, moves: [33, 45, 75, 77], pps: [35, 40, 25, 35] },
   155: { name: 'CYNDAQUIL', baseHp: 39, baseAtk: 52, baseDef: 43, baseSpd: 65, baseSpAtk: 60, baseSpDef: 50, moves: [33, 43, 108, 52], pps: [35, 30, 20, 25] },
   158: { name: 'TOTODILE',  baseHp: 50, baseAtk: 65, baseDef: 64, baseSpd: 43, baseSpAtk: 44, baseSpDef: 48, moves: [10, 43, 55, 99], pps: [35, 30, 25, 20] },
+  // Iniciales Kanto
+  1:   { name: 'BULBASAUR', baseHp: 45, baseAtk: 49, baseDef: 49, baseSpd: 45, baseSpAtk: 65, baseSpDef: 65, moves: [33, 45, 73, 77], pps: [35, 40, 25, 35] },
+  4:   { name: 'CHARMANDER',baseHp: 39, baseAtk: 52, baseDef: 43, baseSpd: 65, baseSpAtk: 60, baseSpDef: 50, moves: [10, 45, 52, 108], pps: [35, 40, 25, 20] },
+  7:   { name: 'SQUIRTLE',  baseHp: 44, baseAtk: 48, baseDef: 65, baseSpd: 43, baseSpAtk: 50, baseSpDef: 64, moves: [33, 39, 55, 110], pps: [35, 30, 25, 40] },
+  // Iniciales Hoenn
+  252: { name: 'TREECKO',   baseHp: 40, baseAtk: 45, baseDef: 35, baseSpd: 70, baseSpAtk: 65, baseSpDef: 55, moves: [1, 43, 71, 72], pps: [35, 30, 25, 20] },
+  255: { name: 'TORCHIC',   baseHp: 45, baseAtk: 60, baseDef: 40, baseSpd: 45, baseSpAtk: 70, baseSpDef: 50, moves: [10, 45, 52, 28], pps: [35, 40, 25, 15] },
+  258: { name: 'MUDKIP',    baseHp: 50, baseAtk: 70, baseDef: 50, baseSpd: 40, baseSpAtk: 50, baseSpDef: 50, moves: [33, 45, 55, 61], pps: [35, 40, 25, 15] },
   // Populares
   25:  { name: 'PIKACHU',   baseHp: 35, baseAtk: 55, baseDef: 40, baseSpd: 90, baseSpAtk: 50, baseSpDef: 50, moves: [84, 98, 104, 85], pps: [30, 30, 15, 15] },
   133: { name: 'EEVEE',     baseHp: 55, baseAtk: 55, baseDef: 50, baseSpd: 55, baseSpAtk: 45, baseSpDef: 65, moves: [33, 39, 98, 44], pps: [35, 30, 30, 25] },

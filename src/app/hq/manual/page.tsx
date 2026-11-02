@@ -1,188 +1,256 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
-  BookOpen,
-  CalendarDays,
   Clock,
   Compass,
   Crown,
-  Gamepad2,
-  HelpCircle,
   Megaphone,
-  ShoppingBag,
   Sparkles,
-  Wallet,
   Wrench,
-  Bot,
-  Share2,
+  CheckCircle2,
+  ArrowRight,
+  Zap,
+  Flame,
+  Layers,
+  BookOpen,
 } from 'lucide-react';
 import { PageHeader } from '@/components/hq/ui/primitives';
+import { soundFx } from '@/lib/soundFx';
 
 export default function ManualPage() {
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
-      <PageHeader
-        eyebrow="Manual de Operaciones"
-        title="Guía Diaria de Martín & SynDex"
-        description="Cómo estructurar tus días entre programación, marketing y dirección sin perder el foco ni sentirte abrumado."
-      />
-
-      {/* Regla de Oro */}
-      <div className="rounded-2xl border-4 border-[#121214] bg-white p-5 shadow-[6px_6px_0px_0px_#000] space-y-2">
-        <div className="flex items-center gap-2 text-rose-600 font-mono font-black text-sm uppercase">
-          <Sparkles className="h-5 w-5" />
-          <span>La Regla de Oro del Fundador Solitario</span>
+    <div className="space-y-8 max-w-5xl mx-auto pb-16">
+      {/* Encabezado elegante estilo Anthropic */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[#E8E5DD] pb-5">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="hq-mono text-[11px] font-semibold tracking-wider text-[#D97043] uppercase bg-[#D97043]/10 px-2.5 py-0.5 rounded-full border border-[#D97043]/20">
+              Manual de Operaciones
+            </span>
+          </div>
+          <h1 className="hq-title text-2xl sm:text-3xl font-semibold text-[#1F1E1B] tracking-tight">
+            Guía Diaria de Martín & SynDex
+          </h1>
+          <p className="text-sm text-[#5E5C56] mt-1 max-w-2xl leading-relaxed">
+            Arquitectura de foco diario entre CTO, CMO y CEO. Máxima claridad mental con estímulos de progreso.
+          </p>
         </div>
-        <p className="text-sm text-neutral-800 leading-relaxed">
-          No intentes hacer todo a la vez. Cuando eres <strong>CTO</strong>, apagas las redes y programas. Cuando eres <strong>CMO</strong>, cierras el código y vendes. Cuando eres <strong>CEO</strong>, miras los números y dejas el terreno preparado para mañana.
-        </p>
+
+        {/* Botón Rojo Nintendo Tactile */}
+        <Link
+          href="/hq"
+          onClick={() => soundFx.playClick()}
+          className="nintendo-btn-red self-start sm:self-auto shrink-0"
+        >
+          <Zap className="h-4 w-4" fill="currentColor" />
+          <span>Iniciar Turno Hoy</span>
+          <ArrowRight className="h-4 w-4 ml-0.5" />
+        </Link>
       </div>
 
-      {/* Caso de estudio paso a paso */}
-      <div className="rounded-2xl border-4 border-[#121214] bg-[#F4F1EA] p-5 shadow-[6px_6px_0px_0px_#000] space-y-5">
-        <div className="border-b-2 border-black pb-3">
-          <span className="rounded bg-black text-white font-mono text-xs px-2 py-0.5 font-bold uppercase">
-            Simulación en Vivo
+      {/* Regla de Oro: Banner Anthropic cálido con acento rojo sutil */}
+      <div className="rounded-2xl border border-[#E8E5DD] bg-white p-6 shadow-[0_2px_8px_rgba(31,30,27,0.04)] relative overflow-hidden">
+        <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#E60012]" />
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[#E60012] border border-red-100">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div className="space-y-1.5 min-w-0">
+            <span className="hq-mono text-xs font-bold tracking-wide text-[#E60012] uppercase">
+              La Regla de Oro del Fundador Solitario
+            </span>
+            <p className="text-sm text-[#383733] font-medium leading-relaxed">
+              No intentes hacer todo a la vez. Cuando eres <strong className="text-[#1F1E1B]">CTO</strong>, apagas las redes y programas. Cuando eres <strong className="text-[#1F1E1B]">CMO</strong>, cierras el código y vendes. Cuando eres <strong className="text-[#1F1E1B]">CEO</strong>, miras los números y dejas el terreno preparado para mañana.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Caso de estudio: Simulación en Vivo */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="h-2 w-2 rounded-full bg-[#E60012] animate-pulse" />
+            <h2 className="text-sm font-semibold tracking-wide uppercase hq-mono text-[#1F1E1B]">
+              Simulación en Vivo · Un Día Típico (11:00 AM a 5:00 PM)
+            </h2>
+          </div>
+          <span className="text-xs text-[#8A877E] hq-mono">
+            4 Bloques de Alta Densidad
           </span>
-          <h2 className="text-lg font-black font-mono mt-1 text-neutral-900">
-            Un Día Típico de Martín (11:00 AM a 5:00 PM)
-          </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
-          {/* Bloque 1 */}
-          <div className="rounded-xl border-2 border-black bg-white p-4 shadow-[4px_4px_0px_0px_#000] space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Bloque 1: Llegada */}
+          <div className="rounded-2xl border border-[#E8E5DD] bg-white p-5 shadow-[0_2px_6px_rgba(31,30,27,0.03)] hover:border-[#D5D1C5] hover:shadow-[0_6px_16px_rgba(31,30,27,0.06)] transition-all space-y-3.5">
             <div className="flex items-center justify-between">
-              <span className="font-mono font-black text-emerald-700 uppercase flex items-center gap-1.5">
-                <Clock className="h-4 w-4" /> 11:00 AM · Llegada
+              <span className="hq-mono text-xs font-bold text-emerald-700 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-full">
+                <Clock className="h-3.5 w-3.5" /> 11:00 AM · Llegada
               </span>
-              <span className="rounded bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 text-[10px]">
+              <span className="hq-mono text-[10px] font-semibold text-neutral-500 bg-[#F2EFE9] px-2 py-0.5 rounded-md border border-[#E8E5DD]">
                 60 segundos
               </span>
             </div>
-            <p className="text-neutral-700">
-              Llegas a la oficina, abres SynDex y vas directo a <Link href="/hq" className="font-bold underline text-emerald-800">/hq (Hoy)</Link>.
+
+            <p className="text-xs text-[#5E5C56]">
+              Llegas a la oficina, abres SynDex y vas directo a <Link href="/hq" className="font-semibold text-emerald-800 hover:underline">/hq (Hoy)</Link>.
             </p>
-            <ul className="list-disc list-inside space-y-1 text-neutral-600">
-              <li>Miras la tarjeta <strong>"Bloque Activo"</strong>.</li>
-              <li>Presionas <strong>"Check-In ahora"</strong> para activar tu turno.</li>
-              <li>Tu batería de energía se activa para la primera sesión.</li>
-            </ul>
+
+            <div className="bg-[#FAF9F5] rounded-xl p-3 border border-[#E8E5DD] space-y-2 text-xs text-[#383733]">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <span>Miras la tarjeta <strong>"Bloque Activo"</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <span>Presionas <strong>"Check-In ahora"</strong> para iniciar tu turno</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                <span>Tu batería de energía se activa para la primera sesión</span>
+              </div>
+            </div>
           </div>
 
-          {/* Bloque 2 */}
-          <div className="rounded-xl border-2 border-black bg-white p-4 shadow-[4px_4px_0px_0px_#000] space-y-2">
+          {/* Bloque 2: CTO */}
+          <div className="rounded-2xl border border-[#E8E5DD] bg-white p-5 shadow-[0_2px_6px_rgba(31,30,27,0.03)] hover:border-[#D5D1C5] hover:shadow-[0_6px_16px_rgba(31,30,27,0.06)] transition-all space-y-3.5">
             <div className="flex items-center justify-between">
-              <span className="font-mono font-black text-blue-700 uppercase flex items-center gap-1.5">
-                <Wrench className="h-4 w-4" /> 11:05 AM - 1:00 PM · CTO
+              <span className="hq-mono text-xs font-bold text-blue-700 flex items-center gap-1.5 bg-blue-50 border border-blue-200/60 px-2.5 py-1 rounded-full">
+                <Wrench className="h-3.5 w-3.5" /> 11:05 AM - 1:00 PM · CTO
               </span>
-              <span className="rounded bg-blue-100 text-blue-800 font-bold px-2 py-0.5 text-[10px]">
+              <span className="hq-mono text-[10px] font-semibold text-neutral-500 bg-[#F2EFE9] px-2 py-0.5 rounded-md border border-[#E8E5DD]">
                 2h Desarrollo
               </span>
             </div>
-            <p className="text-neutral-700">
-              Vas a <Link href="/hq/roles/cto" className="font-bold underline text-blue-800">/hq/roles (CTO)</Link>. Eres el arquitecto técnico.
+
+            <p className="text-xs text-[#5E5C56]">
+              Cambias al rol técnico en <Link href="/hq/roles/cto" className="font-semibold text-blue-800 hover:underline">/hq/roles (CTO)</Link>. Eres el arquitecto.
             </p>
-            <ul className="list-disc list-inside space-y-1 text-neutral-600">
-              <li>Programas o ajustas Nilah AI y agentes de n8n.</li>
-              <li>Redes sociales cerradas. 100% código y foco.</li>
-              <li>Al terminar, marcas la tarea: <strong>+100 XP</strong> y <strong>+50 Pokédólares</strong>.</li>
-            </ul>
+
+            <div className="bg-[#FAF9F5] rounded-xl p-3 border border-[#E8E5DD] space-y-2 text-xs text-[#383733]">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                <span>Programas o ajustas Nilah AI y agentes de n8n</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                <span>Redes sociales cerradas. 100% código y foco continuo</span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-[#E8E5DD]/60">
+                <span className="text-[11px] text-neutral-500 font-medium">Recompensa al completar:</span>
+                <span className="hq-mono text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
+                  +100 XP · +50 💰
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Bloque 3 */}
-          <div className="rounded-xl border-2 border-black bg-white p-4 shadow-[4px_4px_0px_0px_#000] space-y-2">
+          {/* Bloque 3: CMO */}
+          <div className="rounded-2xl border border-[#E8E5DD] bg-white p-5 shadow-[0_2px_6px_rgba(31,30,27,0.03)] hover:border-[#D5D1C5] hover:shadow-[0_6px_16px_rgba(31,30,27,0.06)] transition-all space-y-3.5">
             <div className="flex items-center justify-between">
-              <span className="font-mono font-black text-amber-800 uppercase flex items-center gap-1.5">
-                <Megaphone className="h-4 w-4" /> 2:00 PM - 4:00 PM · CMO
+              <span className="hq-mono text-xs font-bold text-amber-800 flex items-center gap-1.5 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-full">
+                <Megaphone className="h-3.5 w-3.5" /> 2:00 PM - 4:00 PM · CMO
               </span>
-              <span className="rounded bg-amber-100 text-amber-900 font-bold px-2 py-0.5 text-[10px]">
+              <span className="hq-mono text-[10px] font-semibold text-neutral-500 bg-[#F2EFE9] px-2 py-0.5 rounded-md border border-[#E8E5DD]">
                 2h Marketing
               </span>
             </div>
-            <p className="text-neutral-700">
-              Cambias de sombrero en <Link href="/hq/roles/cmo" className="font-bold underline text-amber-800">/hq/roles (CMO)</Link>. Cierras el editor de código.
+
+            <p className="text-xs text-[#5E5C56]">
+              Cambias de sombrero en <Link href="/hq/roles/cmo" className="font-semibold text-amber-800 hover:underline">/hq/roles (CMO)</Link>. Cierras el editor de código.
             </p>
-            <ul className="list-disc list-inside space-y-1 text-neutral-600">
-              <li>Revisas <Link href="/hq/redes" className="underline font-semibold">/hq/redes</Link> para ver leads de WhatsApp y métricas.</li>
-              <li>Creas o programas el video de TikTok/Reel del día.</li>
-              <li>Revisas qué contactos recolectó Maps-Hunter en <Link href="/hq/agentes" className="underline font-semibold">/hq/agentes</Link>.</li>
-            </ul>
+
+            <div className="bg-[#FAF9F5] rounded-xl p-3 border border-[#E8E5DD] space-y-2 text-xs text-[#383733]">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                <span>Revisas <Link href="/hq/redes" className="font-semibold underline">/hq/redes</Link> para ver leads de WhatsApp y métricas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                <span>Creas o programas el video de TikTok/Reel del día</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                <span>Supervisas prospectos de Maps-Hunter en <Link href="/hq/agentes" className="font-semibold underline">/hq/agentes</Link></span>
+              </div>
+            </div>
           </div>
 
-          {/* Bloque 4 */}
-          <div className="rounded-xl border-2 border-black bg-white p-4 shadow-[4px_4px_0px_0px_#000] space-y-2">
+          {/* Bloque 4: CEO */}
+          <div className="rounded-2xl border border-[#E8E5DD] bg-white p-5 shadow-[0_2px_6px_rgba(31,30,27,0.03)] hover:border-[#D5D1C5] hover:shadow-[0_6px_16px_rgba(31,30,27,0.06)] transition-all space-y-3.5">
             <div className="flex items-center justify-between">
-              <span className="font-mono font-black text-purple-700 uppercase flex items-center gap-1.5">
-                <Crown className="h-4 w-4" /> 4:00 PM - 4:30 PM · CEO
+              <span className="hq-mono text-xs font-bold text-purple-700 flex items-center gap-1.5 bg-purple-50 border border-purple-200/60 px-2.5 py-1 rounded-full">
+                <Crown className="h-3.5 w-3.5" /> 4:00 PM - 4:30 PM · CEO
               </span>
-              <span className="rounded bg-purple-100 text-purple-800 font-bold px-2 py-0.5 text-[10px]">
+              <span className="hq-mono text-[10px] font-semibold text-neutral-500 bg-[#F2EFE9] px-2 py-0.5 rounded-md border border-[#E8E5DD]">
                 30m Cierre
               </span>
             </div>
-            <p className="text-neutral-700">
-              Cierre de oficina en <Link href="/hq/pendientes" className="font-bold underline text-purple-800">/hq/pendientes (Cola)</Link>.
+
+            <p className="text-xs text-[#5E5C56]">
+              Cierre de oficina en <Link href="/hq/pendientes" className="font-semibold text-purple-800 hover:underline">/hq/pendientes (Cola)</Link>.
             </p>
-            <ul className="list-disc list-inside space-y-1 text-neutral-600">
-              <li>Mueves tareas pendientes para que no se pierdan.</li>
-              <li>Anotas la tarea #1 con la que vas a arrancar mañana a las 11:00 AM.</li>
-              <li>Haces <strong>Check-Out</strong> en /hq y apagas la laptop con satisfacción.</li>
-            </ul>
+
+            <div className="bg-[#FAF9F5] rounded-xl p-3 border border-[#E8E5DD] space-y-2 text-xs text-[#383733]">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                <span>Mueves tareas pendientes para que no se pierdan</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                <span>Anotas la tarea #1 prioritaria con la que arrancas mañana</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                <span>Haces <strong>Check-Out</strong> en /hq y apagas la laptop con satisfacción</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Directorio de todos los módulos */}
-      <div className="rounded-2xl border-4 border-[#121214] bg-white p-5 shadow-[6px_6px_0px_0px_#000] space-y-4">
-        <h2 className="text-base font-black font-mono uppercase text-neutral-900 border-b-2 border-neutral-200 pb-2 flex items-center gap-2">
-          <Compass className="h-5 w-5 text-neutral-800" /> Directorio Rápido de Módulos
-        </h2>
+      {/* Directorio de todos los módulos: Tarjetas refinadas con hover táctil */}
+      <div className="rounded-2xl border border-[#E8E5DD] bg-white p-6 shadow-[0_2px_8px_rgba(31,30,27,0.03)] space-y-4">
+        <div className="flex items-center justify-between border-b border-[#E8E5DD] pb-3">
+          <h2 className="text-sm font-semibold tracking-wide uppercase hq-mono text-[#1F1E1B] flex items-center gap-2">
+            <Compass className="h-4 w-4 text-[#D97043]" />
+            Directorio Rápido de Módulos
+          </h2>
+          <span className="text-xs text-[#8A877E] hq-mono">9 Módulos Activos</span>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-          <Link href="/hq" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq (Hoy)</strong>
-            <span className="text-neutral-600">Centro neurálgico: check-in, bloque actual y racha.</span>
-          </Link>
-
-          <Link href="/hq/roles" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq/roles</strong>
-            <span className="text-neutral-600">Cambio de piel entre CEO, CTO y CMO.</span>
-          </Link>
-
-          <Link href="/hq/pendientes" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq/pendientes</strong>
-            <span className="text-neutral-600">Cola de tareas, relevos y prioridades de mañana.</span>
-          </Link>
-
-          <Link href="/hq/jornada" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq/jornada</strong>
-            <span className="text-neutral-600">Calendario maestro y estructura de tus 8 horas.</span>
-          </Link>
-
-          <Link href="/hq/redes" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq/redes</strong>
-            <span className="text-neutral-600">Redes sociales, TikTok y leads entrantes.</span>
-          </Link>
-
-          <Link href="/hq/agentes" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq/agentes</strong>
-            <span className="text-neutral-600">Bots y agentes de IA trabajando en segundo plano.</span>
-          </Link>
-
-          <Link href="/hq/tiempo" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq/tiempo</strong>
-            <span className="text-neutral-600">Cartucho Pokémon Heart & Soul y canje de tiempo libre.</span>
-          </Link>
-
-          <Link href="/hq/tienda" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq/tienda</strong>
-            <span className="text-neutral-600">Bazar y recompensas canjeables con Pokédólares.</span>
-          </Link>
-
-          <Link href="/hq/caja" className="p-3 rounded-xl border-2 border-black hover:bg-neutral-50 shadow-[3px_3px_0px_0px_#000] transition-all">
-            <strong className="block font-mono text-sm text-neutral-900">/hq/caja</strong>
-            <span className="text-neutral-600">Cuentas, facturación y MRR de la agencia.</span>
-          </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {[
+            { href: '/hq', title: '/hq (Hoy)', desc: 'Centro neurálgico: check-in, bloque actual y racha.' },
+            { href: '/hq/roles', title: '/hq/roles', desc: 'Cambio de piel entre CEO, CTO y CMO.' },
+            { href: '/hq/pendientes', title: '/hq/pendientes', desc: 'Cola de tareas, relevos y prioridades de mañana.' },
+            { href: '/hq/jornada', title: '/hq/jornada', desc: 'Calendario maestro y estructura de tus 8 horas.' },
+            { href: '/hq/redes', title: '/hq/redes', desc: 'Redes sociales, TikTok y leads entrantes.' },
+            { href: '/hq/agentes', title: '/hq/agentes', desc: 'Bots y agentes de IA trabajando en segundo plano.' },
+            { href: '/hq/tiempo', title: '/hq/tiempo', desc: 'Cartucho Pokémon Heart & Soul y canje de tiempo.' },
+            { href: '/hq/tienda', title: '/hq/tienda', desc: 'Bazar y recompensas canjeables con Pokédólares.' },
+            { href: '/hq/caja', title: '/hq/caja', desc: 'Cuentas, facturación y MRR de la agencia.' },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => soundFx.playClick()}
+              className="group p-3.5 rounded-xl border border-[#E8E5DD] bg-[#FAF9F5]/60 hover:bg-white hover:border-[#D5D1C5] hover:shadow-[0_4px_12px_rgba(31,30,27,0.05)] transition-all space-y-1 block"
+            >
+              <div className="flex items-center justify-between">
+                <span className="hq-mono text-xs font-bold text-[#1F1E1B] group-hover:text-[#D97043] transition-colors">
+                  {item.title}
+                </span>
+                <ArrowRight className="h-3 w-3 text-[#8A877E] group-hover:text-[#D97043] group-hover:translate-x-0.5 transition-all" />
+              </div>
+              <p className="text-[11px] text-[#5E5C56] leading-snug">
+                {item.desc}
+              </p>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

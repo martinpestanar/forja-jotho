@@ -85,8 +85,8 @@ const DEFAULT_KEY_BINDINGS: Record<string, string> = {
   Down: 'ArrowDown',
   Left: 'ArrowLeft',
   Right: 'ArrowRight',
-  A: 'KeyZ',
-  B: 'KeyX',
+  A: 'KeyA',
+  B: 'KeyB',
   Start: 'Enter',
   Select: 'Space',
   L: 'KeyQ',
@@ -1044,11 +1044,24 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       codeToGba[code] = action;
     });
 
-    // Mapear teclas alternativas comunes (WASD secundario)
+    // Mapeo dual y seguro para Boton A (Aceptar / Hablar / Ver stats):
+    // Si la tecla fisica 'KeyA' no esta remapeada a otra accion, activa 'A'
+    if (!codeToGba['KeyA'] && keyBindings['Left'] !== 'KeyA') codeToGba['KeyA'] = 'A';
+    // 'KeyZ' tambien activa 'A' (compatibilidad con emuladores clasicos mGBA/VBA)
+    if (!codeToGba['KeyZ'] && keyBindings['B'] !== 'KeyZ') codeToGba['KeyZ'] = 'A';
+
+    // Mapeo dual para Boton B:
+    if (!codeToGba['KeyB'] && keyBindings['A'] !== 'KeyB') codeToGba['KeyB'] = 'B';
+    if (!codeToGba['KeyX'] && keyBindings['A'] !== 'KeyX') codeToGba['KeyX'] = 'B';
+
+    // Mapear teclas alternativas para movimiento (Flechas y WASD secundario SIN secuestrar la tecla A)
+    if (!codeToGba['ArrowUp'] && keyBindings['Up'] !== 'ArrowUp') codeToGba['ArrowUp'] = 'Up';
+    if (!codeToGba['ArrowDown'] && keyBindings['Down'] !== 'ArrowDown') codeToGba['ArrowDown'] = 'Down';
+    if (!codeToGba['ArrowLeft'] && keyBindings['Left'] !== 'ArrowLeft') codeToGba['ArrowLeft'] = 'Left';
+    if (!codeToGba['ArrowRight'] && keyBindings['Right'] !== 'ArrowRight') codeToGba['ArrowRight'] = 'Right';
     if (!codeToGba['KeyW'] && keyBindings['Up'] !== 'KeyW') codeToGba['KeyW'] = 'Up';
-    if (!codeToGba['KeyS'] && keyBindings['Down'] !== 'KeyS') codeToGba['KeyS'] = 'Down';
-    if (!codeToGba['KeyA'] && keyBindings['Left'] !== 'KeyA') codeToGba['KeyA'] = 'Left';
     if (!codeToGba['KeyD'] && keyBindings['Right'] !== 'KeyD') codeToGba['KeyD'] = 'Right';
+    if (!codeToGba['KeyS'] && keyBindings['Down'] !== 'KeyS' && keyBindings['B'] !== 'KeyS') codeToGba['KeyS'] = 'Down';
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (rebindingAction) return;
@@ -1755,6 +1768,25 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
             <span className="hidden sm:inline">{isSaving ? 'Guardando...' : 'Respaldar .SAV'}</span>
           </button>
         </div>
+      </div>
+
+      {/* Barra de atajos de teclado para PC */}
+      <div className="hidden lg:flex items-center justify-center gap-3 py-1.5 px-3 border-t border-[#E8E5DD] bg-[#FAF9F5] text-[10px] font-mono text-[#5E5C56]">
+        <span className="flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">A</kbd> o <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">Z</kbd> Botón A (Hablar / Stats / Elegir)
+        </span>
+        <span className="text-[#C4C0B5]">•</span>
+        <span className="flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">B</kbd> o <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">X</kbd> Botón B (Cancelar / Correr)
+        </span>
+        <span className="text-[#C4C0B5]">•</span>
+        <span className="flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">Flechas</kbd> Mover
+        </span>
+        <span className="text-[#C4C0B5]">•</span>
+        <span className="flex items-center gap-1">
+          <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">Enter</kbd> Menú Pokémon (Start)
+        </span>
       </div>
 
       <MobileControls onButton={handleButton} activeKeys={activeKeys} />
