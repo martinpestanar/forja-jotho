@@ -1334,7 +1334,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
   }
 
   return (
-    <div ref={consoleRef} className="relative flex h-full min-h-0 w-full select-none flex-col overflow-hidden rounded-none border-y border-[#E8E5DD] bg-[#FAF9F5] p-1.5 text-[#1F1E1B] transition-all duration-300 sm:rounded-2xl sm:border sm:p-3 sm:shadow-sm">
+    <div ref={consoleRef} className="relative flex h-full min-h-0 w-full select-none flex-col overflow-hidden bg-[#FAF9F5] p-0 text-[#1F1E1B] transition-all duration-300 sm:rounded-2xl sm:border sm:border-[#E8E5DD] sm:p-2 sm:shadow-sm">
 
       {/* Modal Personalización de Controles / Teclas */}
       <AnimatePresence>
@@ -1713,7 +1713,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       </div>
 
       {/* Pantalla del Emulador (Marco CRT Oficial mGBA) */}
-      <div className="relative flex min-h-0 max-h-[66.6667vw] flex-1 items-center justify-center overflow-hidden rounded-lg border border-[#2A2723] bg-[#0F1112] sm:rounded-xl lg:max-h-none">
+      <div className="relative flex min-h-0 aspect-[3/2] w-full items-center justify-center overflow-hidden rounded-none sm:rounded-xl border-y sm:border border-[#2A2723] bg-[#0F1112]">
         <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-transparent via-white/5 to-transparent" />
 
         {/* Controles flotantes de pantalla */}
@@ -1915,3 +1915,5 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     </div>
   );
 };
+
+

@@ -295,7 +295,7 @@ export const ArcadeRoomTheater: React.FC = () => {
       )}
 
       {/* Contenido */}
-      <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 grid-cols-1 gap-3 overflow-hidden p-3 lg:grid-cols-12 lg:p-4">
+      <div className="mx-auto grid min-h-0 w-full max-w-7xl flex-1 grid-cols-1 gap-0 sm:gap-3 overflow-hidden p-0 sm:p-4 lg:grid-cols-12">
         {/* Equipo */}
         <section
           className={`lg:col-span-3 flex-col gap-2.5 overflow-y-auto ${
@@ -382,14 +382,14 @@ export const ArcadeRoomTheater: React.FC = () => {
             mobileTab === 'game' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-[#E8E5DD] bg-[#F2EFE9] p-2 shadow-sm lg:p-3">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border sm:border-[#E8E5DD] bg-transparent sm:bg-[#F2EFE9] p-0 sm:p-3">
             <div className="mb-2 flex items-center justify-between px-1">
               <span className="hq-label">Consola</span>
               <span className="hq-mono text-[10px] text-[#8A877E]">
                 {batteryMinutes} min disponibles
               </span>
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden rounded-xl bg-[#0F1112]">
+            <div className="min-h-0 flex-1 overflow-hidden rounded-none sm:rounded-xl bg-[#0F1112]">
               {isArcadeOpen && <GbaPanel />}
             </div>
           </div>
@@ -550,3 +550,7 @@ export const ArcadeRoomTheater: React.FC = () => {
     </div>
   );
 };
+
+
+
+
