@@ -1115,9 +1115,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         // Si el usuario mantiene pulsada la tecla o hay repetición del sistema operativo,
         // forzamos una transición limpia (unpress -> press) para que el motor GBA (JOY_NEW)
         // registre cada pulsación sin ignorar menús como el del equipo Pokémon.
+        // Evitar re-disparo por repetición del sistema operativo (evita cerrar menús al instante)
         if (e.repeat) {
-          handleButton(gbaBtn, false);
-          setTimeout(() => handleButton(gbaBtn, true), 16);
           return;
         }
         handleButton(gbaBtn, true);
