@@ -20,6 +20,7 @@ import { GrimoireSovereignModal } from '@/components/dashboard/GrimoireSovereign
 import { FlexibleCompanionBar } from '@/components/dashboard/FlexibleCompanionBar';
 import { MidnightJournalModal } from '@/components/dashboard/MidnightJournalModal';
 import { SovereignTutorialModal } from '@/components/dashboard/SovereignTutorialModal';
+import { LockedPactBanner } from '@/components/dashboard/LockedPactBanner';
 import {
   FloatingDopamineRewards,
   FloatingReward,
@@ -490,26 +491,51 @@ export default function DashboardPage() {
   const executeSealOath = async () => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.rpc('rpc_valdr_seal_oath', {
+      const today = new Date();
+      const endDate = new Date();
+      endDate.setDate(today.getDate() + oathDays);
+      const todayStr = today.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
+
+      // Intentar primero vía RPC si existe
+      const { error: rpcError } = await supabase.rpc('rpc_valdr_seal_oath', {
         p_title: oathTitle.trim(),
         p_duration_days: oathDays,
         p_front_vow: oathVow.trim() || 'Pacto de autodominio y disciplina inquebrantable',
         p_runic_signature: oathSig.trim(),
       });
 
-      if (error) {
-        showNotice(error.message, 'Pacto Fallido');
-      } else {
-        soundFx.playLevelUp();
-        setCreateOathModalOpen(false);
-        setOathTitle('');
-        setOathVow('');
-        setOathSig('');
-        setHoldProgress(0);
-        await loadValdrData();
+      if (rpcError) {
+        // Fallback seguro directo a tabla valdr_oaths con sesión de usuario autenticado
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Entrenador no autenticado.');
+
+        const { error: insertError } = await supabase.from('valdr_oaths').insert({
+          user_id: user.id,
+          title: oathTitle.trim(),
+          duration_days: oathDays,
+          front_vow: oathVow.trim() || 'Pacto de autodominio y disciplina inquebrantable',
+          runic_signature: oathSig.trim(),
+          start_date: todayStr,
+          end_date: endDateStr,
+          status: 'locked_active',
+        });
+
+        if (insertError) {
+          throw insertError;
+        }
       }
+
+      soundFx.playLevelUp();
+      setCreateOathModalOpen(false);
+      setOathTitle('');
+      setOathVow('');
+      setOathSig('');
+      setHoldProgress(0);
+      showNotice(`¡Pacto de ${oathDays} días sellado y bloqueado! Mantén la disciplina diaria.`, 'Pacto Inquebrantable', 'success');
+      await loadValdrData();
     } catch (err: any) {
-      showNotice(err.message || 'Error al grabar juramento', 'Pacto Fallido');
+      showNotice(err.message || 'Error al sellar el pacto', 'Pacto Fallido', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -536,6 +562,12 @@ export default function DashboardPage() {
               onOpenGrimoire={() => setGrimoireModalOpen(true)}
               onOpenJournal={() => setMidnightJournalModalOpen(true)}
               onOpenTutorial={() => setTutorialModalOpen(true)}
+            />
+
+            {/* Banner de Pacto Inquebrantable Bloqueado (7, 15, 30 días) */}
+            <LockedPactBanner
+              oaths={oaths}
+              onOpenNewPact={() => setCreateOathModalOpen(true)}
             />
 
             {/* Altar de Resumen Visual de Batalla */}

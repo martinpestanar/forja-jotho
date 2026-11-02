@@ -2,167 +2,328 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Lock, ShieldCheck, Waves } from 'lucide-react';
+import { ArrowRight, Lock, ShieldCheck, Sparkles, UserPlus, Gamepad2, Flame, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { soundFx } from '@/lib/soundFx';
-import { HQ_ROLE_LIST } from '@/lib/hqRoles';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
+  const [tab, setTab] = useState<'login' | 'register'>('login');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [leaderName, setLeaderName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Helper para convertir username limpio en correo seguro de Auth
+  const formatEmailFromUsername = (user: string) => {
+    const clean = user.trim().toLowerCase().replace(/[^a-z0-9_.-]/g, '');
+    if (clean.includes('@')) return clean;
+    return `${clean}@syndex.app`;
+  };
+
+  const handleRouteRedirect = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('valdr_profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile?.is_admin) {
+        router.replace('/hq');
+      } else {
+        router.replace('/dashboard');
+      }
+    } catch {
+      router.replace('/dashboard');
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.replace('/hq');
+      if (data.session) {
+        handleRouteRedirect(data.session.user.id);
+      }
     });
   }, [router]);
 
-  const submit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (loading) return;
     setLoading(true);
     setError(null);
+    setSuccessMsg(null);
     soundFx.playClick();
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-
-    if (authError) {
-      soundFx.playDamage();
-      setError(authError.message);
+    const cleanUsername = username.trim();
+    if (!cleanUsername) {
+      setError('Ingresa tu nombre de entrenador');
       setLoading(false);
       return;
     }
 
-    soundFx.playLevelUp();
-    router.replace('/hq');
+    const email = formatEmailFromUsername(cleanUsername);
+
+    if (tab === 'login') {
+      // INICIAR SESIÓN
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        soundFx.playDamage();
+        setError(authError.message === 'Invalid login credentials' 
+          ? 'Entrenador o contraseña incorrectos.' 
+          : authError.message);
+        setLoading(false);
+        return;
+      }
+
+      soundFx.playLevelUp();
+      if (data.user) {
+        await handleRouteRedirect(data.user.id);
+      } else {
+        router.replace('/dashboard');
+      }
+    } else {
+      // REGISTRO RÁPIDO DE NUEVO ENTRENADOR
+      if (password.length < 6) {
+        setError('La contraseña debe tener al menos 6 caracteres.');
+        soundFx.playDamage();
+        setLoading(false);
+        return;
+      }
+
+      const displayLeaderName = leaderName.trim() || cleanUsername;
+
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username: cleanUsername,
+            leader_name: displayLeaderName,
+          },
+        },
+      });
+
+      if (signUpError) {
+        soundFx.playDamage();
+        setError(signUpError.message);
+        setLoading(false);
+        return;
+      }
+
+      const newUserId = data.user?.id;
+      if (newUserId) {
+        // Inicializar perfil en valdr_profiles si no existe
+        try {
+          await supabase.from('valdr_profiles').upsert({
+            id: newUserId,
+            leader_name: displayLeaderName,
+            guide_totem: 'lobo',
+            sovereignty_gold: 250,
+            battery_minutes: 120, // 2 Horas garantizadas por defecto
+            streak_fire_days: 1,
+            temperance_status: 'invictus',
+            temperance_streak_days: 1,
+            is_admin: false,
+          });
+        } catch (e) {
+          console.warn('Auto-init profile fallback:', e);
+        }
+      }
+
+      soundFx.playLevelUp();
+      setSuccessMsg('¡Registro completado! Entrando al juego...');
+      setTimeout(() => {
+        router.replace('/dashboard');
+      }, 700);
+    }
   };
 
   return (
-    <div className="hq-shell flex min-h-screen flex-col lg:flex-row">
-      <section className="relative flex flex-col justify-between overflow-hidden border-b border-[#E8E5DD] bg-[#F4F1EA] px-6 py-8 lg:w-[46%] lg:border-b-0 lg:border-r lg:px-12 lg:py-12">
+    <div className="min-h-screen bg-[#F4F1EA] text-[#1F1E1B] flex flex-col justify-between select-none">
+      {/* Top Banner Neo-Arcade */}
+      <header className="border-b-2 border-black bg-white px-5 py-3.5 flex items-center justify-between shadow-[0_2px_0_0_#000]">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#D97043]/25 bg-[#D97043]/10 text-[#D97043]">
-            <Waves className="h-5 w-5" strokeWidth={2.2} />
-          </span>
+          <div className="w-8 h-8 rounded-lg bg-[#E60012] border-2 border-black flex items-center justify-center text-white shadow-[2px_2px_0px_0px_#000]">
+            <Gamepad2 className="w-4 h-4 stroke-[2.5]" />
+          </div>
           <div>
-            <span className="hq-title block text-sm font-semibold text-[#1F1E1B]">
-              Korat Flow HQ
+            <span className="font-mono text-xs font-black tracking-wider uppercase text-black block">
+              SYNDEX POKÉ-DISCIPLINA
             </span>
-            <span className="hq-mono block text-[10px] text-[#8A877E]">Founder Console</span>
+            <span className="text-[10px] text-[#706E66] block font-mono">
+              mGBA Web · Johto Core
+            </span>
           </div>
         </div>
 
-        <div className="my-10 max-w-md lg:my-0">
-          <span className="hq-chip">
-            <ShieldCheck className="h-3 w-3 text-[#5A7D62]" />
-            Acceso privado · sesión única
-          </span>
-          <h1 className="hq-title mt-4 text-3xl leading-tight text-[#1F1E1B] sm:text-4xl">
-            Un rol a la vez.
-            <br />
-            <span className="italic text-[#D97043]">Cero multitasking.</span>
-          </h1>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-[#5E5C56]">
-            El panel operativo del fundador: jornada, proyectos, academia y recompensas en un solo lugar.
-          </p>
-
-          <div className="mt-6 space-y-2">
-            {HQ_ROLE_LIST.map((role) => (
-              <div
-                key={role.key}
-                className="flex items-center gap-3 rounded-xl border border-[#E8E5DD] bg-white/70 px-3 py-2"
-              >
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: role.accent }}
-                />
-                <div className="min-w-0">
-                  <span className="text-xs font-semibold text-[#1F1E1B]">
-                    {role.label} · {role.title}
-                  </span>
-                  <span className="block truncate text-[11px] text-[#8A877E]">{role.mission}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#22C55E]/15 border border-[#22C55E]/40 text-[#166534] text-[10px] font-mono font-bold">
+          <span className="w-2 h-2 rounded-full bg-[#22C55E] animate-pulse" />
+          <span>2H BATERÍA DIARIA</span>
         </div>
+      </header>
 
-        <p className="hq-mono text-[10px] uppercase tracking-widest text-[#8A877E]">
-          Korat Flow © 2026
-        </p>
-      </section>
+      {/* Main Container Mobile-First */}
+      <main className="flex-1 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white border-2 border-black rounded-2xl p-6 shadow-[4px_4px_0px_0px_#000] space-y-5">
+          
+          {/* Selector de Pestañas Nintendo Style */}
+          <div className="grid grid-cols-2 p-1 bg-[#EAE7DF] border-2 border-black rounded-xl gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playClick();
+                setTab('login');
+                setError(null);
+              }}
+              className={`py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                tab === 'login'
+                  ? 'bg-black text-white shadow-[2px_2px_0px_0px_#E60012]'
+                  : 'text-[#5E5C56] hover:text-black'
+              }`}
+            >
+              Iniciar Sesión
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundFx.playClick();
+                setTab('register');
+                setError(null);
+              }}
+              className={`py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                tab === 'register'
+                  ? 'bg-[#E60012] text-white shadow-[2px_2px_0px_0px_#000]'
+                  : 'text-[#5E5C56] hover:text-black'
+              }`}
+            >
+              Crear Cuenta
+            </button>
+          </div>
 
-      <section className="flex flex-1 items-center justify-center px-5 py-10 sm:px-8">
-        <form onSubmit={submit} className="w-full max-w-sm">
-          <div className="mb-6">
-            <span className="hq-label">Entrar al HQ</span>
-            <h2 className="hq-title mt-1 text-2xl text-[#1F1E1B]">Bienvenido de vuelta</h2>
-            <p className="mt-1.5 text-xs leading-relaxed text-[#5E5C56]">
-              Usa tu cuenta de fundador. No hay registro público.
+          {/* Cartelito de estado / Beneficios */}
+          <div className="p-3 bg-[#F4F1EA] border-2 border-black rounded-xl flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-[#F59E0B]/20 text-[#B45309] border border-[#F59E0B]/40 shrink-0">
+              <Flame className="w-4 h-4 fill-current" />
+            </div>
+            <p className="text-[11px] font-mono leading-tight text-[#44403C]">
+              {tab === 'login' 
+                ? 'Conecta tu cartucho para continuar tus pactos y reclamar tus horas.' 
+                : 'Nuevo Entrenador: 2 Horas diarias de emulador + 250₽ iniciales de regalo.'}
             </p>
           </div>
 
-          <div className="space-y-3.5">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
-              <label htmlFor="email" className="hq-label mb-1.5 block">
-                Correo
+              <label className="block text-[11px] font-black uppercase tracking-wider text-black mb-1">
+                Entrenador / Usuario
               </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="hq-input"
-                placeholder="founder@koratflow.agency"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  autoCapitalize="none"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="ej. ash_ketchum o martin"
+                  className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl px-3 py-2.5 text-xs font-mono font-medium text-black focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]"
+                />
+                <User className="w-4 h-4 text-[#8A877E] absolute right-3 top-3 pointer-events-none" />
+              </div>
             </div>
 
+            {tab === 'register' && (
+              <div>
+                <label className="block text-[11px] font-black uppercase tracking-wider text-black mb-1">
+                  Nombre de Líder (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={leaderName}
+                  onChange={(e) => setLeaderName(e.target.value)}
+                  placeholder="ej. Red o Tu Nombre"
+                  className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl px-3 py-2.5 text-xs font-mono font-medium text-black focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]"
+                />
+              </div>
+            )}
+
             <div>
-              <label htmlFor="password" className="hq-label mb-1.5 block">
+              <label className="block text-[11px] font-black uppercase tracking-wider text-black mb-1">
                 Contraseña
               </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="hq-input"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-[#FAF9F5] border-2 border-black rounded-xl px-3 py-2.5 text-xs font-mono font-medium text-black focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#2563EB]"
+                />
+                <Lock className="w-4 h-4 text-[#8A877E] absolute right-3 top-3 pointer-events-none" />
+              </div>
             </div>
+
+            {error && (
+              <div className="p-2.5 rounded-xl border-2 border-[#E60012] bg-[#FEE2E2] text-[#991B1B] text-[11px] font-mono font-semibold flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {successMsg && (
+              <div className="p-2.5 rounded-xl border-2 border-[#22C55E] bg-[#DCFCE7] text-[#166534] text-[11px] font-mono font-semibold flex items-center gap-2">
+                <span>⭐</span>
+                <span>{successMsg}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-3 px-4 rounded-xl text-xs font-black uppercase tracking-wider text-white border-2 border-black shadow-[4px_4px_0px_0px_#000] active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 mt-2 ${
+                tab === 'login'
+                  ? 'bg-[#2563EB] hover:bg-[#1D4ED8]'
+                  : 'bg-[#E60012] hover:bg-[#B91C1C]'
+              }`}
+            >
+              {loading ? (
+                <span>Sincronizando con Johto...</span>
+              ) : tab === 'login' ? (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Entrar al Juego</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4" />
+                  <span>Crear Cuenta y Empezar</span>
+                  <Sparkles className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Micro-píldoras informativas */}
+          <div className="pt-2 border-t border-[#EAE7DF] flex items-center justify-around text-[10px] font-mono text-[#706E66]">
+            <span>🛡️ Cero Multitasking</span>
+            <span>⚡ Guardado Cloud</span>
+            <span>🔋 120 Minutos</span>
           </div>
+        </div>
+      </main>
 
-          {error && (
-            <div className="mt-3 rounded-xl border border-[#D9534F]/30 bg-[#D9534F]/10 px-3 py-2 text-[11px] text-[#B2403C]">
-              {error}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="hq-btn hq-btn-primary mt-5 w-full py-3"
-          >
-            <Lock className="h-4 w-4" />
-            {loading ? 'Verificando…' : 'Entrar'}
-            {!loading && <ArrowRight className="h-4 w-4" />}
-          </button>
-
-          <p className="mt-4 text-center text-[11px] leading-relaxed text-[#8A877E]">
-            Si perdiste el acceso, restablece la cuenta desde Supabase Auth.
-          </p>
-        </form>
-      </section>
+      {/* Footer minimalista */}
+      <footer className="py-3 text-center text-[10px] font-mono text-[#8A877E]">
+        SYNDEX PLATFORM · NINTENDO VISUAL UI ENGINE © 2026
+      </footer>
     </div>
   );
 }
