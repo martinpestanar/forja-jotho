@@ -191,7 +191,13 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     try {
       const saved = localStorage.getItem('syndex_gba_keybindings');
       if (saved) {
-        setKeyBindings(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (parsed.A === 'KeyZ' || !parsed.A) {
+          parsed.A = 'KeyA';
+          if (parsed.B === 'KeyX' || !parsed.B) parsed.B = 'KeyB';
+          localStorage.setItem('syndex_gba_keybindings', JSON.stringify(parsed));
+        }
+        setKeyBindings(parsed);
       }
     } catch {}
   }, []);
@@ -1068,7 +1074,16 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       const target = e.target as HTMLElement;
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
 
-      const gbaBtn = codeToGba[e.code];
+      let gbaBtn = codeToGba[e.code];
+      // Fallback directo por carácter físico (cero fallos sin importar layout de teclado o locale)
+      if (!gbaBtn && e.key) {
+        const k = e.key.toLowerCase();
+        if (k === 'a' || k === 'z') gbaBtn = 'A';
+        else if (k === 'b' || k === 'x') gbaBtn = 'B';
+        else if (k === 'enter') gbaBtn = 'Start';
+        else if (k === ' ') gbaBtn = 'Select';
+      }
+
       if (gbaBtn) {
         e.preventDefault();
         handleButton(gbaBtn, true);
@@ -1081,7 +1096,15 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       const target = e.target as HTMLElement;
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
 
-      const gbaBtn = codeToGba[e.code];
+      let gbaBtn = codeToGba[e.code];
+      if (!gbaBtn && e.key) {
+        const k = e.key.toLowerCase();
+        if (k === 'a' || k === 'z') gbaBtn = 'A';
+        else if (k === 'b' || k === 'x') gbaBtn = 'B';
+        else if (k === 'enter') gbaBtn = 'Start';
+        else if (k === ' ') gbaBtn = 'Select';
+      }
+
       if (gbaBtn) {
         e.preventDefault();
         handleButton(gbaBtn, false);
