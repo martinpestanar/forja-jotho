@@ -219,6 +219,9 @@ export const PokedexBagViewer: React.FC = () => {
                       alt={pkmn.name}
                       className="h-24 w-24 object-contain filter drop-shadow-sm transition-transform hover:scale-125"
                       loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = POKEMON_ASSETS.getBoxIcon(speciesId);
+                      }}
                     />
                   </div>
 

@@ -228,14 +228,14 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
         {tab === 'boveda' && (
           <div className="space-y-3">
             {/* Banner de Sincronización del Cofre con la ROM */}
-            <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-3">
+            <div className="p-3.5 rounded-2xl border border-[#E8E5DD] bg-[#FAF9F5] flex items-center justify-between gap-3 shadow-sm">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-500 font-bold">
+                <div className="p-2 rounded-xl bg-white border border-[#E8E5DD] text-[#D97043] font-bold">
                   <Package className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-amber-400">Cofre de Exportación (.sav ↔ WebApp)</h4>
-                  <p className="text-[11px] text-stone-400">
+                  <h4 className="text-xs font-editorial font-semibold text-[#1F1E1B]">Cofre de Exportación (.sav ↔ WebApp)</h4>
+                  <p className="text-[11px] text-[#706E66]">
                     Liquida Pepitas, Perlas y Fósiles hallados en la ROM a precio oficial de Johto con eliminación atómica.
                   </p>
                 </div>
@@ -246,7 +246,7 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
                   soundFx.playCoin();
                   flash('Escaneando mochila del emulador en busca de tesoros...');
                 }}
-                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shadow-md active:scale-95 shrink-0"
+                className="px-3 py-1.5 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
               >
                 Escanear .SAV
               </button>

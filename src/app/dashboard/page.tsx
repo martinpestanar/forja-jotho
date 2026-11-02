@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { ArcadeRoomTheater } from '@/components/arcade/ArcadeRoomTheater';
 import { PartyPcManager } from '@/components/dashboard/PartyPcManager';
 import { EconomySanctuary } from '@/components/economy/EconomySanctuary';
-import { PokedexBagViewer } from '@/components/dashboard/PokedexBagViewer';
+import { RanchSection } from '@/components/economy/RanchSection';
 import { MobileTopHud } from '@/components/dashboard/MobileTopHud';
 import { RunicHabitCard } from '@/components/dashboard/RunicHabitCard';
 import { MobileFloatingDock, MobileTab } from '@/components/dashboard/MobileFloatingDock';
@@ -39,7 +39,10 @@ import {
   Settings,
   User,
   LogOut,
-  Calendar
+  Calendar,
+  Package,
+  Sprout,
+  Users
 } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
 
@@ -121,6 +124,9 @@ export default function DashboardPage() {
   const [oathSig, setOathSig] = useState('');
   const [holdProgress, setHoldProgress] = useState(0);
   const holdIntervalRef = useRef<any>(null);
+
+  // Sub-sección del Santuario
+  const [sanctuaryTab, setSanctuaryTab] = useState<'boveda' | 'rancho' | 'equipo'>('boveda');
 
   // Estado para marcar victoria diaria de Templanza
   const [temperanceConfirmedToday, setTemperanceConfirmedToday] = useState(false);
@@ -922,7 +928,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* PESTAÑA 4: BÓVEDA ANCESTRAL */}
+        {/* PESTAÑA 4: SANTUARIO & BÓVEDA ANCESTRAL */}
         {activeTab === 'vault' && (
           <div className="space-y-4">
             <div className="border-l-2 border-[#D4A359] pl-3 py-1">
@@ -930,21 +936,79 @@ export default function DashboardPage() {
                 Santuario & Inyección .SAV
               </h2>
               <p className="text-xs text-[#706E66]">
-                Inspecciona tu equipo y despacha suministros a Pokémon Heart & Soul.
+                Inspecciona tu equipo, recolecta en el rancho y despacha suministros a Pokémon Heart & Soul.
               </p>
             </div>
 
-            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
-              <EconomySanctuary />
+            {/* Selector de sub-sección móvil de clase mundial */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-[#FAF9F5] border border-[#E8E5DD]">
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playClick();
+                  setSanctuaryTab('boveda');
+                }}
+                className={`py-2 px-1 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  sanctuaryTab === 'boveda'
+                    ? 'bg-white text-[#1F1E1B] font-semibold shadow-sm border border-[#E8E5DD]'
+                    : 'text-[#706E66] hover:text-[#1F1E1B]'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5 text-[#D97043]" />
+                <span className="truncate">Bóveda</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playClick();
+                  setSanctuaryTab('rancho');
+                }}
+                className={`py-2 px-1 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  sanctuaryTab === 'rancho'
+                    ? 'bg-white text-[#1F1E1B] font-semibold shadow-sm border border-[#E8E5DD]'
+                    : 'text-[#706E66] hover:text-[#1F1E1B]'
+                }`}
+              >
+                <Sprout className="w-3.5 h-3.5 text-[#5A7D62]" />
+                <span className="truncate">Rancho 4h</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playClick();
+                  setSanctuaryTab('equipo');
+                }}
+                className={`py-2 px-1 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  sanctuaryTab === 'equipo'
+                    ? 'bg-white text-[#1F1E1B] font-semibold shadow-sm border border-[#E8E5DD]'
+                    : 'text-[#706E66] hover:text-[#1F1E1B]'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 text-[#4A8B99]" />
+                <span className="truncate">Equipo & PC</span>
+              </button>
             </div>
 
-            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
-              <PartyPcManager />
-            </div>
+            {/* Vista dinámica según sub-sección */}
+            {sanctuaryTab === 'boveda' && (
+              <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
+                <EconomySanctuary initialTab="boveda" />
+              </div>
+            )}
 
-            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
-              <PokedexBagViewer />
-            </div>
+            {sanctuaryTab === 'rancho' && (
+              <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
+                <RanchSection />
+              </div>
+            )}
+
+            {sanctuaryTab === 'equipo' && (
+              <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
+                <PartyPcManager />
+              </div>
+            )}
           </div>
         )}
 

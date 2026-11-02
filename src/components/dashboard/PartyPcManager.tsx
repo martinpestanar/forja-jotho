@@ -7,11 +7,13 @@ import {
   Sparkles, 
   Layers, 
   ArrowRightLeft, 
-  Database,
-  Gamepad2,
-  Package,
-  Search,
+  Database, 
+  Gamepad2, 
+  Package, 
+  Search, 
   Zap,
+  Shield,
+  Egg,
 } from 'lucide-react';
 import { useTrainerStore } from '@/store/useTrainerStore';
 import { useEconomyStore } from '@/store/useEconomyStore';
@@ -41,6 +43,11 @@ export const PartyPcManager: React.FC = () => {
   const [activeSection, setActiveSection] = useState<ActiveSection>('party');
   const [selectedSlot, setSelectedSlot] = useState<number | null>(0);
   const [notification, setNotification] = useState<string | null>(null);
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
+
+  const markImageBroken = (key: string) => {
+    setBrokenImages((prev) => ({ ...prev, [key]: true }));
+  };
 
   // ── Bag state ──
   const [bagSearch, setBagSearch] = useState('');
@@ -171,49 +178,57 @@ export const PartyPcManager: React.FC = () => {
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            className={`p-2.5 rounded-xl font-black text-xs flex items-center gap-2 border-2 shadow-[3px_3px_0_#000] ${
-              isLight
-                ? 'bg-amber-300 text-slate-950 border-black'
-                : 'bg-emerald-950 text-emerald-300 border-emerald-500'
-            }`}
+            className="p-3 rounded-xl font-editorial font-semibold text-xs flex items-center gap-2 border border-[#E8E5DD] bg-white text-[#1F1E1B] shadow-sm"
           >
-            <Sparkles className="w-4 h-4 animate-spin" />
+            <Sparkles className="w-4 h-4 text-[#D4A359] animate-spin" />
             <span>{notification}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* ── Selector de Sección ── */}
-      <div className="flex items-center justify-between gap-2 border-b-2 pb-2.5 border-black/20 flex-wrap">
+      <div className="flex items-center justify-between gap-2 border-b border-[#E8E5DD] pb-2.5 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => { soundFx.playClick(); setActiveSection('party'); setSelectedSlot(0); }}
-            className={tabBtn('party', 'bg-[#E60012] text-white', 'bg-emerald-500 text-slate-950')}
+            className={`px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeSection === 'party'
+                ? 'bg-[#1F1E1B] text-white shadow-sm'
+                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
+            }`}
           >
-            <Users className="w-4 h-4" />
+            <Users className="w-4 h-4 text-[#D97043]" />
             <span>Equipo ({party.length}/6)</span>
           </button>
 
           <button
             onClick={() => { soundFx.playClick(); setActiveSection('pc'); setSelectedSlot(0); }}
-            className={tabBtn('pc', 'bg-amber-400 text-black', 'bg-amber-500 text-slate-950')}
+            className={`px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeSection === 'pc'
+                ? 'bg-[#1F1E1B] text-white shadow-sm'
+                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
+            }`}
           >
-            <Database className="w-4 h-4" />
+            <Database className="w-4 h-4 text-[#4A8B99]" />
             <span>PC Box 1 ({pcBox.filter(Boolean).length}/30)</span>
           </button>
 
           <button
             onClick={() => { soundFx.playClick(); setActiveSection('bag'); }}
-            className={tabBtn('bag', 'bg-[#F59E0B] text-black', 'bg-orange-500 text-slate-950')}
+            className={`px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+              activeSection === 'bag'
+                ? 'bg-[#1F1E1B] text-white shadow-sm'
+                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
+            }`}
           >
-            <Package className="w-4 h-4" />
-            <span>🎒 Mochila GBA</span>
+            <Package className="w-4 h-4 text-[#D4A359]" />
+            <span>Mochila GBA</span>
           </button>
         </div>
 
-        <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate-400">
-          <Gamepad2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Sincronizado con GBA ROM</span>
+        <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#706E66] font-mono">
+          <Gamepad2 className="w-3.5 h-3.5 text-[#5A7D62]" />
+          <span>Sincronizado con ROM</span>
         </div>
       </div>
 
@@ -241,12 +256,19 @@ export const PartyPcManager: React.FC = () => {
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-11 h-11 flex items-center justify-center shrink-0">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={POKEMON_ASSETS.getAnimatedSprite(mon.speciesId, mon.isShiny)}
-                            alt={mon.name}
-                            className="max-h-11 object-contain"
-                          />
+                          {brokenImages[`party_${idx}_${mon.speciesId}`] ? (
+                            <div className="w-9 h-9 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] flex items-center justify-center text-[#D97043] font-editorial font-bold text-xs">
+                              {mon.name.charAt(0).toUpperCase()}
+                            </div>
+                          ) : (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={POKEMON_ASSETS.getAnimatedSprite(mon.speciesId, mon.isShiny)}
+                              alt={mon.name}
+                              className="max-h-11 object-contain"
+                              onError={() => markImageBroken(`party_${idx}_${mon.speciesId}`)}
+                            />
+                          )}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -301,54 +323,55 @@ export const PartyPcManager: React.FC = () => {
                   return (
                     <motion.div
                       key={idx}
-                      whileTap={{ scale: 0.95 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => { soundFx.playClick(); setSelectedSlot(idx); }}
-                      className={`min-h-[92px] rounded-2xl border-2 flex flex-col items-center justify-between p-2 cursor-pointer transition-all relative select-none shadow-[0_3px_0_0_#000] active:translate-y-0.5 active:shadow-none ${
+                      className={`min-h-[92px] rounded-2xl border flex flex-col items-center justify-between p-2 cursor-pointer transition-all relative select-none ${
                         isSelected
-                          ? isLight
-                            ? 'bg-amber-200 border-black ring-2 ring-[#C5A059]'
-                            : 'bg-gradient-to-b from-[#C5A059]/25 to-[#14171C] border-[#C5A059] shadow-[0_0_15px_rgba(197,160,89,0.4)] ring-1 ring-[#C5A059]'
+                          ? 'bg-[#FAF9F5] border-[#D97043] shadow-sm'
                           : slotMon
-                            ? isLight
-                              ? 'bg-white border-black/40 hover:border-black'
-                              : 'bg-[#14171C] border-white/10 hover:border-[#C5A059]/60'
-                            : isLight
-                              ? 'bg-slate-100 border-dashed border-slate-300 opacity-60'
-                              : 'bg-[#0B0C0E]/70 border-dashed border-white/5 opacity-40 hover:opacity-70'
+                            ? 'bg-white border-[#E8E5DD] hover:border-[#D5D1C5]'
+                            : 'bg-[#FAF9F5]/60 border-dashed border-[#E8E5DD] opacity-60'
                       }`}
                     >
                       {slotMon ? (
                         <>
-                          <div className="w-full flex items-center justify-between text-[9px] font-mono text-slate-400">
+                          <div className="w-full flex items-center justify-between text-[9px] font-mono text-[#8A877E]">
                             <span>#{idx + 1}</span>
                             {slotMon.isShiny && (
-                              <span className="text-amber-400 font-bold drop-shadow-[0_0_4px_rgba(245,158,11,0.8)]">★</span>
+                              <span className="text-[#A6752C] font-semibold">★</span>
                             )}
                           </div>
                           <div className="w-9 h-9 flex items-center justify-center my-0.5">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={POKEMON_ASSETS.getBoxIcon(slotMon.speciesId)}
-                              alt={slotMon.name}
-                              className="w-9 h-9 object-contain [image-rendering:pixelated]"
-                            />
+                            {brokenImages[`pc_${idx}_${slotMon.speciesId}`] ? (
+                              <div className="w-7 h-7 rounded-lg bg-[#FAF9F5] border border-[#E8E5DD] flex items-center justify-center text-[#D97043] font-editorial font-bold text-[10px]">
+                                {slotMon.name.charAt(0).toUpperCase()}
+                              </div>
+                            ) : (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={POKEMON_ASSETS.getBoxIcon(slotMon.speciesId)}
+                                alt={slotMon.name}
+                                className="w-9 h-9 object-contain [image-rendering:pixelated]"
+                                onError={() => markImageBroken(`pc_${idx}_${slotMon.speciesId}`)}
+                              />
+                            )}
                           </div>
                           <div className="w-full text-center">
                             <span 
-                              className="text-[11px] font-black tracking-tight text-[#E2E8F0] block truncate w-full"
+                              className="text-[11px] font-editorial font-semibold tracking-tight text-[#1F1E1B] block truncate w-full"
                               title={slotMon.name}
                             >
                               {slotMon.name}
                             </span>
-                            <span className="text-[9px] font-mono font-bold text-[#C5A059] block -mt-0.5">
+                            <span className="text-[9px] font-mono font-medium text-[#D97043] block -mt-0.5">
                               Nv.{slotMon.level}
                             </span>
                           </div>
                         </>
                       ) : (
-                        <div className="h-full flex flex-col items-center justify-center py-2 text-slate-600">
-                          <span className="text-[11px] font-mono font-black">#{idx + 1}</span>
-                          <span className="text-[8px] font-mono uppercase tracking-wider text-slate-700">VACÍO</span>
+                        <div className="h-full flex flex-col items-center justify-center py-2 text-[#8A877E]">
+                          <span className="text-[11px] font-mono font-medium">#{idx + 1}</span>
+                          <span className="text-[8px] font-mono uppercase tracking-wider text-[#B8B4A8]">VACÍO</span>
                         </div>
                       )}
                     </motion.div>
@@ -383,14 +406,22 @@ export const PartyPcManager: React.FC = () => {
                   <motion.div
                     animate={{ y: [0, -5, 0] }}
                     transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
-                    className="relative z-10"
+                    className="relative z-10 flex items-center justify-center"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={POKEMON_ASSETS.getAnimatedSprite(currentSelectedMon.speciesId, currentSelectedMon.isShiny)}
-                      alt={currentSelectedMon.name}
-                      className="h-28 object-contain drop-shadow-sm"
-                    />
+                    {brokenImages[`detail_${currentSelectedMon.speciesId}`] ? (
+                      <div className="w-24 h-24 rounded-2xl bg-white border border-[#E8E5DD] flex flex-col items-center justify-center text-[#D97043] gap-1 shadow-sm">
+                        <Shield className="w-8 h-8 text-[#D97043]" />
+                        <span className="text-[11px] font-editorial font-bold text-[#1F1E1B]">{currentSelectedMon.name}</span>
+                      </div>
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={POKEMON_ASSETS.getAnimatedSprite(currentSelectedMon.speciesId, currentSelectedMon.isShiny)}
+                        alt={currentSelectedMon.name}
+                        className="h-28 object-contain drop-shadow-sm"
+                        onError={() => markImageBroken(`detail_${currentSelectedMon.speciesId}`)}
+                      />
+                    )}
                   </motion.div>
                   {/* Sombra elástica en el suelo */}
                   <motion.div
@@ -448,17 +479,13 @@ export const PartyPcManager: React.FC = () => {
           <div className="lg:col-span-7 flex flex-col gap-2 min-h-0">
             {/* Buscador */}
             <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" />
+              <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#8A877E]" />
               <input
                 type="text"
                 placeholder="Buscar ítem o categoría..."
                 value={bagSearch}
                 onChange={(e) => setBagSearch(e.target.value)}
-                className={`w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border outline-none font-sans ${
-                  isLight
-                    ? 'bg-slate-50 border-black/30 text-slate-900 focus:border-black'
-                    : 'bg-slate-900 border-slate-700 text-slate-100 focus:border-amber-500'
-                }`}
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-[#E8E5DD] bg-white text-[#1F1E1B] placeholder-[#8A877E] outline-none font-sans focus:border-[#D97043] transition-colors"
               />
             </div>
 
@@ -471,37 +498,42 @@ export const PartyPcManager: React.FC = () => {
                     <button
                       key={item.id}
                       onClick={() => { soundFx.playClick(); setSelectedItem(item); }}
-                      className={`p-3 rounded-xl border flex flex-col items-center justify-between transition-all cursor-pointer ${
+                      className={`p-3 rounded-2xl border flex flex-col items-center justify-between transition-all cursor-pointer ${
                         isSelected
-                          ? isLight
-                            ? 'bg-amber-100 border-2 border-black shadow-[3px_3px_0_#000]'
-                            : 'bg-amber-500/20 border-2 border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
-                          : isLight
-                          ? 'bg-[#FFFFFF] border-2 border-black/30 hover:border-black'
-                          : 'bg-[#18181b]/90 border-slate-800 hover:border-slate-700'
+                          ? 'bg-[#FAF9F5] border-[#D97043] shadow-sm'
+                          : 'bg-white border-[#E8E5DD] hover:border-[#D5D1C5]'
                       }`}
                     >
-                      <div className="w-full flex items-center justify-between text-[10px] font-bold mb-1">
-                        <span className={`px-1.5 py-0.5 rounded uppercase text-[9px] font-black ${
+                      <div className="w-full flex items-center justify-between text-[10px] font-mono mb-1">
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase ${
                           item.category === 'ball'
-                            ? 'bg-rose-500/20 text-rose-400'
+                            ? 'bg-[#D97043]/10 text-[#D97043]'
                             : item.category === 'medicine'
-                            ? 'bg-emerald-500/20 text-emerald-400'
+                            ? 'bg-[#5A7D62]/10 text-[#5A7D62]'
                             : item.category === 'berry'
-                            ? 'bg-lime-500/20 text-lime-400'
-                            : 'bg-amber-500/20 text-amber-400'
+                            ? 'bg-[#6E8B68]/10 text-[#5B7855]'
+                            : 'bg-[#D4A359]/10 text-[#A6752C]'
                         }`}>
                           {item.category}
                         </span>
                       </div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={POKEMON_ASSETS.getItemSprite(item.slug)}
-                        alt={item.name}
-                        className="w-12 h-12 object-contain my-1 filter drop-shadow-md"
-                        loading="lazy"
-                      />
-                      <span className="font-black text-xs text-center truncate w-full">{item.name}</span>
+                      <div className="w-12 h-12 flex items-center justify-center my-1">
+                        {brokenImages[`item_${item.id}`] ? (
+                          <div className="w-9 h-9 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] flex items-center justify-center text-[#D97043]">
+                            <Package className="w-4 h-4" />
+                          </div>
+                        ) : (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={POKEMON_ASSETS.getItemSprite(item.slug)}
+                            alt={item.name}
+                            className="w-10 h-10 object-contain drop-shadow-sm"
+                            loading="lazy"
+                            onError={() => markImageBroken(`item_${item.id}`)}
+                          />
+                        )}
+                      </div>
+                      <span className="font-editorial font-semibold text-xs text-[#1F1E1B] text-center truncate w-full">{item.name}</span>
                     </button>
                   );
                 })}
@@ -510,49 +542,44 @@ export const PartyPcManager: React.FC = () => {
           </div>
 
           {/* Panel Detalle del Ítem */}
-          <div
-            className={`lg:col-span-5 rounded-xl p-4 border-2 flex flex-col justify-between ${
-              isLight
-                ? 'bg-[#FFFFFF] border-black shadow-[4px_4px_0_#000]'
-                : 'bg-[#121214] border-slate-800'
-            }`}
-          >
+          <div className="lg:col-span-5 rounded-2xl p-4 border border-[#E8E5DD] bg-white flex flex-col justify-between shadow-sm">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-base font-black uppercase">{selectedItem.name}</h2>
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase border ${
+              <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#F2EFE9]">
+                <h2 className="font-editorial text-base font-semibold text-[#1F1E1B]">{selectedItem.name}</h2>
+                <span className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-full uppercase ${
                   selectedItem.category === 'ball'
-                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                    ? 'bg-[#D97043]/10 text-[#D97043]'
                     : selectedItem.category === 'medicine'
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                    : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                    ? 'bg-[#5A7D62]/10 text-[#5A7D62]'
+                    : 'bg-[#D4A359]/10 text-[#A6752C]'
                 }`}>
                   {selectedItem.category}
                 </span>
               </div>
 
               {/* Escaparate del Ítem */}
-              <div className={`h-40 w-full flex items-center justify-center my-3 rounded-2xl border border-dashed ${
-                isLight
-                  ? 'bg-amber-50 border-amber-300'
-                  : 'bg-black/20 border-amber-500/30'
-              }`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={POKEMON_ASSETS.getItemSprite(selectedItem.slug)}
-                  alt={selectedItem.name}
-                  className="w-24 h-24 object-contain filter drop-shadow-[0_8px_10px_rgba(0,0,0,0.5)] transition-transform hover:scale-125"
-                />
+              <div className="h-36 w-full flex items-center justify-center my-3 rounded-2xl border border-[#E8E5DD] bg-[#FAF9F5]">
+                {brokenImages[`detail_item_${selectedItem.id}`] ? (
+                  <div className="w-16 h-16 rounded-2xl bg-white border border-[#E8E5DD] flex items-center justify-center text-[#D97043] shadow-sm">
+                    <Package className="w-8 h-8" />
+                  </div>
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={POKEMON_ASSETS.getItemSprite(selectedItem.slug)}
+                    alt={selectedItem.name}
+                    className="w-20 h-20 object-contain drop-shadow-sm transition-transform hover:scale-110"
+                    onError={() => markImageBroken(`detail_item_${selectedItem.id}`)}
+                  />
+                )}
               </div>
 
-              <div className={`p-3 rounded-xl text-xs leading-relaxed mb-3 ${
-                isLight ? 'bg-slate-100 text-slate-700 border border-black/10' : 'bg-black/20 text-slate-300 border border-slate-800'
-              }`}>
+              <div className="p-3 rounded-xl text-xs text-[#5E5C56] leading-relaxed mb-3 bg-[#FAF9F5] border border-[#E8E5DD]">
                 {selectedItem.description}
               </div>
 
-              <div className="text-[11px] text-slate-400 font-mono">
-                <span className="font-bold text-amber-400">Offset GBA: </span>
+              <div className="text-[11px] text-[#706E66] font-mono">
+                <span className="font-medium text-[#D97043]">Offset GBA: </span>
                 0x{selectedItem.gbaItemId.toString(16).toUpperCase().padStart(4, '0')}
                 {' · Bolsillo '}
                 {selectedItem.category === 'ball' ? 'Poké Balls' : 'Objetos'}
@@ -562,14 +589,10 @@ export const PartyPcManager: React.FC = () => {
             {/* Botón Inyectar */}
             <button
               onClick={handleInjectItem}
-              className={`w-full py-3 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer mt-4 ${
-                isLight
-                  ? 'bg-[#F59E0B] hover:bg-[#d97706] text-black border-2 border-black shadow-[3px_3px_0_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none'
-                  : 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-300 border border-amber-500/60'
-              }`}
+              className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold text-white bg-[#D97043] hover:bg-[#CC6437] flex items-center justify-center gap-2 transition-all cursor-pointer mt-4 shadow-sm active:scale-[0.98]"
             >
               <Zap className="w-4 h-4" />
-              <span>INYECTAR A MOCHILA (x3)</span>
+              <span>Inyectar a Mochila GBA</span>
             </button>
           </div>
         </div>
