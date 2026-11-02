@@ -353,6 +353,34 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     });
   }, []);
 
+  // Liberar todos los botones de mGBA para evitar teclas atascadas (stuck keys)
+  const releaseAllButtons = useCallback(() => {
+    const mod = moduleRef.current;
+    if (mod) {
+      const allBtns = ['a', 'b', 'select', 'start', 'right', 'left', 'up', 'down', 'r', 'l'];
+      allBtns.forEach((btn) => {
+        try {
+          mod.buttonUnpress?.(btn);
+        } catch {}
+      });
+    }
+    setActiveKeys(new Set());
+  }, []);
+
+  // Pulsar boton con ciclo de bajada y subida garantizado (edge transition 0 -> 1 -> 0)
+  const pulseButton = useCallback((button: string, holdMs = 90) => {
+    const mod = moduleRef.current;
+    if (mod) {
+      try {
+        mod.buttonUnpress?.(button);
+      } catch {}
+    }
+    handleButton(button, true);
+    setTimeout(() => {
+      handleButton(button, false);
+    }, holdMs);
+  }, [handleButton]);
+
   // Listar partidas disponibles en Supabase Storage y LocalStorage
   const refreshSlotsList = useCallback(async () => {
     try {
@@ -1111,13 +1139,21 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       }
     };
 
+    const handleBlur = () => {
+      releaseAllButtons();
+    };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', handleBlur);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleBlur);
     };
-  }, [keyBindings, handleButton, rebindingAction]);
+  }, [keyBindings, handleButton, releaseAllButtons, rebindingAction]);
 
 
   // Pausa / Reanudar (Sin sobreescribir la partida automáticamente)
@@ -1245,9 +1281,14 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           ref={canvasRef}
           width={240}
           height={160}
-          className={`w-full h-full [image-rendering:pixelated] transition-transform duration-300 ${
+          onClick={() => {
+            soundFx.playClick();
+            pulseButton('A');
+          }}
+          className={`w-full h-full cursor-pointer [image-rendering:pixelated] transition-transform duration-300 active:scale-[0.99] ${
             screenScaleMode === 'wide' ? 'object-cover' : 'object-contain'
           }`}
+          title="Haz clic en la pantalla para interactuar / pulsar Boton A"
           style={{ imageRendering: 'pixelated' }}
         />
 
@@ -1793,23 +1834,72 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         </div>
       </div>
 
-      {/* Barra de atajos de teclado para PC */}
-      <div className="hidden lg:flex items-center justify-center gap-3 py-1.5 px-3 border-t border-[#E8E5DD] bg-[#FAF9F5] text-[10px] font-mono text-[#5E5C56]">
-        <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">A</kbd> o <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">Z</kbd> Botón A (Hablar / Stats / Elegir)
-        </span>
-        <span className="text-[#C4C0B5]">•</span>
-        <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">B</kbd> o <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">X</kbd> Botón B (Cancelar / Correr)
-        </span>
-        <span className="text-[#C4C0B5]">•</span>
-        <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">Flechas</kbd> Mover
-        </span>
-        <span className="text-[#C4C0B5]">•</span>
-        <span className="flex items-center gap-1">
-          <kbd className="px-1.5 py-0.5 rounded border border-[#D5D2C7] bg-white font-bold text-[#1F1E1B] shadow-[0_1px_1px_rgba(0,0,0,0.06)]">Enter</kbd> Menú Pokémon (Start)
-        </span>
+      {/* Barra de atajos y controles interactivos tactiles para PC */}
+      <div className="hidden lg:flex items-center justify-between gap-3 py-2 px-3 border-t border-[#E8E5DD] bg-[#FAF9F5] text-xs font-mono">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-bold text-[#8A877E] uppercase tracking-wider">Controles PC:</span>
+          
+          {/* Boton A interactivo */}
+          <button
+            type="button"
+            onMouseDown={() => { soundFx.playClick(); handleButton('A', true); }}
+            onMouseUp={() => handleButton('A', false)}
+            onClick={() => pulseButton('A')}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 border-[#991B1B] bg-[#DC2626] text-white font-bold text-xs shadow-[0_2px_0_0_#7F1D1D] active:translate-y-0.5 active:shadow-none hover:bg-[#EF4444] transition-all cursor-pointer"
+            title="Pulsar Boton A (Aceptar / Ver stats / Hablar). Tambien puedes pulsar las teclas A o Z en el teclado."
+          >
+            <span className="inline-block px-1 py-0.2 bg-black/20 rounded text-[10px]">A / Z</span>
+            <span>BOTON A</span>
+          </button>
+
+          {/* Boton B interactivo */}
+          <button
+            type="button"
+            onMouseDown={() => { soundFx.playClick(); handleButton('B', true); }}
+            onMouseUp={() => handleButton('B', false)}
+            onClick={() => pulseButton('B')}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 border-[#1E3A8A] bg-[#2563EB] text-white font-bold text-xs shadow-[0_2px_0_0_#1E40AF] active:translate-y-0.5 active:shadow-none hover:bg-[#3B82F6] transition-all cursor-pointer"
+            title="Pulsar Boton B (Cancelar / Correr). Tambien puedes pulsar B o X en el teclado."
+          >
+            <span className="inline-block px-1 py-0.2 bg-black/20 rounded text-[10px]">B / X</span>
+            <span>BOTON B</span>
+          </button>
+
+          {/* Boton START interactivo */}
+          <button
+            type="button"
+            onClick={() => { soundFx.playClick(); pulseButton('Start'); }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded border border-[#C8C2B6] bg-white text-[#1F1E1B] font-bold text-[10px] shadow-[0_1px_0_0_#C8C2B6] active:translate-y-0.5 active:shadow-none hover:bg-[#F2EFE9] transition-all cursor-pointer"
+            title="Abrir Menu Pokemon (Enter)"
+          >
+            <span>[Enter] START</span>
+          </button>
+
+          {/* Boton SELECT interactivo */}
+          <button
+            type="button"
+            onClick={() => { soundFx.playClick(); pulseButton('Select'); }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded border border-[#C8C2B6] bg-white text-[#1F1E1B] font-bold text-[10px] shadow-[0_1px_0_0_#C8C2B6] active:translate-y-0.5 active:shadow-none hover:bg-[#F2EFE9] transition-all cursor-pointer"
+            title="Ordenar / Select"
+          >
+            <span>[Espacio] SELECT</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Boton para liberar teclas atascadas */}
+          <button
+            type="button"
+            onClick={() => {
+              soundFx.playClick();
+              releaseAllButtons();
+            }}
+            className="text-[10px] text-[#8A877E] hover:text-[#DC2626] border border-[#E8E5DD] hover:border-[#DC2626]/40 bg-white px-2 py-0.5 rounded transition-all cursor-pointer"
+            title="Si alguna tecla se quedo atascada o no responde, haz clic aqui para resetearla al instante."
+          >
+            🔄 Resetear Teclas
+          </button>
+        </div>
       </div>
 
       <MobileControls onButton={handleButton} activeKeys={activeKeys} />
