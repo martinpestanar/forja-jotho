@@ -380,6 +380,46 @@ export class PokemonMemoryBridge {
   }
 
   /**
+   * Escanea los tesoros del jugador en la ROM (Pepitas, Perlas, Fósiles)
+   * y opcionalmente los purga tras confirmación del Oráculo de Supabase.
+   */
+  public async scanOrPurgeTreasures(purge: boolean = false): Promise<{
+    treasures: Array<{ itemId: number; quantity: number; name: string }>;
+    success: boolean;
+  }> {
+    if (!this.emulator) {
+      return { treasures: [], success: false };
+    }
+
+    try {
+      this.emulator.pause();
+      const rawSav = this.emulator.readSaveFile();
+      if (!rawSav || rawSav.byteLength < 0x1C000) {
+        this.emulator.resume();
+        return { treasures: [], success: false };
+      }
+
+      const manipulator = new GbaSaveManipulator(rawSav);
+      const { extracted, updatedSav } = manipulator.extractAndPurgeTreasures(purge);
+
+      if (purge && updatedSav) {
+        this.emulator.writeSaveFile(updatedSav);
+      }
+      this.emulator.resume();
+
+      if (purge && updatedSav) {
+        await this.syncSaveToCloud();
+      }
+
+      return { treasures: extracted, success: true };
+    } catch (err) {
+      console.error('[MemoryBridge] Error scan/purge treasures:', err);
+      this.emulator.resume();
+      return { treasures: [], success: false };
+    }
+  }
+
+  /**
    * Procesa ítems pendientes de inyección desde shop_inventory filtrando estrictamente
    * por injection_status = 'pending' y marcándolos como 'delivered' (Punto Ciego 6).
    */

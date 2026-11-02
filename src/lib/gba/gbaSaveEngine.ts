@@ -758,6 +758,79 @@ export class GbaSaveManipulator {
   }
 
   /**
+   * Extrae los tesoros vendibles (Nuggets, Perlas, Fósiles, Setas) del bolsillo ITEMS del .sav
+   * y opcionalmente los purga a 0 (eliminación atómica con recalibración de Checksum).
+   */
+  public extractAndPurgeTreasures(purge: boolean = false): {
+    extracted: Array<{ itemId: number; quantity: number; name: string }>;
+    updatedSav?: Uint8Array;
+  } {
+    const { sectorMap } = this.getActiveSlotMap();
+    const sec0Sector = sectorMap.get(0);
+    const sec1Sector = sectorMap.get(1);
+    if (sec0Sector === undefined || sec1Sector === undefined) {
+      throw new Error('Secciones 0 y/o 1 no encontradas en el slot activo');
+    }
+    const sec0Base = sec0Sector * SECTOR_SIZE;
+    const sec1Base = sec1Sector * SECTOR_SIZE;
+
+    const encryptionKey = this.view.getUint32(sec0Base + this.activeOffsets.SB2_ENCRYPTION_KEY, true);
+    const key16 = encryptionKey & 0xFFFF;
+
+    // Catálogo de Tesoros según GDD v7.0 (IDs de Emerald / HnS v2.0.6)
+    const TREASURE_NAMES: Record<number, string> = {
+      133: 'Chapa Plateada',
+      134: 'Chapa Dorada',
+      135: 'Pepita',
+      136: 'Maxipepita',
+      137: 'Mini Seta',
+      138: 'Seta Grande',
+      139: 'Seta Aroma',
+      140: 'Perla',
+      141: 'Gran Perla',
+      142: 'Sarta de Perlas',
+      143: 'Polvoestelar',
+      144: 'Trozo Estrella',
+      145: 'Trozo Cometa',
+      152: 'Escama Corazón',
+      154: 'Hueso Raro',
+    };
+
+    const pocketInfo = this.activeOffsets.SB1_BAG_ITEMS;
+    const extracted: Array<{ itemId: number; quantity: number; name: string }> = [];
+    let modified = false;
+
+    for (let slot = 0; slot < pocketInfo.maxSlots; slot++) {
+      const slotAddr = sec1Base + pocketInfo.offset + slot * 4;
+      const itemId = this.view.getUint16(slotAddr, true);
+      if (itemId === 0) continue;
+
+      if (TREASURE_NAMES[itemId]) {
+        const encryptedQty = this.view.getUint16(slotAddr + 2, true);
+        const qty = encryptedQty ^ key16;
+        if (qty > 0) {
+          extracted.push({ itemId, quantity: qty, name: TREASURE_NAMES[itemId] });
+          if (purge) {
+            // Purgar slot a 0x0000
+            this.view.setUint16(slotAddr, 0, true);
+            this.view.setUint16(slotAddr + 2, 0 ^ key16, true);
+            modified = true;
+          }
+        }
+      }
+    }
+
+    if (purge && modified) {
+      const newChecksum = GbaSaveManipulator.calculateSectionChecksum(
+        this.view, sec1Base, this.activeSectionSizes[1]
+      );
+      this.view.setUint16(sec1Base + 0x0FF6, newChecksum, true);
+    }
+
+    return { extracted, updatedSav: modified ? this.buffer : undefined };
+  }
+
+  /**
    * Inyecta un Pokémon completo (100 bytes) directamente en el equipo del jugador (SaveBlock1)
    * o en la PC Box 1 (Section 5) si el equipo está lleno.
    */

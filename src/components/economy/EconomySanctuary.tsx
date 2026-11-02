@@ -224,9 +224,34 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
         {/* ================= PESTAÑA 0: EL RANCHO SYNDEX (4H WORK-LOCK) ================= */}
         {tab === 'rancho' && <RanchSection />}
 
-        {/* ================= PESTAÑA 1: BÓVEDA ================= */}
+        {/* ================= PESTAÑA 1: BÓVEDA & COFRE DE EXPORTACIÓN ================= */}
         {tab === 'boveda' && (
-          <div className="space-y-2">
+          <div className="space-y-3">
+            {/* Banner de Sincronización del Cofre con la ROM */}
+            <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-lg bg-amber-500/20 text-amber-500 font-bold">
+                  <Package className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-amber-400">Cofre de Exportación (.sav ↔ WebApp)</h4>
+                  <p className="text-[11px] text-stone-400">
+                    Liquida Pepitas, Perlas y Fósiles hallados en la ROM a precio oficial de Johto con eliminación atómica.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playCoin();
+                  flash('Escaneando mochila del emulador en busca de tesoros...');
+                }}
+                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all shadow-md active:scale-95 shrink-0"
+              >
+                Escanear .SAV
+              </button>
+            </div>
+
             {(snapshot?.vault ?? []).length === 0 ? (
               <div className="hq-panel flex flex-col items-center gap-2 p-6 text-center">
                 <Package className="h-5 w-5 text-[#8A877E]" />
