@@ -85,8 +85,8 @@ const DEFAULT_KEY_BINDINGS: Record<string, string> = {
   Down: 'ArrowDown',
   Left: 'ArrowLeft',
   Right: 'ArrowRight',
-  A: 'KeyA',
-  B: 'KeyB',
+  A: 'KeyZ',
+  B: 'KeyX',
   Start: 'Enter',
   Select: 'Space',
   L: 'KeyQ',
@@ -192,11 +192,6 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       const saved = localStorage.getItem('syndex_gba_keybindings');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.A === 'KeyZ' || !parsed.A) {
-          parsed.A = 'KeyA';
-          if (parsed.B === 'KeyX' || !parsed.B) parsed.B = 'KeyB';
-          localStorage.setItem('syndex_gba_keybindings', JSON.stringify(parsed));
-        }
         setKeyBindings(parsed);
       }
     } catch {}
@@ -1078,15 +1073,14 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       codeToGba[code] = action;
     });
 
-    // Mapeo dual y seguro para Boton A (Aceptar / Hablar / Ver stats):
-    // Si la tecla fisica 'KeyA' no esta remapeada a otra accion, activa 'A'
-    if (!codeToGba['KeyA'] && keyBindings['Left'] !== 'KeyA') codeToGba['KeyA'] = 'A';
-    // 'KeyZ' tambien activa 'A' (compatibilidad con emuladores clasicos mGBA/VBA)
-    if (!codeToGba['KeyZ'] && keyBindings['B'] !== 'KeyZ') codeToGba['KeyZ'] = 'A';
+    // Mapeo universal y prioritario:
+    // Z y A SIEMPRE son Botón A
+    codeToGba['KeyZ'] = 'A';
+    codeToGba['KeyA'] = 'A';
 
-    // Mapeo dual para Boton B:
-    if (!codeToGba['KeyB'] && keyBindings['A'] !== 'KeyB') codeToGba['KeyB'] = 'B';
-    if (!codeToGba['KeyX'] && keyBindings['A'] !== 'KeyX') codeToGba['KeyX'] = 'B';
+    // X y B SIEMPRE son Botón B (Cancelar / Correr)
+    codeToGba['KeyX'] = 'B';
+    codeToGba['KeyB'] = 'B';
 
     // Mapear teclas alternativas para movimiento (Flechas y WASD secundario SIN secuestrar la tecla A)
     if (!codeToGba['ArrowUp'] && keyBindings['Up'] !== 'ArrowUp') codeToGba['ArrowUp'] = 'Up';
@@ -1114,6 +1108,14 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
       if (gbaBtn) {
         e.preventDefault();
+        // Si el usuario mantiene pulsada la tecla o hay repetición del sistema operativo,
+        // forzamos una transición limpia (unpress -> press) para que el motor GBA (JOY_NEW)
+        // registre cada pulsación sin ignorar menús como el del equipo Pokémon.
+        if (e.repeat) {
+          handleButton(gbaBtn, false);
+          setTimeout(() => handleButton(gbaBtn, true), 16);
+          return;
+        }
         handleButton(gbaBtn, true);
         soundFx.playClick();
       }
