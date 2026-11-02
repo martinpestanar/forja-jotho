@@ -1073,23 +1073,23 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       codeToGba[code] = action;
     });
 
-    // Mapeo universal y prioritario:
-    // Z y A SIEMPRE son Botón A
-    codeToGba['KeyZ'] = 'A';
-    codeToGba['KeyA'] = 'A';
+    // 1. Movimiento WASD completo:
+    codeToGba['KeyW'] = 'Up';
+    codeToGba['KeyA'] = 'Left';    // ¡Tecla A = Mover a la Izquierda!
+    codeToGba['KeyS'] = 'Down';
+    codeToGba['KeyD'] = 'Right';
 
-    // X y B SIEMPRE son Botón B (Cancelar / Correr)
-    codeToGba['KeyX'] = 'B';
-    codeToGba['KeyB'] = 'B';
+    // 2. Movimiento Flechas:
+    codeToGba['ArrowUp'] = 'Up';
+    codeToGba['ArrowDown'] = 'Down';
+    codeToGba['ArrowLeft'] = 'Left';
+    codeToGba['ArrowRight'] = 'Right';
 
-    // Mapear teclas alternativas para movimiento (Flechas y WASD secundario SIN secuestrar la tecla A)
-    if (!codeToGba['ArrowUp'] && keyBindings['Up'] !== 'ArrowUp') codeToGba['ArrowUp'] = 'Up';
-    if (!codeToGba['ArrowDown'] && keyBindings['Down'] !== 'ArrowDown') codeToGba['ArrowDown'] = 'Down';
-    if (!codeToGba['ArrowLeft'] && keyBindings['Left'] !== 'ArrowLeft') codeToGba['ArrowLeft'] = 'Left';
-    if (!codeToGba['ArrowRight'] && keyBindings['Right'] !== 'ArrowRight') codeToGba['ArrowRight'] = 'Right';
-    if (!codeToGba['KeyW'] && keyBindings['Up'] !== 'KeyW') codeToGba['KeyW'] = 'Up';
-    if (!codeToGba['KeyD'] && keyBindings['Right'] !== 'KeyD') codeToGba['KeyD'] = 'Right';
-    if (!codeToGba['KeyS'] && keyBindings['Down'] !== 'KeyS' && keyBindings['B'] !== 'KeyS') codeToGba['KeyS'] = 'Down';
+    // 3. Botones de acción GBA:
+    codeToGba['KeyZ'] = 'A';        // Tecla Z = Botón A (Aceptar / Interactuar)
+    codeToGba['KeyX'] = 'B';        // Tecla X = Botón B (Cancelar / Correr)
+    codeToGba['Enter'] = 'Start';    // Enter = Start (Menú)
+    codeToGba['Space'] = 'Select';   // Espacio = Select
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (rebindingAction) return;
@@ -1100,8 +1100,12 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       // Fallback directo por carácter físico (cero fallos sin importar layout de teclado o locale)
       if (!gbaBtn && e.key) {
         const k = e.key.toLowerCase();
-        if (k === 'a' || k === 'z') gbaBtn = 'A';
-        else if (k === 'b' || k === 'x') gbaBtn = 'B';
+        if (k === 'w') gbaBtn = 'Up';
+        else if (k === 'a') gbaBtn = 'Left';
+        else if (k === 's') gbaBtn = 'Down';
+        else if (k === 'd') gbaBtn = 'Right';
+        else if (k === 'z') gbaBtn = 'A';
+        else if (k === 'x') gbaBtn = 'B';
         else if (k === 'enter') gbaBtn = 'Start';
         else if (k === ' ') gbaBtn = 'Select';
       }
@@ -1129,8 +1133,12 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       let gbaBtn = codeToGba[e.code];
       if (!gbaBtn && e.key) {
         const k = e.key.toLowerCase();
-        if (k === 'a' || k === 'z') gbaBtn = 'A';
-        else if (k === 'b' || k === 'x') gbaBtn = 'B';
+        if (k === 'w') gbaBtn = 'Up';
+        else if (k === 'a') gbaBtn = 'Left';
+        else if (k === 's') gbaBtn = 'Down';
+        else if (k === 'd') gbaBtn = 'Right';
+        else if (k === 'z') gbaBtn = 'A';
+        else if (k === 'x') gbaBtn = 'B';
         else if (k === 'enter') gbaBtn = 'Start';
         else if (k === ' ') gbaBtn = 'Select';
       }
@@ -1850,8 +1858,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
             className="flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 border-[#991B1B] bg-[#DC2626] text-white font-bold text-xs shadow-[0_2px_0_0_#7F1D1D] active:translate-y-0.5 active:shadow-none hover:bg-[#EF4444] transition-all cursor-pointer"
             title="Pulsar Boton A (Aceptar / Ver stats / Hablar). Tambien puedes pulsar las teclas A o Z en el teclado."
           >
-            <span className="inline-block px-1 py-0.2 bg-black/20 rounded text-[10px]">A / Z</span>
-            <span>BOTON A</span>
+            <span className="inline-block px-1 py-0.2 bg-black/20 rounded text-[10px]">Z</span>
+            <span>BOTÓN A</span>
           </button>
 
           {/* Boton B interactivo */}
@@ -1863,8 +1871,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
             className="flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 border-[#1E3A8A] bg-[#2563EB] text-white font-bold text-xs shadow-[0_2px_0_0_#1E40AF] active:translate-y-0.5 active:shadow-none hover:bg-[#3B82F6] transition-all cursor-pointer"
             title="Pulsar Boton B (Cancelar / Correr). Tambien puedes pulsar B o X en el teclado."
           >
-            <span className="inline-block px-1 py-0.2 bg-black/20 rounded text-[10px]">B / X</span>
-            <span>BOTON B</span>
+            <span className="inline-block px-1 py-0.2 bg-black/20 rounded text-[10px]">X</span>
+            <span>BOTÓN B</span>
           </button>
 
           {/* Boton START interactivo */}
