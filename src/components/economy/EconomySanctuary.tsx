@@ -454,103 +454,128 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
               </div>
             </div>
 
-            {sortedMarket.map((row) => {
-              const up = (row.change_pct ?? 0) >= 0;
-              const holding = vaultByItem.get(row.item_id);
-              const pnlPct =
-                holding && holding.avgPrice > 0
-                  ? Math.round(((row.sell_price - holding.avgPrice) * 100) / holding.avgPrice)
-                  : null;
+            {/* Lista de Cotizaciones Mobile-First */}
+            <div className="grid gap-2.5">
+              {sortedMarket.map((row) => {
+                const up = (row.change_pct ?? 0) >= 0;
+                const holding = vaultByItem.get(row.item_id);
+                const pnlPct =
+                  holding && holding.avgPrice > 0
+                    ? Math.round(((row.sell_price - holding.avgPrice) * 100) / holding.avgPrice)
+                    : null;
 
-              return (
-                <div key={row.item_id} className="hq-card flex flex-wrap items-center justify-between gap-3 p-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 truncate text-xs font-semibold text-[#1F1E1B]">
-                      {row.display_name}
-                      {holding && holding.qty > 0 && (
-                        <span className="hq-chip text-[9px]">
-                          En Bóveda: x{holding.qty}
-                          {pnlPct !== null ? ` (${pnlPct >= 0 ? '+' : ''}${pnlPct}%)` : ''}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-0.5 flex items-center gap-2">
-                      <span
-                        className="hq-mono flex items-center gap-1 text-[10px] font-semibold"
-                        style={{ color: up ? 'var(--hq-cto)' : 'var(--hq-danger)' }}
-                      >
-                        {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                        {up ? '+' : ''}
-                        {row.change_pct ?? 0}% hoy
-                      </span>
-                      <span className="hq-mono text-[10px] text-[#8A877E]">
-                        Base: {currency(row.base_price)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <div className="mr-1 text-right">
-                      <span className="hq-label">Compra</span>
-                      <div className="hq-mono text-xs font-semibold tabular-nums text-[#1F1E1B]">
-                        {currency(row.buy_price)}
+                return (
+                  <div
+                    key={row.item_id}
+                    className="rounded-2xl border border-[#E8E5DD] bg-white p-3 shadow-sm hover:border-[#D5D1C5] transition-all flex flex-col gap-2.5"
+                  >
+                    {/* Nivel 1: Identificador, variación porcentual y precio actual */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate text-xs font-semibold text-[#1F1E1B]">
+                            {row.display_name}
+                          </span>
+                          {holding && holding.qty > 0 && (
+                            <span className="inline-flex items-center rounded-md bg-[#FAF9F5] border border-[#E8E5DD] px-1.5 py-0.5 text-[9px] font-medium text-[#706E66]">
+                              En Bóveda: x{holding.qty}
+                              {pnlPct !== null && (
+                                <span className={pnlPct >= 0 ? 'ml-1 text-[#5A7D62]' : 'ml-1 text-[#D97043]'}>
+                                  ({pnlPct >= 0 ? '+' : ''}{pnlPct}%)
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-2">
+                          <span
+                            className="hq-mono flex items-center gap-0.5 text-[10px] font-semibold"
+                            style={{ color: up ? 'var(--hq-cto)' : 'var(--hq-danger)' }}
+                          >
+                            {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                            {up ? '+' : ''}
+                            {row.change_pct ?? 0}%
+                          </span>
+                          <span className="hq-mono text-[10px] text-[#8A877E]">
+                            Base: {currency(row.base_price)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Precio de Cotización Destacado */}
+                      <div className="text-right shrink-0">
+                        <span className="hq-label text-[9px] block">Precio compra</span>
+                        <div className="hq-mono text-sm font-bold tabular-nums text-[#1F1E1B]">
+                          {currency(row.buy_price)}
+                        </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        soundFx.playClick();
-                        const res = await buy(row.item_id, 1);
-                        if (res.success) {
-                          soundFx.playCoin();
-                          flash(`${row.display_name} x1 guardada en Bóveda.`);
-                        } else {
-                          soundFx.playDamage();
-                          flash(res.error || 'No se pudo comprar.');
-                        }
-                      }}
-                      className="hq-btn hq-btn-primary h-7 px-2 text-[10px]"
-                    >
-                      +1
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        soundFx.playClick();
-                        const res = await buy(row.item_id, 5);
-                        if (res.success) {
-                          soundFx.playCoin();
-                          confetti({ particleCount: 25, spread: 45, origin: { y: 0.7 } });
-                          flash(`${row.display_name} x5 acumuladas en Bóveda.`);
-                        } else {
-                          soundFx.playDamage();
-                          flash(res.error || 'No se pudo comprar x5.');
-                        }
-                      }}
-                      className="hq-btn hq-btn-primary h-7 px-2 text-[10px]"
-                    >
-                      +5
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        soundFx.playClick();
-                        const res = await sell(row.item_id, 1);
-                        if (res.success) {
-                          soundFx.playCoin();
-                          flash(`Vendida por ${currency(row.sell_price)}.`);
-                        } else {
-                          soundFx.playDamage();
-                          flash(res.error || 'No se pudo vender.');
-                        }
-                      }}
-                      className="hq-btn hq-btn-ghost h-7 px-2 text-[10px]"
-                    >
-                      Vender {currency(row.sell_price)}
-                    </button>
+
+                    {/* Nivel 2: Botones de acción táctiles y limpios */}
+                    <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-[#F4F1EA]">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            soundFx.playClick();
+                            const res = await buy(row.item_id, 1);
+                            if (res.success) {
+                              soundFx.playCoin();
+                              flash(`${row.display_name} x1 guardada en Bóveda.`);
+                            } else {
+                              soundFx.playDamage();
+                              flash(res.error || 'No se pudo comprar.');
+                            }
+                          }}
+                          className="h-8 min-w-[38px] px-2.5 rounded-xl border border-[#E8E5DD] bg-[#FAF9F5] hover:bg-[#F2EFE9] text-xs font-semibold text-[#1F1E1B] transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                          title="Comprar 1 unidad"
+                        >
+                          +1
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            soundFx.playClick();
+                            const res = await buy(row.item_id, 5);
+                            if (res.success) {
+                              soundFx.playCoin();
+                              confetti({ particleCount: 25, spread: 45, origin: { y: 0.7 } });
+                              flash(`${row.display_name} x5 acumuladas en Bóveda.`);
+                            } else {
+                              soundFx.playDamage();
+                              flash(res.error || 'No se pudo comprar x5.');
+                            }
+                          }}
+                          className="h-8 min-w-[38px] px-2.5 rounded-xl border border-[#E8E5DD] bg-[#FAF9F5] hover:bg-[#F2EFE9] text-xs font-semibold text-[#1F1E1B] transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                          title="Comprar 5 unidades"
+                        >
+                          +5
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          soundFx.playClick();
+                          const res = await sell(row.item_id, 1);
+                          if (res.success) {
+                            soundFx.playCoin();
+                            flash(`Vendida por ${currency(row.sell_price)}.`);
+                          } else {
+                            soundFx.playDamage();
+                            flash(res.error || 'No se pudo vender.');
+                          }
+                        }}
+                        className="h-8 flex-1 max-w-[150px] px-3 rounded-xl border border-[#E8E5DD] bg-white hover:bg-[#FAF9F5] text-xs font-semibold text-[#1F1E1B] transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer truncate shadow-xs"
+                      >
+                        <span className="text-[#8A877E] text-[10px]">Vender</span>
+                        <span className="hq-mono font-bold text-[#5A7D62]">{currency(row.sell_price)}</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
 

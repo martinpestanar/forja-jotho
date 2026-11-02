@@ -35,13 +35,9 @@ const CATALOG_ITEMS = EXPANDED_SHOP_CATALOG;
 const FLOORS: { id: ShopFloor; label: string; floorNum: string; icon: any }[] = [
   { id: 'eggs', label: 'Huevos de Crianza', floorNum: '1F', icon: Egg },
   { id: 'breeding', label: 'Genética & Crianza', floorNum: '2F', icon: Dna },
-  { id: 'mints', label: 'Máquinas de Naturaleza', floorNum: '2F-B', icon: Sparkles },
   { id: 'specials', label: 'Pokémon Especiales', floorNum: '3F', icon: Sparkles },
   { id: 'supplies', label: 'Bolsillos GBA', floorNum: '4F', icon: Zap },
-  { id: 'tms', label: 'Máquinas Técnicas (MT)', floorNum: '4F-B', icon: Zap },
-  { id: 'pokemon_costumes', label: 'Equipamiento & Armaduras', floorNum: '5F', icon: Shield },
-  { id: 'trainer_skins', label: 'Skins de Entrenador', floorNum: '6F', icon: UserCheck },
-  { id: 'cosmetics', label: 'Auras & Títulos Web', floorNum: '7F', icon: Glasses },
+  { id: 'tms', label: 'Máquinas Técnicas (MT)', floorNum: '5F', icon: Zap },
 ];
 
 function currency(value: number) {
