@@ -41,37 +41,31 @@ interface TrainerState {
 
 const DEFAULT_PROFILE: TrainerProfile = {
   id: 'guest-trainer-id',
-  trainer_name: 'Gold Neo',
+  trainer_name: 'Entrenador',
   starter_pokemon: 'cyndaquil',
   nature_role: 'fuego_ui',
-  current_level: 5,
-  xp: 450,
-  pokedollars: 99999, // Modo Admin / Pruebas
-  streak_days: 7,
-  battery_minutes: 999,
-  egg_steps: 40,
+  current_level: 1,
+  xp: 0,
+  pokedollars: 250, // Balance inicial limpio para nuevo usuario
+  streak_days: 1,
+  battery_minutes: 120, // 2 Horas garantizadas
+  egg_steps: 0,
   parent_whatsapp: null,
-  equipped_accessory: 'Visor Cyberpunk Oro',
+  equipped_accessory: null,
   equipped_trainer_cosmetics: {
-    eyewear: 'COSMETIC_CYBER_VISOR',
-    aura: 'COSMETIC_NEON_AURA',
+    eyewear: null,
+    aura: null,
     headwear: null,
     clothing: null,
   },
   equipped_pokemon_cosmetics: {
-    targetPokemonId: 155, // Cyndaquil por defecto
-    eyewear: 'COSMETIC_CYBER_VISOR',
-    headwear: 'COSMETIC_TRAINER_CAP',
-    aura: 'COSMETIC_NEON_AURA',
+    targetPokemonId: 155,
+    eyewear: null,
+    headwear: null,
+    aura: null,
   },
-  cosmetics_inventory: [
-    'COSMETIC_CYBER_VISOR',
-    'COSMETIC_NEON_AURA',
-    'COSMETIC_TRAINER_CAP',
-  ],
-  gba_party_json: [
-    { name: 'Cyndaquil', speciesId: 155, level: 12, hp: 35, maxHp: 35, type: 'fire', isShiny: false }
-  ],
+  cosmetics_inventory: [],
+  gba_party_json: [], // Equipo vacío para iniciar desde cero en la ROM
   sav_file_url: null,
 };
 

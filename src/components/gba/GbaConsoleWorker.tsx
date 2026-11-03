@@ -807,12 +807,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
               initialSavBytes = new Uint8Array(await fallbackData.arrayBuffer());
             } else if (currentUid !== 'guest-trainer-id') {
               // Fallback a guest save si el usuario recién se logueó
-              const { data: guestData } = await supabase.storage
-                .from(SAV_BUCKET)
-                .download('guest-trainer-id/slot_1.sav');
-              if (guestData) {
-                initialSavBytes = new Uint8Array(await guestData.arrayBuffer());
-              }
+              // Usuario nuevo: arrancar partida limpia sin heredar el savegame de pruebas de admin
             }
           }
         } catch (cloudErr) {
@@ -1915,6 +1910,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     </div>
   );
 };
+
 
 
 
