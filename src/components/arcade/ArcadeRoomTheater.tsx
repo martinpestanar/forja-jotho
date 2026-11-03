@@ -202,56 +202,56 @@ export const ArcadeRoomTheater: React.FC = () => {
           : 'invisible pointer-events-none opacity-0'
       }`}
     >
-      {/* Cabecera */}
-      <header className="shrink-0 border-b border-[#E8E5DD] bg-[#FAF9F5]/95 backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
+      {/* Cabecera Limpia & Editorial Mobile-First */}
+      <header className="shrink-0 border-b border-[#E8E5DD] bg-[#FAF9F5] px-4 py-2.5">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2">
+          {/* Botón Atrás + Título */}
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               type="button"
               onClick={() => {
                 soundFx.playClick();
                 closeArcadeRoom();
               }}
-              className="hq-btn hq-btn-ghost shrink-0 py-1.5 text-[11px]"
-              title="Volver al HQ (ESC)"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E8E5DD] bg-white text-[#1F1E1B] shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Volver"
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Volver al HQ</span>
+              <ArrowLeft className="h-4 w-4 stroke-[2.2]" />
             </button>
 
             <div className="min-w-0">
-              <span className="hq-label">Sala arcade</span>
-              <h1 className="hq-title truncate text-lg leading-tight sm:text-xl">
+              <span className="font-editorial block truncate text-sm font-semibold tracking-tight text-[#1F1E1B]">
                 Pokémon Heart & Soul
-              </h1>
+              </span>
+              <span className="font-mono block text-[10px] text-[#706E66]">
+                mGBA Johto Edition
+              </span>
             </div>
           </div>
 
+          {/* Batería & Cerrar */}
           <div className="flex shrink-0 items-center gap-2">
-            <span
-              className="hq-chip"
-              style={{
-                color: batteryMinutes > 0 ? 'var(--hq-cto)' : 'var(--hq-danger)',
-                borderColor:
-                  batteryMinutes > 0 ? 'rgba(90,125,98,0.35)' : 'rgba(217,83,79,0.35)',
-                backgroundColor:
-                  batteryMinutes > 0 ? 'rgba(90,125,98,0.08)' : 'rgba(217,83,79,0.08)',
-              }}
+            <div
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-mono font-medium ${
+                batteryMinutes > 0
+                  ? 'border-[#5A7D62]/30 bg-[#5A7D62]/10 text-[#4C6151]'
+                  : 'border-[#D9534F]/30 bg-[#D9534F]/10 text-[#B2403C]'
+              }`}
             >
               <BatteryCharging className="h-3.5 w-3.5" />
-              <span className="tabular-nums">{batteryMinutes} min</span>
-            </span>
-            <span className="hq-chip hidden lg:inline">ESC para salir</span>
+              <span className="tabular-nums font-semibold">{batteryMinutes} min</span>
+            </div>
+
             <button
               type="button"
               onClick={() => {
                 soundFx.playClick();
                 closeArcadeRoom();
               }}
-              className="hq-focus rounded-lg border border-[#E8E5DD] bg-white p-2 text-[#5E5C56] transition-colors hover:text-[#1F1E1B]"
-              aria-label="Cerrar sala"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E8E5DD] bg-white text-[#706E66] shadow-sm transition-all hover:text-[#1F1E1B] active:scale-95 cursor-pointer"
+              aria-label="Cerrar"
             >
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4 stroke-[2.2]" />
             </button>
           </div>
         </div>

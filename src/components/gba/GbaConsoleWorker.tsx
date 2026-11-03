@@ -257,7 +257,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     } catch {}
   };
 
-  const batteryMinutes = profile?.battery_minutes ?? 42;
+  const batteryMinutes = profile?.battery_minutes ?? 120;
   const isDrained = batteryMinutes <= 0;
   const isLight = true;
   const userId = profile?.id ?? 'guest-trainer-id';
@@ -1915,5 +1915,6 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     </div>
   );
 };
+
 
 

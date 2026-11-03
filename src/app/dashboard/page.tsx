@@ -196,6 +196,14 @@ export default function DashboardPage() {
       }
 
       setProfileData(prof);
+      // Sincronizar en el store global para que el emulador y la cabecera lean el perfil real
+      useTrainerStore.getState().setProfile({
+        ...useTrainerStore.getState().profile,
+        id: prof.id,
+        battery_minutes: prof.battery_minutes ?? 120,
+        pokedollars: prof.sovereignty_gold ?? 250,
+      } as any);
+
       if (prof.temperance_last_date === todayStr) {
         setTemperanceConfirmedToday(true);
       }

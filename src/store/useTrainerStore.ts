@@ -227,7 +227,34 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
 
   // 1. Consumir 1 minuto del banco de tiempo del HQ (2h base + tareas)
   consumeBatteryMinuteRpc: async () => {
-    const remaining = useHqStore.getState().consumeMinute();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Consultar batería real en valdr_profiles
+        const { data: prof } = await supabase
+          .from('valdr_profiles')
+          .select('battery_minutes')
+          .eq('id', session.user.id)
+          .single();
+
+        const currentBattery = prof?.battery_minutes ?? 120;
+        const newBattery = Math.max(0, currentBattery - 1);
+
+        await supabase
+          .from('valdr_profiles')
+          .update({ battery_minutes: newBattery })
+          .eq('id', session.user.id);
+
+        get().updateProfile({ battery_minutes: newBattery });
+        return newBattery;
+      }
+    } catch (e) {
+      console.warn('Error decrementing battery from Supabase:', e);
+    }
+
+    // Fallback local seguro
+    const current = get().profile?.battery_minutes ?? 120;
+    const remaining = Math.max(0, current - 1);
     get().updateProfile({ battery_minutes: remaining });
     return remaining;
   },
