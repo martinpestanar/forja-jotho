@@ -620,15 +620,6 @@ export default function DashboardPage() {
               onOpenDatePicker={() => setJourneyModalOpen(true)}
             />
 
-            {/* Barra de Acompañamiento Discreta & Útil */}
-            <FlexibleCompanionBar
-              completedCount={completedHabitsCount}
-              totalCount={activeHabitsList.length}
-              onOpenGrimoire={() => setGrimoireModalOpen(true)}
-              onOpenJournal={() => setMidnightJournalModalOpen(true)}
-              onOpenTutorial={() => setTutorialModalOpen(true)}
-            />
-
             {/* Listado Bento de Hábitos o Estado Vacío Intuitivo */}
             <div className="space-y-2.5">
               {habits.filter((h) => h.front_type === 'vigor' || h.front_type === 'expansion').length === 0 ? (
