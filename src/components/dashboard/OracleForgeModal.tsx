@@ -81,26 +81,44 @@ export function OracleForgeModal({
         oracle_judgment: `El Tótem ${totemName} aprueba tu voto rúnico.`,
       };
 
-      // 3. Registrar el hábito evaluado en Supabase
+      // 3. Registrar el hábito evaluado en Supabase (o guardado local de contingencia)
+      const habitId = `custom_${Date.now()}`;
+      const newHabitRecord = {
+        id: habitId,
+        user_id: user?.id || 'guest',
+        front_type: 'vigor' as const,
+        title: title.trim(),
+        subtitle: description.trim() || 'Hábito sellado ante el Oráculo',
+        duration_minutes: durationMinutes,
+        gold_reward: evaluation.gold_reward,
+        game_battery_reward: evaluation.battery_reward,
+        requires_proof: evaluation.requires_proof,
+        is_custom: true,
+        sort_order: 99,
+      };
+
       if (user) {
-        const habitId = `custom_${Date.now()}`;
-        await supabase.from('valdr_habits_catalog').insert({
-          id: habitId,
-          user_id: user.id,
-          front_type: 'vigor',
-          title: title.trim(),
-          subtitle: description.trim() || 'Hábito sellado ante el Oráculo',
-          duration_minutes: durationMinutes,
-          gold_reward: evaluation.gold_reward,
-          game_battery_reward: evaluation.battery_reward,
-          requires_proof: evaluation.requires_proof,
-          is_custom: true,
-          sort_order: 99,
-        });
+        const { error: insertError } = await supabase
+          .from('valdr_habits_catalog')
+          .insert(newHabitRecord);
+
+        if (insertError) {
+          console.warn('[valdr_habits_catalog] Error al insertar en Supabase, guardando en contingencia local:', insertError);
+          // Contingencia en localStorage para que el usuario NUNCA pierda su hábito creado
+          try {
+            const localCustom = JSON.parse(localStorage.getItem(`syndex_custom_habits_${user.id}`) || '[]');
+            localCustom.push(newHabitRecord);
+            localStorage.setItem(`syndex_custom_habits_${user.id}`, JSON.stringify(localCustom));
+          } catch (e) {
+            console.error('Error saving local habit:', e);
+          }
+        }
       }
 
       soundFx.playLevelUp();
       setErrorMessage(null);
+      // Notificar de inmediato al dashboard para que el nuevo hábito aparezca en pantalla al instante
+      onForged();
       setOracleResult(evaluation);
     } catch (err: any) {
       soundFx.playDamage();

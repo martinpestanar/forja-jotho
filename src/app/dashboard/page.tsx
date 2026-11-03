@@ -215,6 +215,12 @@ export default function DashboardPage() {
       .select('*')
       .order('sort_order', { ascending: true });
 
+    // Recuperar también hábitos locales de contingencia
+    let localCustomHabits: any[] = [];
+    try {
+      localCustomHabits = JSON.parse(localStorage.getItem(`syndex_custom_habits_${user.id}`) || '[]');
+    } catch {}
+
     const todayStr = new Date().toISOString().split('T')[0];
     const { data: logs } = await supabase
       .from('valdr_daily_logs')
@@ -224,14 +230,19 @@ export default function DashboardPage() {
 
     const completedIds = new Set((logs || []).map((l: any) => l.habit_id));
 
-    if (catalog) {
-      setHabits(
-        catalog.map((h: any) => ({
-          ...h,
-          completed: completedIds.has(h.id),
-        }))
-      );
-    }
+    // Combinar catálogo remoto + hábitos creados por el usuario
+    const allHabitsMap = new Map();
+    (catalog || []).forEach((h: any) => allHabitsMap.set(h.id, h));
+    localCustomHabits.forEach((h: any) => allHabitsMap.set(h.id, h));
+
+    const combinedHabits = Array.from(allHabitsMap.values());
+
+    setHabits(
+      combinedHabits.map((h: any) => ({
+        ...h,
+        completed: completedIds.has(h.id),
+      }))
+    );
 
     // Juramentos
     const { data: oathsData } = await supabase
@@ -588,15 +599,6 @@ export default function DashboardPage() {
         {/* PESTAÑA 1: FRENTE DE VIGOR */}
         {activeTab === 'vigor' && (
           <div className="space-y-3.5">
-            {/* Barra de Acompañamiento Flexible del Jefe Tribal */}
-            <FlexibleCompanionBar
-              completedCount={completedHabitsCount}
-              totalCount={activeHabitsList.length}
-              onOpenGrimoire={() => setGrimoireModalOpen(true)}
-              onOpenJournal={() => setMidnightJournalModalOpen(true)}
-              onOpenTutorial={() => setTutorialModalOpen(true)}
-            />
-
             {/* Banner de Pacto Inquebrantable Bloqueado (7, 15, 30 días) */}
             <LockedPactBanner
               oaths={oaths}
@@ -616,6 +618,15 @@ export default function DashboardPage() {
               journeyStartDate={profileData?.journey_start_date}
               onOpenOracle={() => setCreateHabitModalOpen(true)}
               onOpenDatePicker={() => setJourneyModalOpen(true)}
+            />
+
+            {/* Barra de Acompañamiento Discreta & Útil */}
+            <FlexibleCompanionBar
+              completedCount={completedHabitsCount}
+              totalCount={activeHabitsList.length}
+              onOpenGrimoire={() => setGrimoireModalOpen(true)}
+              onOpenJournal={() => setMidnightJournalModalOpen(true)}
+              onOpenTutorial={() => setTutorialModalOpen(true)}
             />
 
             {/* Listado Bento de Hábitos o Estado Vacío Intuitivo */}
