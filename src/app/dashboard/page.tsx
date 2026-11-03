@@ -1100,54 +1100,56 @@ export default function DashboardPage() {
         totemName={profileData?.guide_totem?.toUpperCase() || 'OSO'}
       />
 
-      {/* Modal 2: Juramento */}
+      {/* Modal 2: Juramento (Línea Gráfica Editorial Serena & Cálida) */}
       {createOathModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
-          <div className="rounded-2xl bg-[#14171C] max-w-sm w-full p-5 space-y-4 border border-[#C5A059]/70 shadow-[0_8px_25px_rgba(0,0,0,0.8)]">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="rounded-2xl bg-white max-w-sm w-full p-5 space-y-4 border border-[#E8E5DD] shadow-[0_12px_32px_rgba(31,30,27,0.12)] animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Scroll className="w-5 h-5 text-[#C5A059]" />
-                <h3 className="text-sm font-black text-[#E2E8F0] uppercase">
+                <div className="w-8 h-8 rounded-xl bg-[#D97043]/10 border border-[#D97043]/20 flex items-center justify-center text-[#D97043]">
+                  <Scroll className="w-4 h-4 stroke-[2.2]" />
+                </div>
+                <h3 className="font-editorial text-sm font-semibold text-[#1F1E1B]">
                   Pacto Inviolable
                 </h3>
               </div>
               <button
                 onClick={() => setCreateOathModalOpen(false)}
-                className="text-[#64748B] hover:text-[#E2E8F0] cursor-pointer"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#706E66] hover:text-[#1F1E1B] hover:bg-[#F2EFE9] transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <p className="text-[11px] text-[#64748B] leading-tight">
-              Una vez sellado con tu firma rúnica, no podrá ser cancelado ni editado. Romperlo marcará tu perfil con deshonor.
+            <p className="text-[11px] text-[#706E66] leading-relaxed">
+              Una vez sellado con tu firma, quedará bloqueado por el plazo elegido. Es un compromiso inquebrantable de disciplina.
             </p>
 
             <div className="space-y-3">
               <div>
-                <label className="text-[11px] text-[#64748B] block mb-1">Título del Pacto:</label>
+                <label className="text-[11px] font-mono text-[#706E66] block mb-1">Título del Pacto:</label>
                 <input
                   type="text"
                   required
                   value={oathTitle}
                   onChange={(e) => setOathTitle(e.target.value)}
                   placeholder="Ej. Pacto de Hierro: Cero Procrastinación"
-                  className="w-full bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
+                  className="w-full bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl p-2.5 text-xs text-[#1F1E1B] focus:outline-none focus:border-[#D97043] focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] text-[#64748B] block mb-1">Duración del Sol:</label>
+                <label className="text-[11px] font-mono text-[#706E66] block mb-1">Duración del Sol:</label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {[7, 14, 30, 90].map((d) => (
                     <button
                       key={d}
                       type="button"
                       onClick={() => setOathDays(d)}
-                      className={`py-2 rounded-xl text-xs font-mono font-black cursor-pointer transition-all ${
+                      className={`py-2 rounded-xl text-xs font-mono font-semibold cursor-pointer transition-all ${
                         oathDays === d
-                          ? 'bg-[#C5A059] text-black shadow-[0_2px_0_0_#000]'
-                          : 'bg-white/5 border border-white/10 text-[#64748B]'
+                          ? 'bg-[#D97043] text-white shadow-xs'
+                          : 'bg-[#FAF9F5] border border-[#E8E5DD] text-[#706E66] hover:bg-[#F2EFE9]'
                       }`}
                     >
                       {d}d
@@ -1157,24 +1159,24 @@ export default function DashboardPage() {
               </div>
 
               <div>
-                <label className="text-[11px] text-[#64748B] block mb-1">Voto Específico:</label>
+                <label className="text-[11px] font-mono text-[#706E66] block mb-1">Voto Específico:</label>
                 <textarea
                   value={oathVow}
                   onChange={(e) => setOathVow(e.target.value)}
-                  placeholder="Si fallo un solo día, acepto la penalización..."
-                  className="w-full h-20 bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
+                  placeholder="Compromiso: no fallaré en mis hábitos ni buscaré atajos..."
+                  className="w-full h-20 bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl p-2.5 text-xs text-[#1F1E1B] focus:outline-none focus:border-[#D97043] focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] text-[#64748B] block mb-1">Tu Firma Rúnica:</label>
+                <label className="text-[11px] font-mono text-[#706E66] block mb-1">Tu Firma:</label>
                 <input
                   type="text"
                   required
                   value={oathSig}
                   onChange={(e) => setOathSig(e.target.value)}
                   placeholder="Escribe tu alias de líder"
-                  className="w-full bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs font-mono text-[#C5A059] focus:outline-none focus:border-[#C5A059]"
+                  className="w-full bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl p-2.5 text-xs font-mono text-[#D97043] focus:outline-none focus:border-[#D97043] focus:bg-white transition-all"
                 />
               </div>
 
@@ -1186,14 +1188,14 @@ export default function DashboardPage() {
                   onMouseLeave={cancelOathHold}
                   onTouchStart={startOathHold}
                   onTouchEnd={cancelOathHold}
-                  className="w-full relative overflow-hidden py-3.5 bg-[#14171C] border-2 border-[#C5A059] text-[#C5A059] text-xs font-black rounded-xl uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-[0_4px_0_0_#000]"
+                  className="w-full relative overflow-hidden py-3 bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold rounded-xl tracking-wider cursor-pointer active:scale-98 transition-all shadow-sm"
                 >
                   <div
-                    className="absolute inset-0 bg-[#C5A059]/30 transition-all duration-150"
+                    className="absolute inset-0 bg-black/15 transition-all duration-150"
                     style={{ width: `${holdProgress}%` }}
                   />
                   <span className="relative z-10">
-                    {holdProgress > 0 ? `GRABANDO RUNA (${holdProgress}%)` : 'MANTÉN PRESIONADO 3S PARA SELLAR'}
+                    {holdProgress > 0 ? `SELLANDO PACTO (${holdProgress}%)` : 'MANTÉN PRESIONADO 3S PARA SELLAR'}
                   </span>
                 </button>
               </div>
@@ -1202,18 +1204,18 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Modal 3: Comprobante Proof-of-Work */}
+      {/* Modal 3: Comprobante Proof-of-Work (Línea Gráfica Editorial Serena) */}
       {proofModalHabit && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4">
-          <div className="rounded-2xl bg-[#14171C] max-w-sm w-full p-5 space-y-4 border border-[#C5A059]/60 shadow-[0_8px_25px_rgba(0,0,0,0.8)]">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="rounded-2xl bg-white max-w-sm w-full p-5 space-y-4 border border-[#E8E5DD] shadow-[0_12px_32px_rgba(31,30,27,0.12)] animate-in fade-in zoom-in-95 duration-150">
             <div className="space-y-1">
-              <h3 className="text-sm font-black text-[#E2E8F0] uppercase">
+              <h3 className="font-editorial text-sm font-semibold text-[#1F1E1B]">
                 Registro de Conquista
               </h3>
-              <p className="text-xs text-[#C5A059] font-bold">
+              <p className="text-xs text-[#D97043] font-semibold">
                 {proofModalHabit.title}
               </p>
-              <p className="text-[11px] text-[#64748B]">
+              <p className="text-[11px] text-[#706E66]">
                 Ingresa el enlace del video, leads contactados o evidencia de 1 línea:
               </p>
             </div>
@@ -1221,23 +1223,23 @@ export default function DashboardPage() {
             <textarea
               value={proofText}
               onChange={(e) => setProofText(e.target.value)}
-              placeholder="Ej. Video TikTok subido día 53 + 4 leads contactados..."
-              className="w-full h-24 bg-[#0B0C0E] border border-white/10 rounded-xl p-2.5 text-xs text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
+              placeholder="Ej. Sesión completada con éxito..."
+              className="w-full h-24 bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl p-2.5 text-xs text-[#1F1E1B] focus:outline-none focus:border-[#D97043] focus:bg-white transition-all"
             />
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setProofModalHabit(null)}
-                className="w-1/2 py-2.5 border border-white/20 rounded-xl text-xs font-semibold text-[#64748B] cursor-pointer"
+                className="w-1/2 py-2.5 border border-[#E8E5DD] rounded-xl text-xs font-semibold text-[#706E66] hover:bg-[#F2EFE9] transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 disabled={submitting || !proofText.trim()}
                 onClick={(e) => executeHabitSubmit(proofModalHabit.id, proofText, e)}
-                className="w-1/2 py-2.5 bg-[#C5A059] text-black rounded-xl text-xs font-black disabled:opacity-50 cursor-pointer shadow-[0_2px_0_0_#000]"
+                className="w-1/2 py-2.5 bg-[#5A7D62] hover:bg-[#4C6B53] text-white rounded-xl text-xs font-semibold disabled:opacity-50 transition-all cursor-pointer shadow-xs"
               >
-                {submitting ? 'Sellando...' : 'Sellar Runa'}
+                {submitting ? 'Sellando...' : 'Sellar Registro'}
               </button>
             </div>
           </div>
