@@ -13,6 +13,7 @@ import { MobileFloatingDock, MobileTab } from '@/components/dashboard/MobileFloa
 import { OracleForgeModal } from '@/components/dashboard/OracleForgeModal';
 import { OracleConsultWidget } from '@/components/dashboard/OracleConsultWidget';
 import { JourneyStartModal } from '@/components/dashboard/JourneyStartModal';
+import { StarterSelectionModal } from '@/components/dashboard/StarterSelectionModal';
 import { LootBoxModal, LootBoxData } from '@/components/dashboard/LootBoxModal';
 import { VigorHeaderSummary } from '@/components/dashboard/VigorHeaderSummary';
 import { NintendoNoticeModal, NoticeType } from '@/components/dashboard/NintendoNoticeModal';
@@ -83,6 +84,7 @@ export default function DashboardPage() {
   const [createHabitModalOpen, setCreateHabitModalOpen] = useState(false);
   const [createOathModalOpen, setCreateOathModalOpen] = useState(false);
   const [journeyModalOpen, setJourneyModalOpen] = useState(false);
+  const [starterModalOpen, setStarterModalOpen] = useState(false);
   const [grimoireModalOpen, setGrimoireModalOpen] = useState(false);
   const [midnightJournalModalOpen, setMidnightJournalModalOpen] = useState(false);
   const [tutorialModalOpen, setTutorialModalOpen] = useState(false);
@@ -207,6 +209,37 @@ export default function DashboardPage() {
       if (prof.temperance_last_date === todayStr) {
         setTemperanceConfirmedToday(true);
       }
+    }
+
+    // Sincronizar starter_pokemon y gba_party_json desde tabla profiles
+    try {
+      const { data: trainerProf } = await supabase
+        .from('profiles')
+        .select('starter_pokemon, gba_party_json')
+        .eq('id', user.id)
+        .single();
+
+      if (trainerProf) {
+        useTrainerStore.getState().updateProfile({
+          starter_pokemon: trainerProf.starter_pokemon,
+          gba_party_json: trainerProf.gba_party_json || [],
+        });
+
+        const alreadyChosen = typeof window !== 'undefined' && localStorage.getItem(`syndex_starter_chosen_${user.id}`) === 'true';
+        const hasParty = Array.isArray(trainerProf.gba_party_json) && trainerProf.gba_party_json.length > 0;
+
+        // Si es un usuario nuevo (sin party registrada y sin haber elegido), abrir modal de 3 iniciales
+        if (!alreadyChosen && !hasParty) {
+          setStarterModalOpen(true);
+        }
+      } else {
+        const alreadyChosen = typeof window !== 'undefined' && localStorage.getItem(`syndex_starter_chosen_${user.id}`) === 'true';
+        if (!alreadyChosen) {
+          setStarterModalOpen(true);
+        }
+      }
+    } catch (e) {
+      console.warn('Error al verificar perfil de entrenador:', e);
     }
 
     // Catálogo y logs
@@ -1016,7 +1049,7 @@ export default function DashboardPage() {
 
             {sanctuaryTab === 'equipo' && (
               <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
-                <PartyPcManager />
+                <PartyPcManager onOpenStarterModal={() => setStarterModalOpen(true)} />
               </div>
             )}
           </div>
@@ -1278,6 +1311,16 @@ export default function DashboardPage() {
           }}
         />
       )}
+
+      {/* Modal de Elección de 3 Iniciales Shinies (1 Kanto, 1 Johto, 1 Hoenn) */}
+      <StarterSelectionModal
+        isOpen={starterModalOpen}
+        onClose={() => setStarterModalOpen(false)}
+        onSelected={() => {
+          soundFx.playLevelUp();
+          loadValdrData();
+        }}
+      />
 
       {/* Widget Interactivo del Oráculo de Johto (Gemini 2.5 Flash + Supabase) */}
       <OracleConsultWidget profileData={profileData} />

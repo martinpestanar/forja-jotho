@@ -79,9 +79,15 @@ export const GoldenrodShop: React.FC = () => {
 
   // Conjunto de especies que el alumno posee actualmente en su inventario / equipo / starter
   const starterSpeciesMap: Record<string, number> = {
+    bulbasaur: 1,
+    charmander: 4,
+    squirtle: 7,
+    chikorita: 152,
     cyndaquil: 155,
     totodile: 158,
-    chikorita: 152,
+    treecko: 252,
+    torchic: 255,
+    mudkip: 258,
   };
   const starterSpeciesId = starterSpeciesMap[starter] || 155;
   const partySpeciesIds = (profile?.gba_party_json || [])

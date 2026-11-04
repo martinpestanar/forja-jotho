@@ -19,6 +19,7 @@ import { useTrainerStore } from '@/store/useTrainerStore';
 import { useEconomyStore } from '@/store/useEconomyStore';
 import { soundFx } from '@/lib/soundFx';
 import { POKEMON_ASSETS, JOHTO_POKEDEX_CATALOG, HNS_ITEMS_CATALOG, ItemAssetMetadata } from '@/lib/pokemonAssets';
+import { ALL_STARTERS } from '@/lib/starterCatalog';
 import confetti from 'canvas-confetti';
 
 interface BoxedPokemon {
@@ -34,7 +35,11 @@ interface BoxedPokemon {
 
 type ActiveSection = 'party' | 'pc' | 'bag';
 
-export const PartyPcManager: React.FC = () => {
+interface PartyPcManagerProps {
+  onOpenStarterModal?: () => void;
+}
+
+export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterModal }) => {
   const profile = useTrainerStore((s) => s.profile);
   const updateProfile = useTrainerStore((s) => s.updateProfile);
   // Estándar 100% Light Mode Claude
@@ -53,12 +58,22 @@ export const PartyPcManager: React.FC = () => {
   const [bagSearch, setBagSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<ItemAssetMetadata>(HNS_ITEMS_CATALOG[0]);
 
-  // Obtener equipo real del perfil: starter nivel 5 si está recién creada
+  // Obtener equipo real del perfil o fallback al starter elegido
+  const currentStarterOption = ALL_STARTERS.find((s) => s.key === profile?.starter_pokemon);
+  const fallbackStarter = currentStarterOption
+    ? {
+        name: currentStarterOption.name,
+        speciesId: currentStarterOption.speciesId,
+        level: 5,
+        hp: 20,
+        maxHp: 20,
+        isShiny: true,
+      }
+    : { name: 'Cyndaquil', speciesId: 155, level: 5, hp: 20, maxHp: 20, isShiny: false };
+
   const rawParty = profile?.gba_party_json && profile.gba_party_json.length > 0
     ? profile.gba_party_json
-    : [
-        { name: 'Cyndaquil', speciesId: 155, level: 5, hp: 20, maxHp: 20, isShiny: false },
-      ];
+    : [fallbackStarter];
 
   // Formatear party a estructura homogénea
   const party: BoxedPokemon[] = rawParty.map((p: any, idx: number) => {
@@ -224,6 +239,17 @@ export const PartyPcManager: React.FC = () => {
             <Package className="w-4 h-4 text-[#D4A359]" />
             <span>Mochila GBA</span>
           </button>
+
+          {onOpenStarterModal && (
+            <button
+              onClick={() => { soundFx.playClick(); onOpenStarterModal(); }}
+              className="px-2.5 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all cursor-pointer"
+              title="Cambiar o elegir terna de iniciales shinies"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+              <span>Iniciales Shinies</span>
+            </button>
+          )}
         </div>
 
         <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#706E66] font-mono">

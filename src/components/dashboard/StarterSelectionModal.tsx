@@ -96,19 +96,23 @@ export const StarterSelectionModal: React.FC<StarterSelectionModalProps> = ({
         gba_party_json: newParty,
       });
 
-      // 2. Persistir en Supabase si está logueado
+      // 2. Persistir en Supabase (tabla profiles) si está logueado
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (user) {
         await supabase
-          .from('valdr_profiles')
+          .from('profiles')
           .update({
             starter_pokemon: selectedStarter.key,
             gba_party_json: newParty,
           })
           .eq('id', user.id);
+        
+        localStorage.setItem(`syndex_starter_chosen_${user.id}`, 'true');
+      } else {
+        localStorage.setItem('syndex_starter_chosen_guest', 'true');
       }
 
       soundFx.playLevelUp();
