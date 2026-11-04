@@ -384,3 +384,69 @@
     transform: none;
   }
 }
+
+/* =========================================================
+   🎮 JOHTO ARCADE SYSTEM STYLES (CLASES NATIVAS RESISTENTES)
+   ========================================================= */
+
+/* Paleta de Acento */
+.johto-bg-ink {
+  background-color: #1A1915 !important;
+  color: #FFFFFF !important;
+}
+
+.johto-bg-red {
+  background-color: #E60012 !important;
+  color: #FFFFFF !important;
+}
+
+.johto-bg-blue {
+  background-color: #2563EB !important;
+  color: #FFFFFF !important;
+}
+
+.johto-bg-gold {
+  background-color: #D4A359 !important;
+  color: #1A1915 !important;
+}
+
+.johto-bg-parchment {
+  background-color: #FAF9F5 !important;
+}
+
+.johto-bg-subtle {
+  background-color: #F2EFE9 !important;
+}
+
+.johto-bg-surface {
+  background-color: #FFFFFF !important;
+}
+
+/* Bordes y Sombras Neo-Arcade */
+.johto-border-arcade {
+  border: 2px solid #1A1915 !important;
+}
+
+.johto-shadow-sm {
+  box-shadow: 2px 2px 0px 0px #1A1915 !important;
+}
+
+.johto-shadow-md {
+  box-shadow: 3px 3px 0px 0px #1A1915 !important;
+}
+
+.johto-shadow-lg {
+  box-shadow: 4px 4px 0px 0px #1A1915 !important;
+}
+
+/* Hundimiento Táctil al pulsar */
+.johto-btn-tactile {
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+  user-select: none;
+  cursor: pointer;
+}
+.johto-btn-tactile:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: none !important;
+}
+

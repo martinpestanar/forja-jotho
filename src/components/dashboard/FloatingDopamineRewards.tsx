@@ -21,12 +21,13 @@ export function FloatingDopamineRewards({ rewards, onComplete }: FloatingDopamin
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
       <AnimatePresence>
         {rewards.map((r) => {
+          // Neo-Arcade Johto Light Palette para números flotantes
           const colorClass =
             r.type === 'gold'
-              ? 'text-[#C5A059] border-[#C5A059]/50 bg-[#14171C]/90 shadow-[0_0_15px_rgba(197,160,89,0.5)]'
+              ? 'text-[#855B14] border-2 border-[#1A1915] bg-[#FFF8E7] shadow-[2px_2px_0px_0px_#1A1915]'
               : r.type === 'battery'
-              ? 'text-emerald-400 border-emerald-500/50 bg-[#14171C]/90 shadow-[0_0_15px_rgba(34,197,94,0.5)]'
-              : 'text-rose-400 border-rose-500/50 bg-[#14171C]/90 shadow-[0_0_15px_rgba(244,63,94,0.5)]';
+              ? 'text-[#2563EB] border-2 border-[#1A1915] bg-[#EFF6FF] shadow-[2px_2px_0px_0px_#1A1915]'
+              : 'text-[#E60012] border-2 border-[#1A1915] bg-[#FEF2F2] shadow-[2px_2px_0px_0px_#1A1915]';
 
           return (
             <motion.div
@@ -39,7 +40,7 @@ export function FloatingDopamineRewards({ rewards, onComplete }: FloatingDopamin
               }}
               transition={{ duration: 1.3, ease: 'easeOut' }}
               onAnimationComplete={() => onComplete(r.id)}
-              className={`absolute px-3 py-1 rounded-full border text-xs font-mono font-black flex items-center gap-1.5 backdrop-blur-md ${colorClass}`}
+              className={`absolute px-3 py-1 rounded-xl text-xs font-mono font-black flex items-center gap-1.5 select-none ${colorClass}`}
             >
               {r.text}
             </motion.div>

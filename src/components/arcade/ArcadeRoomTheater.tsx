@@ -24,70 +24,49 @@ import { POKEMON_ASSETS } from '@/lib/pokemonAssets';
 // Ítems inyectables para la mochila del alumno
 const QUICK_ITEMS = [
   {
-    id: 'rare_candy',
-    name: 'Raro Caramelo',
-    icon: <Sparkles className="h-4 w-4 text-[#C49347]" />,
-    desc: '+1 Nivel instantáneo (x3)',
-    cost: 50,
-    gbaItemId: HNS_ITEM_IDS.RARE_CANDY,
+    id: 'potion',
+    name: 'Poción (x3)',
+    icon: <Heart className="h-4 w-4 text-[#2E8555]" />,
+    desc: 'Restaura 20 PS',
+    cost: 300,
+    gbaItemId: 0x0013,
     pocket: 'ITEMS' as const,
     quantity: 3,
   },
   {
-    id: 'master_ball',
-    name: 'Master Ball',
-    icon: <Crown className="h-4 w-4 text-[#7E6AA6]" />,
-    desc: 'Captura 100% infalible (x1)',
-    cost: 120,
-    gbaItemId: HNS_ITEM_IDS.MASTER_BALL,
-    pocket: 'POKEBALLS' as const,
-    quantity: 1,
-  },
-  {
-    id: 'max_potion',
-    name: 'Poción Máxima',
-    icon: <Heart className="h-4 w-4 text-[#D9534F]" />,
-    desc: 'Restaura 100% PS (x5)',
-    cost: 30,
+    id: 'super_potion',
+    name: 'Superpoción (x2)',
+    icon: <Heart className="h-4 w-4 text-[#2D68C4]" />,
+    desc: 'Restaura 50 PS',
+    cost: 700,
     gbaItemId: 0x0014,
     pocket: 'ITEMS' as const,
+    quantity: 2,
+  },
+  {
+    id: 'pokeball',
+    name: 'Poké Ball (x5)',
+    icon: <Sparkles className="h-4 w-4 text-[#D9383A]" />,
+    desc: 'Captura estándar',
+    cost: 1000,
+    gbaItemId: HNS_ITEM_IDS.POKE_BALL,
+    pocket: 'POKEBALLS' as const,
     quantity: 5,
+  },
+  {
+    id: 'antidote',
+    name: 'Antídoto (x2)',
+    icon: <Zap className="h-4 w-4 text-[#C59B46]" />,
+    desc: 'Cura el envenenamiento',
+    cost: 200,
+    gbaItemId: 0x0016,
+    pocket: 'ITEMS' as const,
+    quantity: 2,
   },
 ];
 
 // Pokémon de recompensa para inyectar al equipo
-const QUICK_POKEMON_REWARDS = [
-  {
-    id: 'pikachu_cyber',
-    name: 'PIKACHU',
-    speciesId: 25,
-    level: 15,
-    cost: 80,
-    isShiny: true,
-    desc: 'Eléctrico · Shiny Oro (Nv. 15)',
-    badge: 'SHINY ⚡',
-  },
-  {
-    id: 'totodile_reward',
-    name: 'TOTODILE',
-    speciesId: 158,
-    level: 12,
-    cost: 70,
-    isShiny: false,
-    desc: 'Agua · Naturaleza Alegre (Nv. 12)',
-    badge: 'INICIAL 🌊',
-  },
-  {
-    id: 'celebi_reward',
-    name: 'CELEBI',
-    speciesId: 251,
-    level: 30,
-    cost: 150,
-    isShiny: true,
-    desc: 'Planta/Psíquico · Guardián (Nv. 30)',
-    badge: 'MÍTICO 🌿',
-  },
-];
+const QUICK_POKEMON_REWARDS: any[] = [];
 
 interface PartyMember {
   name: string;
@@ -123,6 +102,12 @@ export const ArcadeRoomTheater: React.FC = () => {
   }, [isArcadeOpen, closeArcadeRoom]);
 
   const handleInjectItem = async (item: (typeof QUICK_ITEMS)[0]) => {
+    if (party.length === 0) {
+      soundFx.playWarning();
+      setInjectedNotification("⚠️ Inicia tu partida y elige a tu inicial antes de inyectar suministros.");
+      setTimeout(() => setInjectedNotification(null), 3500);
+      return;
+    }
     const currentPokedollars = profile?.pokedollars ?? 0;
     if (currentPokedollars < item.cost) {
       soundFx.playWarning();
@@ -415,7 +400,7 @@ export const ArcadeRoomTheater: React.FC = () => {
           <div className="flex gap-1 rounded-xl border border-[#E8E5DD] bg-[#F2EFE9] p-1">
             {[
               { id: 'items' as const, label: `Suministros (${QUICK_ITEMS.length})` },
-              { id: 'pokemon' as const, label: `Pokémon (${QUICK_POKEMON_REWARDS.length})` },
+              
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -542,8 +527,8 @@ export const ArcadeRoomTheater: React.FC = () => {
             </div>
           )}
 
-          <div className="hq-panel p-3 text-[10px] leading-relaxed text-[#8A877E]">
-            Las tiendas del juego son caras. Gana Pokédólares con tus tareas para abastecerte.
+          <div className="p-3 bg-[#FAF9F5] border border-[#E4E1D8] rounded-xl text-[10px] text-[#706E66] font-mono leading-relaxed">
+            🛡️ <strong>Regla de la Liga:</strong> Los Pokémon legendarios están protegidos y no se venden. Se capturan en la historia de la ROM. Los suministros tienen precios oficiales de Johto.
           </div>
         </section>
       </div>

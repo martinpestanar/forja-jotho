@@ -217,7 +217,7 @@ export function OracleForgeModal({
 
             <button
               onClick={handleFinish}
-              className="w-full py-3 bg-[#D97043] hover:bg-[#CC6437] text-white font-semibold text-xs tracking-wide rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer"
+              className="w-full py-3.5 johto-bg-red text-white font-bold text-xs uppercase tracking-wide rounded-xl johto-border-arcade johto-shadow-sm johto-btn-tactile transition-all cursor-pointer"
             >
               Activar Reto en mi Semana
             </button>
@@ -283,10 +283,10 @@ export function OracleForgeModal({
                     key={mins}
                     type="button"
                     onClick={() => setDurationMinutes(mins)}
-                    className={`py-1.5 rounded-xl border cursor-pointer transition-all ${
+                    className={`py-1.5 rounded-xl border-2 font-bold cursor-pointer transition-all johto-btn-tactile ${
                       durationMinutes === mins
-                        ? 'bg-[#D97043] text-white font-semibold shadow-sm'
-                        : 'bg-[#FAF9F5] border-[#E8E5DD] text-[#706E66]'
+                        ? 'johto-bg-ink text-white border-[#1A1915] shadow-xs'
+                        : 'bg-[#FAF9F5] border-[#1A1915]/30 text-[#1A1915]'
                     }`}
                   >
                     {mins}m
@@ -300,7 +300,7 @@ export function OracleForgeModal({
               <button
                 type="submit"
                 disabled={evaluating || !title.trim()}
-                className="w-full py-3 bg-[#D97043] hover:bg-[#CC6437] text-white font-semibold text-xs tracking-wide rounded-xl shadow-sm active:scale-95 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+                className="w-full py-3.5 johto-bg-red text-white font-bold text-xs uppercase tracking-wide rounded-xl johto-border-arcade johto-shadow-sm johto-btn-tactile cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
               >
                 <Sparkles className="w-4 h-4 fill-current" />
                 <span>{evaluating ? 'Equilibrando tu Reto...' : 'Guardar y Activar Reto'}</span>

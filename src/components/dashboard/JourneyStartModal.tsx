@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Sunrise, Sparkles, X, Check, ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Calendar, Sunrise, Sparkles, X, Check } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
 import { supabase } from '@/lib/supabase';
 
@@ -54,6 +54,9 @@ export const JourneyStartModal: React.FC<JourneyStartModalProps> = ({
       }
 
       soundFx.playLevelUp();
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate([15, 25]);
+      }
       onUpdated(targetDate);
       onClose();
     } catch (err) {
@@ -64,99 +67,103 @@ export const JourneyStartModal: React.FC<JourneyStartModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 select-none font-sans">
+    <div className="fixed inset-0 z-50 bg-[#1C1B18]/40 backdrop-blur-sm flex items-center justify-center p-4 select-none font-sans">
       <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 15 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 15 }}
-        className="max-w-sm w-full bg-[#14171C] rounded-2xl border-2 border-[#C5A059] p-5 space-y-4 shadow-[0_10px_35px_rgba(0,0,0,0.9)] text-[#E2E8F0]"
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+        className="max-w-sm w-full bg-white rounded-2xl border border-[#E4E1D8] p-5 space-y-4 shadow-[0_12px_40px_rgba(26,25,21,0.12)] text-[#1C1B18]"
       >
-        {/* Cabecera */}
-        <div className="flex items-center justify-between pb-2 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-[#C5A059]/15 text-[#C5A059]">
-              <Sunrise className="w-4 h-4 fill-current" />
+        {/* Cabecera Pop-up Minimalista */}
+        <div className="flex items-center justify-between pb-3 border-b border-[#E4E1D8]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#C59B46]/10 border border-[#C59B46]/25 flex items-center justify-center text-[#9A7025]">
+              <Sunrise className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-xs font-black uppercase tracking-wider text-[#E2E8F0]">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#1C1B18]">
                 Apertura de la Forja
               </h3>
-              <span className="text-[10px] text-[#C5A059] font-mono block">
-                Pacto de Consagración
+              <span className="text-[10px] text-[#9A7025] font-mono font-medium block">
+                Fecha de Inicio de Marea
               </span>
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="text-[#64748B] hover:text-[#E2E8F0] p-1 cursor-pointer transition-colors"
+            onClick={() => {
+              soundFx.playClick();
+              onClose();
+            }}
+            className="w-7 h-7 rounded-lg border border-[#E4E1D8] bg-[#FAF9F5] text-[#706E66] hover:text-[#1C1B18] hover:bg-white flex items-center justify-center cursor-pointer active:scale-95 transition-all"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 stroke-[2]" />
           </button>
         </div>
 
-        {/* Diálogo RPG */}
-        <div className="p-3.5 rounded-xl bg-[#0B0C0E] border border-white/5 text-xs text-[#CBD5E1] leading-relaxed font-mono">
-          "Un verdadero guerrero no improvisa a mitad de la noche: fija el alba de su bautismo para iniciar con vigor pleno."
+        {/* Diálogo conciso */}
+        <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] text-xs text-[#1C1B18] font-medium leading-relaxed italic">
+          "Fija el día en que tu marea de hábitos comienza formalmente para calibrar tu cartucho."
         </div>
 
-        {/* Opciones */}
+        {/* Opciones con Tarjetas Limpias */}
         <div className="space-y-2">
           {/* Opción 1: Mañana con el alba */}
           <button
             type="button"
             onClick={() => { soundFx.playClick(); setSelectedOption('tomorrow'); }}
-            className={`w-full p-3 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${
+            className={`w-full p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all select-none active:scale-[0.98] ${
               selectedOption === 'tomorrow'
-                ? 'bg-[#C5A059]/20 border-[#C5A059] text-[#E2E8F0] shadow-[0_0_12px_rgba(197,160,89,0.3)]'
-                : 'bg-[#0B0C0E] border-white/10 text-[#64748B] hover:border-white/20'
+                ? 'bg-[#C59B46]/10 border-[#C59B46]/40 text-[#1C1B18] shadow-[0_2px_6px_rgba(197,155,70,0.08)]'
+                : 'bg-[#FAF9F5] border-[#E4E1D8] text-[#706E66] hover:border-[#D5D1C5] hover:bg-white'
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Sunrise className="w-4 h-4 text-amber-400" />
+              <Sunrise className="w-4 h-4 text-[#C59B46]" />
               <div className="text-left">
-                <span className="text-xs font-black block">Mañana con el Alba</span>
-                <span className="text-[10px] text-[#64748B] block font-mono">{tomorrowStr} (Recomendado)</span>
+                <span className="text-xs font-semibold block text-[#1C1B18]">Mañana con el Alba</span>
+                <span className="text-[10px] text-[#706E66] block font-mono font-medium">{tomorrowStr} (Recomendado)</span>
               </div>
             </div>
-            {selectedOption === 'tomorrow' && <Check className="w-4 h-4 text-[#C5A059]" />}
+            {selectedOption === 'tomorrow' && <Check className="w-4 h-4 text-[#9A7025] stroke-[2.5]" />}
           </button>
 
           {/* Opción 2: Hoy mismo */}
           <button
             type="button"
             onClick={() => { soundFx.playClick(); setSelectedOption('today'); }}
-            className={`w-full p-3 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all ${
+            className={`w-full p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all select-none active:scale-[0.98] ${
               selectedOption === 'today'
-                ? 'bg-[#C5A059]/20 border-[#C5A059] text-[#E2E8F0] shadow-[0_0_12px_rgba(197,160,89,0.3)]'
-                : 'bg-[#0B0C0E] border-white/10 text-[#64748B] hover:border-white/20'
+                ? 'bg-[#2E8555]/10 border-[#2E8555]/30 text-[#1C1B18] shadow-[0_2px_6px_rgba(46,133,85,0.08)]'
+                : 'bg-[#FAF9F5] border-[#E4E1D8] text-[#706E66] hover:border-[#D5D1C5] hover:bg-white'
             }`}
           >
             <div className="flex items-center gap-2.5">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <Sparkles className="w-4 h-4 text-[#2E8555]" />
               <div className="text-left">
-                <span className="text-xs font-black block">Comenzar Hoy de Inmediato</span>
-                <span className="text-[10px] text-[#64748B] block font-mono">{todayStr}</span>
+                <span className="text-xs font-semibold block text-[#1C1B18]">Comenzar Hoy de Inmediato</span>
+                <span className="text-[10px] text-[#706E66] block font-mono font-medium">{todayStr}</span>
               </div>
             </div>
-            {selectedOption === 'today' && <Check className="w-4 h-4 text-[#C5A059]" />}
+            {selectedOption === 'today' && <Check className="w-4 h-4 text-[#2E8555] stroke-[2.5]" />}
           </button>
 
           {/* Opción 3: Elegir fecha específica */}
           <button
             type="button"
             onClick={() => { soundFx.playClick(); setSelectedOption('custom'); }}
-            className={`w-full p-3 rounded-xl border-2 flex flex-col gap-2 cursor-pointer transition-all ${
+            className={`w-full p-3 rounded-xl border flex flex-col gap-2 cursor-pointer transition-all select-none active:scale-[0.98] ${
               selectedOption === 'custom'
-                ? 'bg-[#C5A059]/20 border-[#C5A059] text-[#E2E8F0] shadow-[0_0_12px_rgba(197,160,89,0.3)]'
-                : 'bg-[#0B0C0E] border-white/10 text-[#64748B] hover:border-white/20'
+                ? 'bg-[#2D68C4]/10 border-[#2D68C4]/30 text-[#1C1B18] shadow-[0_2px_6px_rgba(45,104,196,0.08)]'
+                : 'bg-[#FAF9F5] border-[#E4E1D8] text-[#706E66] hover:border-[#D5D1C5] hover:bg-white'
             }`}
           >
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-2.5">
-                <Calendar className="w-4 h-4 text-purple-400" />
-                <span className="text-xs font-black">Elegir Otra Fecha</span>
+                <Calendar className="w-4 h-4 text-[#2D68C4]" />
+                <span className="text-xs font-semibold text-[#1C1B18]">Elegir Otra Fecha</span>
               </div>
-              {selectedOption === 'custom' && <Check className="w-4 h-4 text-[#C5A059]" />}
+              {selectedOption === 'custom' && <Check className="w-4 h-4 text-[#2D68C4] stroke-[2.5]" />}
             </div>
 
             {selectedOption === 'custom' && (
@@ -165,17 +172,17 @@ export const JourneyStartModal: React.FC<JourneyStartModalProps> = ({
                 min={todayStr}
                 value={customDate}
                 onChange={(e) => setCustomDate(e.target.value)}
-                className="w-full bg-[#0B0C0E] border border-white/20 rounded-lg p-2 text-xs font-mono text-[#E2E8F0] focus:outline-none focus:border-[#C5A059]"
+                className="w-full bg-white border border-[#E4E1D8] rounded-xl p-2 text-xs font-mono font-medium text-[#1C1B18] focus:outline-none focus:border-[#2D68C4]"
               />
             )}
           </button>
         </div>
 
-        {/* Botón Consagrar */}
+        {/* Botón Primario de Consagración */}
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full py-3 bg-[#C5A059] hover:bg-[#d4b069] text-black font-black text-xs uppercase tracking-wider rounded-xl cursor-pointer transition-all border border-black shadow-[0_3px_0_0_#000] active:translate-y-0.5 active:shadow-none"
+          className="w-full py-3 bg-[#D9383A] text-white font-semibold text-xs uppercase tracking-wider rounded-xl cursor-pointer shadow-[0_2px_0px_#B32628] active:translate-y-[1px] active:shadow-none hover:bg-[#C92F31] transition-all disabled:opacity-50"
         >
           {loading ? 'Sellando...' : 'Consagrar Fecha de Inicio'}
         </button>

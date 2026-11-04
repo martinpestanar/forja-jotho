@@ -14,6 +14,7 @@ import { OracleForgeModal } from '@/components/dashboard/OracleForgeModal';
 import { OracleConsultWidget } from '@/components/dashboard/OracleConsultWidget';
 import { JourneyStartModal } from '@/components/dashboard/JourneyStartModal';
 import { StarterSelectionModal } from '@/components/dashboard/StarterSelectionModal';
+import { SilphFrequencyTunerModal } from '@/components/dashboard/SilphFrequencyTunerModal';
 import { LootBoxModal, LootBoxData } from '@/components/dashboard/LootBoxModal';
 import { VigorHeaderSummary } from '@/components/dashboard/VigorHeaderSummary';
 import { NintendoNoticeModal, NoticeType } from '@/components/dashboard/NintendoNoticeModal';
@@ -85,6 +86,7 @@ export default function DashboardPage() {
   const [createOathModalOpen, setCreateOathModalOpen] = useState(false);
   const [journeyModalOpen, setJourneyModalOpen] = useState(false);
   const [starterModalOpen, setStarterModalOpen] = useState(false);
+  const [silphTunerOpen, setSilphTunerOpen] = useState(false);
   const [grimoireModalOpen, setGrimoireModalOpen] = useState(false);
   const [midnightJournalModalOpen, setMidnightJournalModalOpen] = useState(false);
   const [tutorialModalOpen, setTutorialModalOpen] = useState(false);
@@ -225,17 +227,16 @@ export default function DashboardPage() {
           gba_party_json: trainerProf.gba_party_json || [],
         });
 
-        const alreadyChosen = typeof window !== 'undefined' && localStorage.getItem(`syndex_starter_chosen_${user.id}`) === 'true';
-        const hasParty = Array.isArray(trainerProf.gba_party_json) && trainerProf.gba_party_json.length > 0;
+        const alreadyTuned = typeof window !== 'undefined' && localStorage.getItem(`syndex_shiny_tuned_${user.id}`) === 'true';
 
-        // Si es un usuario nuevo (sin party registrada y sin haber elegido), abrir modal de 3 iniciales
-        if (!alreadyChosen && !hasParty) {
-          setStarterModalOpen(true);
+        // Si es un usuario nuevo que aún no ha calibrado su frecuencia Silph, abrir el sintonizador
+        if (!alreadyTuned) {
+          setSilphTunerOpen(true);
         }
       } else {
-        const alreadyChosen = typeof window !== 'undefined' && localStorage.getItem(`syndex_starter_chosen_${user.id}`) === 'true';
-        if (!alreadyChosen) {
-          setStarterModalOpen(true);
+        const alreadyTuned = typeof window !== 'undefined' && localStorage.getItem(`syndex_shiny_tuned_${user.id}`) === 'true';
+        if (!alreadyTuned) {
+          setSilphTunerOpen(true);
         }
       }
     } catch (e) {
@@ -670,7 +671,7 @@ export default function DashboardPage() {
                   </div>
                   <button
                     onClick={() => setCreateHabitModalOpen(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer active:scale-95"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl johto-bg-red text-white text-xs font-bold johto-border-arcade johto-shadow-sm johto-btn-tactile transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4 stroke-[2.5]" />
                     <span>Crear Mi Primer Reto Semanal</span>
@@ -730,7 +731,7 @@ export default function DashboardPage() {
                         />
                         <button
                           onClick={() => handleUpdateInnerBeast(innerBeastInput)}
-                          className="p-1.5 bg-[#4A8B99] hover:bg-[#3B7582] text-white rounded-lg cursor-pointer transition-all"
+                          className="p-1.5 johto-bg-blue text-white rounded-lg cursor-pointer transition-all johto-border-arcade johto-btn-tactile shadow-xs"
                           title="Guardar compulsión"
                         >
                           <Check className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -816,10 +817,10 @@ export default function DashboardPage() {
               <button
                 disabled={temperanceConfirmedToday || submitting}
                 onClick={handleConfirmTemperance}
-                className={`w-full py-3.5 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm active:scale-[0.98] ${
+                className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all johto-border-arcade johto-shadow-sm johto-btn-tactile ${
                   temperanceConfirmedToday
-                    ? 'bg-[#6E8B68]/15 text-[#5B7855] border border-[#6E8B68]/30 cursor-default'
-                    : 'bg-[#4A8B99] hover:bg-[#3B7582] text-white border border-[#3B7582]'
+                    ? 'bg-[#EBF7EE] text-[#15803D] cursor-default opacity-85'
+                    : 'johto-bg-blue text-white'
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 fill-current" />
@@ -902,7 +903,7 @@ export default function DashboardPage() {
                 </div>
                 <button
                   onClick={() => setCreateOathModalOpen(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-[11px] font-medium cursor-pointer shadow-sm active:scale-95 transition-all"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl johto-bg-red text-white text-[11px] font-bold cursor-pointer johto-border-arcade johto-shadow-sm johto-btn-tactile transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Nuevo Pacto</span>
@@ -918,7 +919,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-[#706E66]">No tienes juramentos activos en curso.</p>
                   <button
                     onClick={() => setCreateOathModalOpen(true)}
-                    className="px-3 py-1.5 bg-[#D97043] text-white font-medium text-xs rounded-xl shadow-sm cursor-pointer inline-flex items-center gap-1.5 active:scale-95 transition-all"
+                    className="px-3.5 py-2 johto-bg-red text-white font-bold text-xs rounded-xl johto-border-arcade johto-shadow-sm johto-btn-tactile cursor-pointer inline-flex items-center gap-1.5 transition-all"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Sellar mi primer pacto</span>
@@ -1078,9 +1079,9 @@ export default function DashboardPage() {
 
               <button
                 onClick={openArcadeRoom}
-                className="w-full py-3.5 bg-[#6E8B68] hover:bg-[#5B7855] text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.98] transition-all tracking-wide"
+                className="w-full py-3.5 johto-bg-red text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer johto-border-arcade johto-shadow-md johto-btn-tactile transition-all tracking-wide uppercase"
               >
-                <Zap className="w-4 h-4 fill-current" />
+                <Zap className="w-4 h-4 fill-current text-[#FFE600]" />
                 <span>Encender Cartucho</span>
               </button>
             </div>
@@ -1181,10 +1182,10 @@ export default function DashboardPage() {
                       key={d}
                       type="button"
                       onClick={() => setOathDays(d)}
-                      className={`py-2 rounded-xl text-xs font-mono font-semibold cursor-pointer transition-all ${
+                      className={`py-2 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all johto-border-arcade johto-btn-tactile ${
                         oathDays === d
-                          ? 'bg-[#D97043] text-white shadow-xs'
-                          : 'bg-[#FAF9F5] border border-[#E8E5DD] text-[#706E66] hover:bg-[#F2EFE9]'
+                          ? 'johto-bg-ink text-white johto-shadow-sm'
+                          : 'bg-[#FAF9F5] text-[#1A1915] hover:bg-[#F2EFE9]'
                       }`}
                     >
                       {d}d
@@ -1223,10 +1224,10 @@ export default function DashboardPage() {
                   onMouseLeave={cancelOathHold}
                   onTouchStart={startOathHold}
                   onTouchEnd={cancelOathHold}
-                  className="w-full relative overflow-hidden py-3 bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold rounded-xl tracking-wider cursor-pointer active:scale-98 transition-all shadow-sm"
+                  className="w-full relative overflow-hidden py-3.5 johto-bg-red text-white text-xs font-bold rounded-xl tracking-wider cursor-pointer johto-border-arcade johto-shadow-sm johto-btn-tactile transition-all"
                 >
                   <div
-                    className="absolute inset-0 bg-black/15 transition-all duration-150"
+                    className="absolute inset-0 bg-black/20 transition-all duration-150"
                     style={{ width: `${holdProgress}%` }}
                   />
                   <span className="relative z-10">
@@ -1265,14 +1266,14 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setProofModalHabit(null)}
-                className="w-1/2 py-2.5 border border-[#E8E5DD] rounded-xl text-xs font-semibold text-[#706E66] hover:bg-[#F2EFE9] transition-all cursor-pointer"
+                className="w-1/2 py-2.5 johto-border-arcade rounded-xl text-xs font-bold text-[#1A1915] bg-[#FAF9F5] hover:bg-[#F2EFE9] transition-all cursor-pointer johto-btn-tactile"
               >
                 Cancelar
               </button>
               <button
                 disabled={submitting || !proofText.trim()}
                 onClick={(e) => executeHabitSubmit(proofModalHabit.id, proofText, e)}
-                className="w-1/2 py-2.5 bg-[#5A7D62] hover:bg-[#4C6B53] text-white rounded-xl text-xs font-semibold disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+                className="w-1/2 py-2.5 johto-bg-ink text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-all cursor-pointer johto-border-arcade johto-shadow-sm johto-btn-tactile"
               >
                 {submitting ? 'Sellando...' : 'Sellar Registro'}
               </button>
@@ -1312,7 +1313,17 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Modal de Elección de 3 Iniciales Shinies (1 Kanto, 1 Johto, 1 Hoenn) */}
+      {/* Sintonizador de Frecuencia Silph (Regalo Shiny Inicial Onboarding) */}
+      <SilphFrequencyTunerModal
+        isOpen={silphTunerOpen}
+        onClose={() => setSilphTunerOpen(false)}
+        onClaimed={() => {
+          soundFx.playLevelUp();
+          loadValdrData();
+        }}
+      />
+
+      {/* Modal de Elección de 3 Iniciales Shinies (1 Kanto, 1 Johto, 1 Hoenn) - Accesible como fallback opcional */}
       <StarterSelectionModal
         isOpen={starterModalOpen}
         onClose={() => setStarterModalOpen(false)}

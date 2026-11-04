@@ -42,7 +42,7 @@ interface TrainerState {
 const DEFAULT_PROFILE: TrainerProfile = {
   id: 'guest-trainer-id',
   trainer_name: 'Entrenador',
-  starter_pokemon: 'cyndaquil',
+  starter_pokemon: null,
   nature_role: 'fuego_ui',
   current_level: 1,
   xp: 0,

@@ -57,6 +57,13 @@ export const POKEMON_ASSETS = {
   },
 
   /**
+   * Sprite oficial de Huevo Pokémon (Gen 3 / Emerald / Johto)
+   */
+  getEggSprite: (): string => {
+    return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/egg.png';
+  },
+
+  /**
    * Sprite oficial frontal pixel-art nítido para tarjetas compactas
    */
   getPixelSprite: (id: number): string => {

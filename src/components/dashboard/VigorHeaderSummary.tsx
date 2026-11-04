@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Swords, Coins, BatteryCharging, Trophy, Sparkles, Plus } from 'lucide-react';
+import { Plus, Battery, Coins } from 'lucide-react';
+import { soundFx } from '@/lib/soundFx';
+import { useTrainerStore } from '@/store/useTrainerStore';
+import { POKEMON_ASSETS } from '@/lib/pokemonAssets';
 
 interface VigorHeaderSummaryProps {
   totalCount: number;
@@ -23,30 +26,141 @@ export function VigorHeaderSummary({
   onOpenOracle,
   onOpenDatePicker,
 }: VigorHeaderSummaryProps) {
-  const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 100;
+  const profile = useTrainerStore((state) => state.profile);
+  const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllDone = percent === 100 && totalCount > 0;
 
-  // Evaluar si estamos en periodo de consagración previo
+  // Especie activa o inicial
+  const starterSpeciesMap: Record<string, number> = {
+    chikorita: 152,
+    cyndaquil: 155,
+    totodile: 158,
+    bulbasaur: 1,
+    charmander: 4,
+    squirtle: 7,
+    treecko: 252,
+    torchic: 255,
+    mudkip: 258,
+  };
+  const firstPartyMon = profile?.gba_party_json?.[0]?.speciesId;
+  const isFirstPartyShiny = profile?.gba_party_json?.[0]?.isShiny ?? false;
+  
+  // Revisar si hay un shiny reclamado en tránsito en localStorage
+  let pendingShinySpeciesId: number | null = null;
+  if (typeof window !== 'undefined' && profile?.id) {
+    try {
+      const pendingRaw = localStorage.getItem(`syndex_pending_shiny_${profile.id}`);
+      if (pendingRaw) {
+        const parsed = JSON.parse(pendingRaw);
+        if (parsed.species_id) pendingShinySpeciesId = parsed.species_id;
+      }
+    } catch {}
+  }
+
+  const hasPokemon = Boolean(
+    firstPartyMon ||
+    profile?.equipped_pokemon_cosmetics?.targetPokemonId ||
+    (profile?.starter_pokemon && starterSpeciesMap[profile.starter_pokemon]) ||
+    pendingShinySpeciesId
+  );
+
+  const speciesId =
+    firstPartyMon ||
+    pendingShinySpeciesId ||
+    profile?.equipped_pokemon_cosmetics?.targetPokemonId ||
+    (profile?.starter_pokemon && starterSpeciesMap[profile.starter_pokemon]) ||
+    null;
+
+  const isShiny = firstPartyMon ? isFirstPartyShiny : Boolean(pendingShinySpeciesId);
+  const spriteUrl = speciesId ? POKEMON_ASSETS.getAnimatedSprite(speciesId, isShiny) : POKEMON_ASSETS.getEggSprite();
+
+  // Matriz de reactividad sobria de Johto
+  const getCompanionMood = () => {
+    if (!hasPokemon) {
+      return {
+        mood: 'En Incubación',
+        badgeColor: 'bg-[#C59B46]/10 text-[#9A7025] border-[#C59B46]/25',
+        spriteAnimation: { rotate: [-2, 2, -2, 2, 0], scale: [1, 1.02, 1] },
+        dialogue: 'Esperando señal del cartucho. Inicia tu aventura en la consola para despertar a tu compañero.',
+        multiplier: '1.0x',
+        multiplierBg: 'bg-[#FAF9F5] text-[#706E66]',
+        statusEmoji: '🥚',
+      };
+    }
+    if (completedCount === 0) {
+      return {
+        mood: 'En Reposo',
+        badgeColor: 'bg-[#706E66]/10 text-[#706E66] border-[#706E66]/20',
+        spriteAnimation: { y: [0, 2, 0], opacity: 0.92 },
+        dialogue: 'Zzz... ¿arrancamos el día con hidratación y foco, Entrenador?',
+        multiplier: '1.0x',
+        multiplierBg: 'bg-[#FAF9F5] text-[#706E66]',
+        statusEmoji: '💤',
+      };
+    }
+    if (completedCount >= 1 && completedCount <= 2 && !isAllDone) {
+      return {
+        mood: 'Animado',
+        badgeColor: 'bg-[#2D68C4]/10 text-[#2D68C4] border-[#2D68C4]/25',
+        spriteAnimation: { y: [0, -3, 0] },
+        dialogue: 'Buen ritmo. Siento el incremento de energía y foco de Johto.',
+        multiplier: '1.0x',
+        multiplierBg: 'bg-[#2D68C4]/8 text-[#2D68C4]',
+        statusEmoji: '✨',
+      };
+    }
+    if (completedCount >= 3 && !isAllDone) {
+      return {
+        mood: 'Foco Alto',
+        badgeColor: 'bg-[#C59B46]/10 text-[#9A7025] border-[#C59B46]/25',
+        spriteAnimation: { y: [0, -5, 0], scale: [1, 1.03, 1] },
+        dialogue: 'Disciplina impecable. Casi listos para sellar el día.',
+        multiplier: '1.1x Batería',
+        multiplierBg: 'bg-[#C59B46]/10 text-[#9A7025]',
+        statusEmoji: '⚡',
+      };
+    }
+    // 100% de cumplimiento
+    return {
+      mood: 'En Fuego',
+      badgeColor: 'bg-[#D9383A]/10 text-[#D9383A] border-[#D9383A]/25',
+      spriteAnimation: { y: [0, -6, 0] },
+      dialogue: 'Día perfecto conquistado. La sesión de GBA está más que ganada.',
+      multiplier: '1.2x EXP',
+      multiplierBg: 'bg-[#D9383A]/10 text-[#D9383A]',
+      statusEmoji: '🔥',
+    };
+  };
+
+  const companion = getCompanionMood();
+
   const todayStr = new Date().toISOString().split('T')[0];
   const isPendingStart = journeyStartDate && journeyStartDate > todayStr;
 
+  const handleSpriteTap = () => {
+    soundFx.playLevelUp();
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate([15, 25]);
+    }
+  };
+
   return (
     <div className="space-y-3">
-      {/* Banner de Consagración si la fecha de inicio es futura */}
+      {/* Banner de Calibración si la fecha de inicio es futura */}
       {isPendingStart && (
-        <div className="rounded-2xl bg-gradient-to-r from-amber-500/15 via-[#C5A059]/10 to-transparent border border-[#C5A059]/50 p-3 flex items-center justify-between gap-2 shadow-[0_2px_0_0_#000]">
+        <div className="rounded-2xl bg-[#FFFBF0] border border-[#C59B46]/30 p-3 flex items-center justify-between gap-2 shadow-[0_2px_6px_rgba(197,155,70,0.06)]">
           <div className="space-y-0.5 min-w-0">
-            <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider flex items-center gap-1">
+            <span className="text-[10px] font-semibold uppercase text-[#9A7025] tracking-wider flex items-center gap-1 font-mono">
               <span>🌅</span> PERIODO DE VIGILIA & CALIBRACIÓN
             </span>
-            <p className="text-[11px] text-[#CBD5E1] truncate">
-              Tu forja oficial inicia: <strong className="text-[#C5A059] font-mono">{journeyStartDate}</strong>
+            <p className="text-xs text-[#706E66] truncate font-mono">
+              Inicio oficial: <strong className="text-[#1C1B18]">{journeyStartDate}</strong>
             </p>
           </div>
           {onOpenDatePicker && (
             <button
               onClick={onOpenDatePicker}
-              className="px-2.5 py-1 rounded-lg bg-[#C5A059] hover:bg-amber-400 text-black text-[10px] font-black uppercase cursor-pointer shrink-0 shadow-[0_1px_0_0_#000]"
+              className="px-2.5 py-1 rounded-xl bg-[#C59B46]/15 hover:bg-[#C59B46]/25 text-[#9A7025] border border-[#C59B46]/30 text-[10px] font-mono font-semibold uppercase active:scale-95 transition-all cursor-pointer"
             >
               Cambiar
             </button>
@@ -54,93 +168,99 @@ export function VigorHeaderSummary({
         </div>
       )}
 
-      {/* Altar de Batalla Bento Card */}
-      <div className="rounded-2xl bg-white border border-[#E8E5DD] p-4 space-y-3 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#D97043]/10 border border-[#D97043]/20 flex items-center justify-center text-[#D97043]">
-              <Swords className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-editorial text-sm font-semibold tracking-tight text-[#1F1E1B]">
-                  Mareas de Vigor
-                </h2>
-                {onOpenDatePicker && (
-                  <button
-                    onClick={onOpenDatePicker}
-                    className="text-[10px] font-mono text-[#D97043] hover:underline cursor-pointer"
-                  >
-                    {isPendingStart ? '⏳ Inicia pronto' : 'Configurar'}
-                  </button>
-                )}
-              </div>
-              <span className="text-[11px] text-[#706E66] font-mono">
-                {completedCount} de {totalCount} disciplinas en flujo
+      {/* HERO COMPONENT: Widget de Arte Digital Pokémon (Display Analogue Pocket) */}
+      <div className="rounded-2xl bg-white border border-[#E4E1D8] p-4 space-y-3.5 shadow-[0_2px_8px_rgba(26,25,21,0.04)]">
+        {/* Cabecera del Hero: Sprite en display de hardware + Diálogo teletipo de 1 línea */}
+        <div className="flex items-center gap-3.5">
+          {/* Sprite con marco display mate */}
+          <motion.div
+            onClick={handleSpriteTap}
+            animate={companion.spriteAnimation}
+            transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+            title="Toca a tu compañero Pokémon"
+            className="w-16 h-16 rounded-2xl bg-[#FAF9F5] border border-[#E4E1D8] shadow-[0_1px_3px_rgba(26,25,21,0.03)] flex items-center justify-center shrink-0 cursor-pointer active:scale-95 transition-all relative overflow-hidden"
+          >
+            <img
+              src={spriteUrl}
+              alt="Compañero Pokémon"
+              style={{ imageRendering: 'pixelated' }}
+              className="max-h-12 max-w-12 object-contain select-none"
+              onError={(e) => {
+                if (speciesId) {
+                  (e.target as HTMLImageElement).src = POKEMON_ASSETS.getBoxIcon(speciesId);
+                }
+              }}
+            />
+            <span className="absolute bottom-1 right-1 text-xs select-none">
+              {companion.statusEmoji}
+            </span>
+          </motion.div>
+
+          {/* Diálogo conciso y badges sobrias */}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex items-center justify-between gap-1">
+              <span className={`text-[9px] font-mono font-medium uppercase tracking-wider px-2 py-0.5 rounded-md border ${companion.badgeColor}`}>
+                {companion.mood}
+              </span>
+              <span className={`text-[9px] font-mono font-medium tracking-wider px-1.5 py-0.5 rounded-md border border-[#E4E1D8] ${companion.multiplierBg}`}>
+                {companion.multiplier}
               </span>
             </div>
-          </div>
 
-          {/* Botón Claro y Directo para Agregar Retos */}
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={onOpenOracle}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold cursor-pointer shadow-sm transition-all"
-            title="Crear un nuevo hábito o reto semanal"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>Nuevo Reto</span>
-          </motion.button>
+            {/* Bocadillo de diálogo estilo teletipo editorial */}
+            <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] text-xs text-[#1C1B18] leading-snug font-medium">
+              "{companion.dialogue}"
+            </div>
+          </div>
         </div>
 
-        {/* Barra de Progreso de Batalla */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] font-mono font-medium">
-            <span className="text-[#8A877E]">AVANCE DEL DÍA</span>
-            <span
-              className={
-                isAllDone
-                  ? 'text-[#5B7855] font-bold'
-                  : percent >= 60
-                  ? 'text-[#D97043] font-bold'
-                  : 'text-[#D9534F] font-bold'
-              }
-            >
-              {isAllDone ? '👑 100% CUMPLIDO' : `${percent}% VIGOR`}
+        {/* Barra Técnica de Vínculo & Disciplina */}
+        <div className="space-y-1.5 pt-0.5">
+          <div className="flex items-center justify-between text-[11px] font-mono">
+            <span className="text-[#706E66] font-medium tracking-wider uppercase">VÍNCULO & DISCIPLINA</span>
+            <span className={`font-semibold tabular-nums ${isAllDone ? 'text-[#2E8555]' : 'text-[#1C1B18]'}`}>
+              {completedCount}/{totalCount} ({percent}%)
             </span>
           </div>
 
-          <div className="w-full h-2 rounded-full bg-[#EAE7DF] overflow-hidden relative">
+          <div className="w-full h-2 rounded-full bg-[#FAF9F5] border border-[#E4E1D8] p-0.5 overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${percent}%` }}
-              transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-              className={`h-full rounded-full ${
+              transition={{ type: 'spring', stiffness: 120, damping: 16 }}
+              className={`h-full rounded-full transition-colors ${
                 isAllDone
-                  ? 'bg-gradient-to-r from-[#6E8B68] via-[#4A8B99] to-[#D97043]'
-                  : 'bg-gradient-to-r from-[#D97043] to-[#E07A4D]'
+                  ? 'bg-[#2E8555]'
+                  : percent >= 60
+                  ? 'bg-[#C59B46]'
+                  : 'bg-[#D9383A]'
               }`}
             />
           </div>
         </div>
 
-        {/* Resumen de Recursos Cosechados Hoy */}
-        <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] font-mono">
-          <div className="p-2.5 rounded-xl bg-[#F7F5F0] border border-[#E8E5DD] flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[#A6752C]">
-              <Coins className="w-4 h-4" />
-              <span className="font-medium">POKÉDÓLARES:</span>
+        {/* Fila de Recompensas Cosechadas + Botón Primario de Nuevo Reto */}
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#E4E1D8]">
+          <div className="flex items-center gap-1.5 text-xs font-mono font-medium">
+            <div className="px-2 py-0.5 rounded-lg bg-[#C59B46]/10 border border-[#C59B46]/25 text-[#9A7025] flex items-center gap-1">
+              <Coins className="w-3.5 h-3.5 text-[#C59B46]" />
+              <span className="tabular-nums">+{earnedGoldToday} 💰</span>
             </div>
-            <span className="text-[#1F1E1B] font-bold tabular-nums">+{earnedGoldToday} ₽</span>
+            <div className="px-2 py-0.5 rounded-lg bg-[#2D68C4]/8 border border-[#2D68C4]/20 text-[#2D68C4] flex items-center gap-1">
+              <Battery className="w-3.5 h-3.5 stroke-[2.2]" />
+              <span className="tabular-nums">+{earnedBatteryToday}m 🔋</span>
+            </div>
           </div>
 
-          <div className="p-2.5 rounded-xl bg-[#F7F5F0] border border-[#E8E5DD] flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-[#5B7855]">
-              <BatteryCharging className="w-4 h-4" />
-              <span className="font-medium">FLUJO GBA:</span>
-            </div>
-            <span className="text-[#1F1E1B] font-bold tabular-nums">+{earnedBatteryToday}m</span>
-          </div>
+          <button
+            type="button"
+            onClick={onOpenOracle}
+            className="bg-[#D9383A] text-white font-semibold text-xs tracking-wider uppercase py-2 px-3.5 rounded-xl shadow-[0_2px_0px_#B32628] active:translate-y-[1px] active:shadow-none hover:bg-[#C92F31] transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none"
+            title="Forjar un nuevo hábito o reto"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Nuevo Reto</span>
+          </button>
         </div>
       </div>
     </div>

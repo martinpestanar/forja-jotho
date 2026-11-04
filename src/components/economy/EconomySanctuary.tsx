@@ -183,19 +183,22 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
         />
       </div>
 
-      {/* Barra de la meta */}
-      <div className="hq-card p-3">
-        <div className="flex items-center justify-between text-[10px]">
-          <span className="hq-label">Meta Olimpo Shiny · {currency(snapshot?.dratini_price ?? 50000)}</span>
-          <span className="hq-mono text-[#8A877E]">
-            {snapshot?.dratini_days_left ?? '—'} días sin trading · ~35 días con Bolsa Bonguri
+      {/* Barra de la meta Johto */}
+      <div className="bg-white border border-[#E4E1D8] rounded-2xl p-4 shadow-[0_2px_8px_rgba(26,25,21,0.04)]">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold text-[#1C1B18] flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5 text-[#C59B46]" />
+            Meta Shiny Johto · {currency(snapshot?.dratini_price ?? 50000)}
+          </span>
+          <span className="font-mono text-[10px] text-[#706E66]">
+            {snapshot?.dratini_days_left ?? '—'} días est.
           </span>
         </div>
-        <ElasticProgress value={progress} accent="var(--hq-gold)" className="mt-2" height={6} />
+        <ElasticProgress value={progress} accent="var(--hq-gold)" className="mt-2.5" height={6} />
       </div>
 
-      {/* Pestañas */}
-      <div className="hq-scroll flex items-center gap-1.5 overflow-x-auto">
+      {/* Pestañas de Precisión Editorial */}
+      <div className="hq-scroll flex items-center gap-1.5 overflow-x-auto pb-1">
         {TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;
@@ -207,10 +210,10 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
                 soundFx.playClick();
                 setTab(t.id);
               }}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer active:scale-95 ${
                 active
-                  ? 'border-[#1F1E1B] bg-[#1F1E1B] text-[#FAF9F5]'
-                  : 'border-[#E8E5DD] bg-white text-[#5E5C56] hover:border-[#D5D1C5] hover:text-[#1F1E1B]'
+                  ? 'bg-[#D9383A] text-white border-[#D9383A] shadow-[0_2px_4px_rgba(217,56,58,0.25)]'
+                  : 'bg-white text-[#706E66] border-[#E4E1D8] hover:text-[#1C1B18] hover:bg-[#FAF9F5]'
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -228,15 +231,15 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
         {tab === 'boveda' && (
           <div className="space-y-3">
             {/* Banner de Sincronización del Cofre con la ROM */}
-            <div className="p-3.5 rounded-2xl border border-[#E8E5DD] bg-[#FAF9F5] flex items-center justify-between gap-3 shadow-sm">
+            <div className="p-4 rounded-2xl border border-[#E4E1D8] bg-white flex items-center justify-between gap-3 shadow-[0_2px_8px_rgba(26,25,21,0.04)]">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-white border border-[#E8E5DD] text-[#D97043] font-bold">
-                  <Package className="h-4 w-4" />
+                <div className="p-2.5 rounded-xl bg-[#2D68C4]/10 border border-[#2D68C4]/20 text-[#2D68C4] font-medium">
+                  <Package className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-editorial font-semibold text-[#1F1E1B]">Cofre de Exportación (.sav ↔ WebApp)</h4>
-                  <p className="text-[11px] text-[#706E66]">
-                    Liquida Pepitas, Perlas y Fósiles hallados en la ROM a precio oficial de Johto con eliminación atómica.
+                  <h4 className="text-xs font-semibold text-[#1C1B18]">Cofre de Exportación (.sav ↔ WebApp)</h4>
+                  <p className="text-[11px] text-[#706E66] line-clamp-1">
+                    Liquida Pepitas, Perlas y Fósiles hallados en la ROM a precio oficial de Johto.
                   </p>
                 </div>
               </div>
@@ -246,24 +249,32 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
                   soundFx.playCoin();
                   flash('Escaneando mochila del emulador en busca de tesoros...');
                 }}
-                className="px-3 py-1.5 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white text-xs font-semibold transition-all shadow-sm active:scale-95 shrink-0 cursor-pointer"
+                className="px-3.5 py-2 rounded-xl bg-[#2D68C4] text-white text-xs font-semibold uppercase tracking-wider transition-all shadow-[0_2px_0px_#23529B] active:translate-y-[1px] active:shadow-none hover:bg-[#255BB0] shrink-0 cursor-pointer"
               >
                 Escanear .SAV
               </button>
             </div>
 
             {(snapshot?.vault ?? []).length === 0 ? (
-              <div className="hq-panel flex flex-col items-center gap-2 p-6 text-center">
-                <Package className="h-5 w-5 text-[#8A877E]" />
-                <p className="text-xs text-[#5E5C56]">Tu Bóveda de Ciudad Trigal está vacía.</p>
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => setTab('mercado')} className="hq-btn hq-btn-primary">
+              <div className="bg-white border border-[#E4E1D8] rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(26,25,21,0.04)] space-y-3">
+                <Package className="h-8 w-8 mx-auto text-[#706E66]" />
+                <p className="text-xs text-[#1C1B18] font-semibold">Tu Bóveda de Ciudad Trigal está vacía.</p>
+                <div className="flex justify-center gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setTab('mercado')} 
+                    className="px-3 py-1.5 rounded-xl bg-[#C59B46]/10 text-[#9A7025] font-semibold text-xs border border-[#C59B46]/25 hover:bg-[#C59B46]/20 active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
                     <TrendingUp className="h-3.5 w-3.5" />
-                    Ir a la Bolsa de Bonguris
+                    Bolsa Bonguri
                   </button>
-                  <button type="button" onClick={() => setTab('bazar')} className="hq-btn hq-btn-ghost">
+                  <button 
+                    type="button" 
+                    onClick={() => setTab('bazar')} 
+                    className="px-3 py-1.5 rounded-xl bg-white text-[#1C1B18] font-semibold text-xs border border-[#E4E1D8] hover:bg-[#FAF9F5] active:scale-95 cursor-pointer flex items-center gap-1.5"
+                  >
                     <ShoppingBag className="h-3.5 w-3.5" />
-                    Ir al Bazar
+                    Bazar
                   </button>
                 </div>
               </div>
@@ -273,14 +284,14 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
                 return (
                   <div
                     key={item.id}
-                    className="hq-card flex items-center justify-between gap-3 p-3"
+                    className="bg-white border border-[#E4E1D8] rounded-2xl flex items-center justify-between gap-3 p-3.5 shadow-[0_1px_3px_rgba(26,25,21,0.03)] hover:border-[#D5D1C5] transition-all"
                   >
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 truncate text-xs font-semibold text-[#1F1E1B]">
+                      <div className="flex items-center gap-1.5 truncate text-xs font-semibold text-[#1C1B18]">
                         {item.display_name}
-                        {item.is_shiny && <Sparkles className="h-3 w-3 shrink-0 text-[#C49347]" />}
+                        {item.is_shiny && <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#C59B46]" />}
                       </div>
-                      <div className="hq-mono mt-0.5 text-[10px] uppercase text-[#8A877E]">
+                      <div className="font-mono mt-0.5 text-[10px] uppercase text-[#706E66]">
                         {item.item_type} · x{item.quantity}
                         {avg > 0 ? ` · Costo prom: ${currency(avg)}` : ' · Cosechado'}
                       </div>
@@ -289,7 +300,7 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
                       <button
                         type="button"
                         onClick={() => handleDispatch(item.id)}
-                        className="hq-btn hq-btn-ghost shrink-0"
+                        className="px-3 py-1.5 rounded-xl bg-[#2D68C4] text-white text-xs font-semibold uppercase tracking-wider border border-[#2D68C4] shadow-[0_2px_4px_rgba(45,104,196,0.25)] hover:bg-[#255BB0] active:scale-95 shrink-0 cursor-pointer flex items-center gap-1.5 transition-all"
                       >
                         <Send className="h-3.5 w-3.5" />
                         Inyectar a GBA

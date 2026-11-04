@@ -135,7 +135,7 @@ export const OracleConsultWidget: React.FC<OracleConsultWidgetProps> = ({ profil
                 <button
                   type="submit"
                   disabled={loading || !prompt.trim()}
-                  className="px-3.5 py-2 rounded-xl bg-[#D97043] hover:bg-[#CC6437] text-white font-semibold text-xs cursor-pointer disabled:opacity-40 transition-all shadow-sm active:scale-95"
+                  className="px-3.5 py-2 rounded-xl johto-bg-ink text-white font-bold text-xs cursor-pointer disabled:opacity-40 transition-all johto-border-arcade johto-shadow-sm johto-btn-tactile"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>

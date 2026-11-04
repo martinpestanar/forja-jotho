@@ -58,22 +58,10 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
   const [bagSearch, setBagSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<ItemAssetMetadata>(HNS_ITEMS_CATALOG[0]);
 
-  // Obtener equipo real del perfil o fallback al starter elegido
-  const currentStarterOption = ALL_STARTERS.find((s) => s.key === profile?.starter_pokemon);
-  const fallbackStarter = currentStarterOption
-    ? {
-        name: currentStarterOption.name,
-        speciesId: currentStarterOption.speciesId,
-        level: 5,
-        hp: 20,
-        maxHp: 20,
-        isShiny: true,
-      }
-    : { name: 'Cyndaquil', speciesId: 155, level: 5, hp: 20, maxHp: 20, isShiny: false };
-
+  // Equipo real del perfil (vacío por defecto para cuentas nuevas)
   const rawParty = profile?.gba_party_json && profile.gba_party_json.length > 0
     ? profile.gba_party_json
-    : [fallbackStarter];
+    : [];
 
   // Formatear party a estructura homogénea
   const party: BoxedPokemon[] = rawParty.map((p: any, idx: number) => {
@@ -202,58 +190,62 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
       </AnimatePresence>
 
       {/* ── Selector de Sección ── */}
-      <div className="flex items-center justify-between gap-2 border-b border-[#E8E5DD] pb-2.5 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 border-b border-[#E4E1D8] pb-2.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
+            type="button"
             onClick={() => { soundFx.playClick(); setActiveSection('party'); setSelectedSlot(0); }}
-            className={`px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer border active:scale-95 ${
               activeSection === 'party'
-                ? 'bg-[#1F1E1B] text-white shadow-sm'
-                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
+                ? 'bg-[#D9383A] text-white border-[#D9383A] shadow-[0_2px_4px_rgba(217,56,58,0.25)]'
+                : 'bg-white text-[#706E66] border-[#E4E1D8] hover:text-[#1C1B18] hover:bg-[#FAF9F5]'
             }`}
           >
-            <Users className="w-4 h-4 text-[#D97043]" />
+            <Users className="w-4 h-4" />
             <span>Equipo ({party.length}/6)</span>
           </button>
 
           <button
+            type="button"
             onClick={() => { soundFx.playClick(); setActiveSection('pc'); setSelectedSlot(0); }}
-            className={`px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer border active:scale-95 ${
               activeSection === 'pc'
-                ? 'bg-[#1F1E1B] text-white shadow-sm'
-                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
+                ? 'bg-[#2D68C4] text-white border-[#2D68C4] shadow-[0_2px_4px_rgba(45,104,196,0.25)]'
+                : 'bg-white text-[#706E66] border-[#E4E1D8] hover:text-[#1C1B18] hover:bg-[#FAF9F5]'
             }`}
           >
-            <Database className="w-4 h-4 text-[#4A8B99]" />
-            <span>PC Box 1 ({pcBox.filter(Boolean).length}/30)</span>
+            <Database className="w-4 h-4" />
+            <span>PC Box ({pcBox.filter(Boolean).length}/30)</span>
           </button>
 
           <button
+            type="button"
             onClick={() => { soundFx.playClick(); setActiveSection('bag'); }}
-            className={`px-3 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-all cursor-pointer border active:scale-95 ${
               activeSection === 'bag'
-                ? 'bg-[#1F1E1B] text-white shadow-sm'
-                : 'bg-[#FAF9F5] text-[#706E66] hover:text-[#1F1E1B] border border-[#E8E5DD]'
+                ? 'bg-[#C59B46] text-white border-[#C59B46] shadow-[0_2px_4px_rgba(197,155,70,0.25)]'
+                : 'bg-white text-[#706E66] border-[#E4E1D8] hover:text-[#1C1B18] hover:bg-[#FAF9F5]'
             }`}
           >
-            <Package className="w-4 h-4 text-[#D4A359]" />
-            <span>Mochila GBA</span>
+            <Package className="w-4 h-4" />
+            <span>Mochila Suministros</span>
           </button>
 
           {onOpenStarterModal && (
             <button
+              type="button"
               onClick={() => { soundFx.playClick(); onOpenStarterModal(); }}
-              className="px-2.5 py-1.5 rounded-xl font-medium text-xs flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all cursor-pointer"
+              className="px-2.5 py-1.5 rounded-xl font-semibold text-xs flex items-center gap-1.5 bg-[#FFFBF0] text-[#9A7025] border border-[#C59B46]/30 shadow-[0_1px_2px_rgba(197,155,70,0.06)] active:scale-95 transition-all cursor-pointer"
               title="Cambiar o elegir terna de iniciales shinies"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+              <Sparkles className="w-3.5 h-3.5 text-[#C59B46] fill-[#C59B46]" />
               <span>Iniciales Shinies</span>
             </button>
           )}
         </div>
 
-        <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#706E66] font-mono">
-          <Gamepad2 className="w-3.5 h-3.5 text-[#5A7D62]" />
+        <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-[#1C1B18] font-mono font-medium">
+          <Gamepad2 className="w-3.5 h-3.5 text-[#2E8555]" />
           <span>Sincronizado con ROM</span>
         </div>
       </div>
@@ -267,72 +259,89 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
           <div className="lg:col-span-7 h-full overflow-y-auto pr-1 space-y-2">
             {activeSection === 'party' ? (
               <div className="space-y-2">
-                {party.map((mon, idx) => {
-                  const isSelected = selectedSlot === idx;
-                  const hpPct = Math.round((mon.hp / mon.maxHp) * 100);
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => { soundFx.playClick(); setSelectedSlot(idx); }}
-                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                        isSelected
-                          ? 'bg-[#FAF9F5] border-[#D97043] shadow-sm'
-                          : 'bg-white border-[#E8E5DD] hover:border-[#D5D1C5]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-11 h-11 flex items-center justify-center shrink-0">
-                          {brokenImages[`party_${idx}_${mon.speciesId}`] ? (
-                            <div className="w-9 h-9 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] flex items-center justify-center text-[#D97043] font-editorial font-bold text-xs">
-                              {mon.name.charAt(0).toUpperCase()}
-                            </div>
-                          ) : (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={POKEMON_ASSETS.getAnimatedSprite(mon.speciesId, mon.isShiny)}
-                              alt={mon.name}
-                              className="max-h-11 object-contain"
-                              onError={() => markImageBroken(`party_${idx}_${mon.speciesId}`)}
-                            />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-editorial font-semibold text-sm text-[#1F1E1B] tracking-tight">{mon.name}</span>
-                            {mon.isShiny && (
-                              <span className="px-1 py-0.5 bg-[#D4A359]/20 text-[#A6752C] text-[9px] font-mono rounded flex items-center gap-0.5 shrink-0">
-                                <Sparkles className="w-2.5 h-2.5" /> SHINY
-                              </span>
+                {party.length === 0 ? (
+                  <div className="p-6 rounded-2xl border border-dashed border-[#E4E1D8] bg-[#FAF9F5] flex flex-col items-center justify-center text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-white border border-[#E4E1D8] flex items-center justify-center text-[#C59B46] mb-3 shadow-sm">
+                      <Sparkles className="w-6 h-6 animate-pulse" />
+                    </div>
+                    <h4 className="font-semibold text-sm text-[#1C1B18]">Esperando señal del cartucho</h4>
+                    <p className="text-xs text-[#706E66] mt-1 mb-4 max-w-xs leading-relaxed">
+                      Abre el juego en tu consola, visita al <strong>Profesor Elm</strong> para elegir a tu inicial y guarda la partida. Tu equipo se reflejará aquí automáticamente.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-[#706E66] bg-white border border-[#E4E1D8] px-3 py-1.5 rounded-xl">
+                        🎮 Sincronización Automática Activa
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  party.map((mon, idx) => {
+                    const isSelected = selectedSlot === idx;
+                    const hpPct = Math.round((mon.hp / mon.maxHp) * 100);
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => { soundFx.playClick(); setSelectedSlot(idx); }}
+                        className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-[#FAF9F5] border-[#D97043] shadow-sm'
+                            : 'bg-white border-[#E8E5DD] hover:border-[#D5D1C5]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-11 h-11 flex items-center justify-center shrink-0">
+                            {brokenImages[`party_${idx}_${mon.speciesId}`] ? (
+                              <div className="w-9 h-9 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] flex items-center justify-center text-[#D97043] font-editorial font-bold text-xs">
+                                {mon.name.charAt(0).toUpperCase()}
+                              </div>
+                            ) : (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={POKEMON_ASSETS.getAnimatedSprite(mon.speciesId, mon.isShiny)}
+                                alt={mon.name}
+                                className="max-h-11 object-contain"
+                                onError={() => markImageBroken(`party_${idx}_${mon.speciesId}`)}
+                              />
                             )}
                           </div>
-                          <div className="text-[11px] text-[#706E66] flex items-center gap-1.5 font-mono">
-                            <span className="font-semibold text-[#D97043]">Nv. {mon.level}</span>
-                            <span>·</span>
-                            <span className="text-[#706E66]">{mon.types.join(' / ')}</span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-editorial font-semibold text-sm text-[#1F1E1B] tracking-tight">{mon.name}</span>
+                              {mon.isShiny && (
+                                <span className="px-1 py-0.5 bg-[#D4A359]/20 text-[#A6752C] text-[9px] font-mono rounded flex items-center gap-0.5 shrink-0">
+                                  <Sparkles className="w-2.5 h-2.5" /> SHINY
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-[#706E66] flex items-center gap-1.5 font-mono">
+                              <span className="font-semibold text-[#D97043]">Nv. {mon.level}</span>
+                              <span>·</span>
+                              <span className="text-[#706E66]">{mon.types.join(' / ')}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right space-y-1 shrink-0 pl-2">
-                        <div className="text-[10px] text-[#706E66] font-mono">
-                          HP: <span className="text-[#5B7855] font-semibold">{mon.hp}</span>/{mon.maxHp}
+                        <div className="text-right space-y-1 shrink-0 pl-2">
+                          <div className="text-[10px] text-[#706E66] font-mono">
+                            HP: <span className="text-[#5B7855] font-semibold">{mon.hp}</span>/{mon.maxHp}
+                          </div>
+                          <div className="w-16 sm:w-20 h-1.5 bg-[#EAE7DF] rounded-full overflow-hidden ml-auto">
+                            <div
+                              className={`h-full ${hpPct > 50 ? 'bg-[#6E8B68]' : hpPct > 20 ? 'bg-[#D97043]' : 'bg-rose-500'}`}
+                              style={{ width: `${hpPct}%` }}
+                            />
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDepositOrWithdraw('party', idx); }}
+                            className="text-[10px] text-[#D97043] hover:underline font-mono cursor-pointer block ml-auto pt-0.5"
+                          >
+                            Depositar en PC →
+                          </button>
                         </div>
-                        <div className="w-16 sm:w-20 h-1.5 bg-[#EAE7DF] rounded-full overflow-hidden ml-auto">
-                          <div
-                            className={`h-full ${hpPct > 50 ? 'bg-[#6E8B68]' : hpPct > 20 ? 'bg-[#D97043]' : 'bg-rose-500'}`}
-                            style={{ width: `${hpPct}%` }}
-                          />
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDepositOrWithdraw('party', idx); }}
-                          className="text-[10px] text-[#D97043] hover:underline font-mono cursor-pointer block ml-auto pt-0.5"
-                        >
-                          Depositar en PC →
-                        </button>
                       </div>
-                    </div>
-                  );
-                })}
-                {Array(6 - party.length).fill(null).map((_, i) => (
+                    );
+                  })
+                )}
+                {party.length > 0 && Array(6 - party.length).fill(null).map((_, i) => (
                   <div
                     key={`empty-${i}`}
                     className="p-3 rounded-xl border border-dashed border-[#E8E5DD] flex items-center justify-center text-[#8A877E] text-xs gap-2 bg-[#FAF9F5]"
@@ -476,10 +485,10 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
                       handleDepositOrWithdraw('pc', selectedSlot ?? 0);
                     }
                   }}
-                  className={`w-full py-2.5 rounded-xl font-medium text-xs uppercase flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-[0.98] ${
+                  className={`w-full py-2.5 rounded-xl font-semibold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer active:translate-y-[1px] active:shadow-none ${
                     activeSection === 'party'
-                      ? 'bg-[#D97043] hover:bg-[#CC6437] text-white'
-                      : 'bg-[#4A8B99] hover:bg-[#3B7582] text-white'
+                      ? 'bg-[#D9383A] text-white shadow-[0_2px_0px_#B32628] hover:bg-[#C92F31]'
+                      : 'bg-[#2D68C4] text-white shadow-[0_2px_0px_#23529B] hover:bg-[#255BB0]'
                   }`}
                 >
                   <ArrowRightLeft className="w-4 h-4" />
@@ -497,12 +506,18 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
       )}
 
       {/* ══════════════════════════════════════════════════════════════
-          SECCIÓN 3: MOCHILA GBA (Catálogo de Ítems + Inyección)
+          SECCIÓN 3: DESPACHO DE SUMINISTROS (Catálogo de Ítems + Bóveda)
       ══════════════════════════════════════════════════════════════ */}
       {activeSection === 'bag' && (
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-0 overflow-hidden">
           {/* Catálogo de Ítems */}
           <div className="lg:col-span-7 flex flex-col gap-2 min-h-0">
+            {/* Aviso informativo de suministros */}
+            <div className="px-3 py-2 rounded-xl border border-[#E8E5DD] bg-[#FAF9F5] text-[11px] text-[#706E66] font-mono flex items-center gap-2">
+              <Package className="w-4 h-4 text-[#D4A359] shrink-0" />
+              <span>Catálogo de suministros. Se despachan desde tu Bóveda comprándolos en el Bazar.</span>
+            </div>
+
             {/* Buscador */}
             <div className="relative">
               <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#8A877E]" />
@@ -615,10 +630,10 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
             {/* Botón Inyectar */}
             <button
               onClick={handleInjectItem}
-              className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold text-white bg-[#D97043] hover:bg-[#CC6437] flex items-center justify-center gap-2 transition-all cursor-pointer mt-4 shadow-sm active:scale-[0.98]"
+              className="w-full py-2.5 px-3 rounded-xl text-xs font-semibold text-white bg-[#1C1B18] hover:bg-black shadow-[0_2px_0px_rgba(0,0,0,0.3)] active:translate-y-[1px] active:shadow-none flex items-center justify-center gap-2 transition-all cursor-pointer mt-4 uppercase tracking-wider"
             >
-              <Zap className="w-4 h-4" />
-              <span>Inyectar a Mochila GBA</span>
+              <Zap className="w-4 h-4 fill-current text-[#C59B46]" />
+              <span>Despachar a Partida GBA</span>
             </button>
           </div>
         </div>

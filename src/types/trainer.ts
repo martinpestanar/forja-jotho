@@ -14,7 +14,7 @@ export type ActiveTab = 'map' | 'party' | 'pokedex' | 'tuning' | 'minigames' | '
 export interface TrainerProfile {
   id: string;
   trainer_name: string;
-  starter_pokemon: StarterPokemon;
+  starter_pokemon?: StarterPokemon | null;
   nature_role: NatureRole;
   current_level: number;
   xp: number;

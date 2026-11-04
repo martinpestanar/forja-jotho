@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Moon, Sun, CheckCircle2, Circle, Compass, Sparkles, AlertCircle } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
+import { useTrainerStore } from '@/store/useTrainerStore';
+import { POKEMON_ASSETS } from '@/lib/pokemonAssets';
 
 interface FlexibleCompanionBarProps {
   completedCount: number;
@@ -20,66 +21,66 @@ export function FlexibleCompanionBar({
   onOpenJournal,
   onOpenTutorial,
 }: FlexibleCompanionBarProps) {
-  const [currentHour, setCurrentHour] = useState(12);
+  const profile = useTrainerStore((state) => state.profile);
+  const speciesId = profile?.equipped_pokemon_cosmetics?.targetPokemonId || 155;
+  const spriteUrl = POKEMON_ASSETS.getAnimatedSprite(speciesId, false);
 
-  useEffect(() => {
-    const updateHour = () => {
-      setCurrentHour(new Date().getHours());
-    };
-    updateHour();
-    const interval = setInterval(updateHour, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const remaining = Math.max(0, totalCount - completedCount);
   const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const isAllDone = percent === 100 && totalCount > 0;
 
-  // Frase dinámica según energía del día sin imponer horarios rígidos
-  const getCompanionTone = () => {
-    if (completedCount === totalCount && totalCount > 0) {
+  // Matriz de reactividad según avance diario (Estilo Editorial Sobrio)
+  const getCompanionState = () => {
+    if (completedCount === 0) {
       return {
-        title: '👑 EL DÍA HA SIDO CONQUISTADO',
-        message: 'Has cumplido tus pilares. El botín de medianoche es tuyo.',
-        color: 'text-amber-400 border-amber-500/40 bg-amber-500/10',
+        mood: 'En Reposo',
+        badge: 'bg-[#706E66]/10 text-[#706E66] border-[#706E66]/20',
+        message: 'Zzz... ¿arrancamos el día con hidratación y foco, Entrenador?',
+        emoji: '💤',
       };
     }
-
-    if (currentHour >= 10 && currentHour < 15) {
+    if (completedCount >= 1 && completedCount <= 2 && !isAllDone) {
       return {
-        title: '☀️ MAÑANA SOBERANA (ENERGÍA DE ARRANQUE)',
-        message: `Llevas ${completedCount} de ${totalCount}. Fluye a tu propio ritmo, Martín.`,
-        color: 'text-cyan-400 border-cyan-500/40 bg-cyan-500/10',
-      };
-    } else if (currentHour >= 15 && currentHour < 20) {
-      return {
-        title: '⚡ TARDE DEL CAZADOR (MOMENTO DE EJECUCIÓN)',
-        message: `Quedan ${remaining} misiones para sellar. Recuerda tu terraza y tus tomates.`,
-        color: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10',
-      };
-    } else if (currentHour >= 20 && currentHour <= 23) {
-      return {
-        title: '🔥 NOCHE DE JEFE TRIBAL (POTENCIA MÁXIMA)',
-        message: `Ideal para tu danza tribal o cerrar tus SaaS antes de medianoche.`,
-        color: 'text-rose-400 border-rose-500/40 bg-rose-500/10',
-      };
-    } else {
-      return {
-        title: '🌙 LA VIGILIA NOCTURNA (CERO COMPLACENCIA)',
-        message: 'Descansa o sella tu veredicto. Cuida tu energía para mañana.',
-        color: 'text-purple-400 border-purple-500/40 bg-purple-500/10',
+        mood: 'Animado',
+        badge: 'bg-[#2D68C4]/10 text-[#2D68C4] border-[#2D68C4]/25',
+        message: 'Buen ritmo. Siento el incremento de energía y foco de Johto.',
+        emoji: '✨',
       };
     }
+    if (completedCount >= 3 && !isAllDone) {
+      return {
+        mood: 'Foco Alto',
+        badge: 'bg-[#C59B46]/10 text-[#9A7025] border-[#C59B46]/25',
+        message: 'Disciplina impecable. Casi listos para sellar el día.',
+        emoji: '⚡',
+      };
+    }
+    return {
+      mood: 'En Fuego',
+      badge: 'bg-[#D9383A]/10 text-[#D9383A] border-[#D9383A]/25',
+      message: 'Día perfecto conquistado. La sesión de GBA está más que ganada.',
+      emoji: '🔥',
+    };
   };
 
-  const tone = getCompanionTone();
+  const state = getCompanionState();
 
   return (
-    <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3.5 space-y-2.5 shadow-sm">
+    <div className="rounded-2xl bg-white border border-[#E4E1D8] p-3.5 space-y-3 shadow-[0_2px_8px_rgba(26,25,21,0.04)]">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Compass className="w-4 h-4 shrink-0 text-[#D97043]" />
-          <span className="text-[10px] font-semibold uppercase tracking-wider font-mono text-[#D97043] truncate">
-            {tone.title}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] flex items-center justify-center shrink-0">
+            <img
+              src={spriteUrl}
+              alt="Pokémon"
+              style={{ imageRendering: 'pixelated' }}
+              className="max-h-6 max-w-6 object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = POKEMON_ASSETS.getBoxIcon(speciesId);
+              }}
+            />
+          </div>
+          <span className={`text-[9px] font-mono font-medium uppercase px-2 py-0.5 rounded-md border ${state.badge}`}>
+            {state.emoji} {state.mood}
           </span>
         </div>
 
@@ -90,7 +91,7 @@ export function FlexibleCompanionBar({
                 soundFx.playClick();
                 onOpenTutorial();
               }}
-              className="text-[10px] px-2 py-0.5 rounded-lg bg-[#FAF9F5] border border-[#E8E5DD] text-[#706E66] hover:text-[#1F1E1B] font-mono transition-colors"
+              className="text-[10px] px-2.5 py-1 rounded-lg bg-white border border-[#E4E1D8] text-[#1C1B18] font-mono font-medium hover:bg-[#FAF9F5] active:scale-95 transition-all shadow-[0_1px_2px_rgba(26,25,21,0.03)] cursor-pointer"
             >
               📖 Guía
             </button>
@@ -101,7 +102,7 @@ export function FlexibleCompanionBar({
                 soundFx.playClick();
                 onOpenJournal();
               }}
-              className="text-[10px] px-2 py-0.5 rounded-lg bg-[#FAF9F5] border border-[#E8E5DD] text-[#706E66] hover:text-[#1F1E1B] font-mono transition-colors"
+              className="text-[10px] px-2.5 py-1 rounded-lg bg-white border border-[#E4E1D8] text-[#1C1B18] font-mono font-medium hover:bg-[#FAF9F5] active:scale-95 transition-all shadow-[0_1px_2px_rgba(26,25,21,0.03)] cursor-pointer"
             >
               ✍️ Diario
             </button>
@@ -111,28 +112,30 @@ export function FlexibleCompanionBar({
               soundFx.playClick();
               onOpenGrimoire();
             }}
-            className="text-[10px] px-2 py-0.5 rounded-lg bg-[#FAF9F5] border border-[#E8E5DD] text-[#D97043] font-mono font-medium hover:bg-[#F2EFE9] transition-colors shrink-0"
+            className="text-[10px] px-2.5 py-1 rounded-lg bg-[#C59B46]/15 border border-[#C59B46]/30 text-[#9A7025] font-mono font-semibold hover:bg-[#C59B46]/25 active:scale-95 transition-all shadow-[0_1px_2px_rgba(26,25,21,0.03)] cursor-pointer"
           >
             📜 Grimorio
           </button>
         </div>
       </div>
 
-      <p className="font-editorial text-xs text-[#1F1E1B] leading-relaxed">
-        {tone.message}
-      </p>
+      <div className="p-2.5 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] text-xs text-[#1C1B18] leading-snug font-medium">
+        "{state.message}"
+      </div>
 
-      {/* Barra de Progreso Fluida Claude */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-2 rounded-full bg-[#EAE7DF] overflow-hidden">
+      {/* Barra técnica de Vínculo */}
+      <div className="flex items-center gap-2.5">
+        <div className="flex-1 h-2 rounded-full bg-[#FAF9F5] border border-[#E4E1D8] p-0.5 overflow-hidden">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-[#6E8B68] via-[#4A8B99] to-[#D97043]"
+            className={`h-full rounded-full transition-colors ${
+              isAllDone ? 'bg-[#2E8555]' : percent >= 60 ? 'bg-[#C59B46]' : 'bg-[#D9383A]'
+            }`}
             initial={{ width: 0 }}
             animate={{ width: `${percent}%` }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
+            transition={{ type: 'spring', stiffness: 120, damping: 16 }}
           />
         </div>
-        <span className="text-[10px] font-mono font-medium text-[#706E66] shrink-0">
+        <span className="text-[10px] font-mono font-medium text-[#1C1B18] shrink-0 tabular-nums">
           {completedCount}/{totalCount} ({percent}%)
         </span>
       </div>

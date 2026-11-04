@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Coins, Flame, BatteryCharging, Gamepad2 } from 'lucide-react';
 import { useTrainerStore } from '@/store/useTrainerStore';
+import { soundFx } from '@/lib/soundFx';
 
 interface MobileTopHudProps {
   profileData: any;
@@ -13,50 +13,76 @@ interface MobileTopHudProps {
 
 export function MobileTopHud({
   profileData,
-  completionPercent,
 }: MobileTopHudProps) {
   const wallet = useTrainerStore((s) => s.profile?.pokedollars);
   const gold = wallet ?? profileData?.sovereignty_gold ?? 250;
   const battery = profileData?.battery_minutes ?? 120;
   const streak = profileData?.streak_fire_days ?? 1;
 
+  const handleChipTap = () => {
+    soundFx.playClick();
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(12);
+    }
+  };
+
   return (
-    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E8E5DD] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
-      <header className="px-4 py-2.5 flex items-center justify-between max-w-md mx-auto">
-        {/* Identidad / App Brand */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-[#D97043]/10 border border-[#D97043]/20 flex items-center justify-center text-[#D97043]">
+    <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E4E1D8] shadow-[0_1px_3px_rgba(26,25,21,0.02)]">
+      <header className="px-3.5 py-2.5 flex items-center justify-between max-w-md mx-auto">
+        {/* Identidad / App Brand Editorial Retro-Premium Johto */}
+        <div className="flex items-center gap-2.5 select-none">
+          <div className="w-8 h-8 rounded-xl bg-[#D9383A] text-white flex items-center justify-center shadow-[0_2px_6px_rgba(217,56,58,0.25)]">
             <Gamepad2 className="w-4 h-4 stroke-[2.2]" />
           </div>
           <div>
-            <span className="font-editorial text-sm font-semibold tracking-tight text-[#1F1E1B] block leading-none">
-              SynDex
-            </span>
-            <span className="text-[10px] text-[#706E66] font-mono block mt-0.5">
+            <div className="flex items-center gap-1.5 leading-none">
+              <span className="text-sm font-semibold tracking-tight text-[#1C1B18]">
+                SynDex
+              </span>
+              <span className="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded-md bg-[#FAF9F5] text-[#706E66] border border-[#E4E1D8]">
+                GBA
+              </span>
+            </div>
+            <span className="text-[10px] text-[#706E66] font-mono font-medium block mt-0.5 truncate max-w-[100px]">
               {profileData?.leader_name || 'Entrenador'}
             </span>
           </div>
         </div>
 
-        {/* Píldoras Esenciales: Monedas, Racha y 2h Batería */}
-        <div className="flex items-center gap-1.5 text-xs font-mono">
-          {/* Batería Emulador (2H) */}
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#5A7D62]/10 border border-[#5A7D62]/25 text-[#4C6151] font-semibold">
-            <BatteryCharging className="w-3.5 h-3.5" />
-            <span className="tabular-nums">{battery}m</span>
-          </div>
+        {/* Píldoras Técnicas: Batería (Lugia), Monedas (Oro) y Racha (Ho-Oh) */}
+        <div className="flex items-center gap-1.5 select-none">
+          {/* Batería Emulador GBA (Azul Zafiro Lugia) */}
+          <button
+            type="button"
+            onClick={handleChipTap}
+            title="Minutos de batería disponibles"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#2D68C4]/8 border border-[#2D68C4]/20 text-[#2D68C4] hover:bg-[#2D68C4]/12 active:scale-95 cursor-pointer transition-all"
+          >
+            <BatteryCharging className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span className="tabular-nums font-mono text-xs font-semibold">{battery}m</span>
+          </button>
 
-          {/* Pokédólares */}
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] text-[#A6752C] font-semibold">
-            <Coins className="w-3.5 h-3.5" />
-            <span className="tabular-nums">{gold}</span>
-          </div>
+          {/* Monedas Johto (Oro Campana Clara) */}
+          <button
+            type="button"
+            onClick={handleChipTap}
+            title="Pokédólares acumulados"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#C59B46]/10 border border-[#C59B46]/25 text-[#9A7025] hover:bg-[#C59B46]/15 active:scale-95 cursor-pointer transition-all"
+          >
+            <Coins className="w-3.5 h-3.5 text-[#C59B46] stroke-[2]" />
+            <span className="tabular-nums font-mono text-xs font-semibold">{gold}</span>
+          </button>
 
-          {/* Racha */}
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] text-[#D97043] font-semibold">
-            <Flame className="w-3.5 h-3.5 fill-current" />
-            <span className="tabular-nums">{streak}d</span>
-          </div>
+          {/* Racha de Fuego (Rojo Ho-Oh Editorial) */}
+          <button
+            type="button"
+            onClick={handleChipTap}
+            title="Días de racha de disciplina"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#D9383A]/8 border border-[#D9383A]/20 text-[#D9383A] hover:bg-[#D9383A]/12 active:scale-95 cursor-pointer transition-all"
+          >
+            <Flame className="w-3.5 h-3.5 fill-current stroke-[1.5]" />
+            <span className="tabular-nums font-mono text-xs font-semibold">{streak}d</span>
+          </button>
         </div>
       </header>
     </div>

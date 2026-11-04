@@ -1,28 +1,25 @@
-# REGLA MAESTRA DE DISEÑO: Nintendo Visual UI & Dopamine Design System
+# REGLA MAESTRA DE DISEÑO: SynDex Editorial Retro-Premium (Audiencia Adulta)
 
-Actúa bajo el estándar obligatorio de diseño: **"Nintendo Visual UI & Dopamine Design System"**. A partir de ahora y en todas las fases de este proyecto, queda estrictamente prohibido generar paredes de texto o interfaces aburridas tipo blog. Aplica siempre estas reglas en cada componente:
+Actúa bajo el estándar obligatorio de diseño: **"SynDex Editorial Retro-Premium"** (definido en `.agents/skills/johto-arcade-design-system/SKILL.md`). En todas las fases de este proyecto, queda estrictamente prohibido generar interfaces infantiles estilo cómic con bordes negros toscos o tableros aburridos de oficina/SaaS.
 
-## 1. Política Cero Bloques de Texto
-- **Prohibido mostrar párrafos de más de 2 líneas.**
-- Toda explicación debe sustituirse por:
-  - Diagramas de cartas visuales con iconos.
-  - Barras de vida/energía elásticas.
-  - Insignias de estado pixel-art.
-  - Números rodantes o contadores visuales.
-- Las intervenciones de la IA o personajes deben ir en un cuadro de diálogo clásico de RPG de Nintendo de máximo 2 oraciones cortas con efecto teletipo (*typewriter*) y sonido retro.
+## 1. Audiencia Objetivo & Dirección Visual
+- **Audiencia:** Adultos de 24 a 38 años (disciplina, deporte, foco, emprendimiento y nostalgia sobria de Pokémon Johto).
+- **Inspiración:** Diseño industrial de hardware retro-moderno (*Analogue Pocket*, *Teenage Engineering*, *Braun*).
+- **Línea Gráfica:** Elegante, minimalista, con toques de pixel-art coleccionable y datos en tipografía monoespaciada técnica.
 
-## 2. Estándar de Doble Tema Nintendo (Light & Dark)
-- **Modo Light (Game Boy Color / Pokédex Clásica):**
-  - Fondo marfil/crema retro (`#F4F1EA`).
-  - Bordes biselados con sombras duras negras estilo neo-arcade (`shadow-[4px_4px_0px_0px_#000]`).
-  - Botones táctiles rojo Nintendo (`#E60012`) y azul zafiro (`#2563EB`) que se hunden físicamente al hacer clic (`active:translate-x-1 active:translate-y-1 active:shadow-none`).
-- **Modo Dark (Game Boy Advance SP / Cyber-Johto):**
-  - Fondo grafito oscuro (`#121214`).
-  - Bordes con sutil brillo neón.
-  - Acentos verde Game Boy (`#22C55E`), cian (`#06B6D4`) y oro de Johto (`#F59E0B`).
+## 2. Acabados y Superficies
+- **Light Mode Obligatorio:** Fondo marfil mate cálido (`#FAF9F5`), tarjetas blanco puro (`#FFFFFF`). Cero dark mode deprimente.
+- **Bordes Finos de Precisión:** `border border-[#E4E1D8]` (1px nítido). **TERMINANTEMENTE PROHIBIDO usar bordes negros gruesos estilo historieta (`border-2 border-black` o `shadow-[4px_4px_0px_#000]`).**
+- **Elevación Física Suave:** `shadow-[0_2px_8px_rgba(26,25,21,0.04)]` o reborde sutil `shadow-[0_2px_0px_#DCD8CD]`.
 
-## 3. Micro-interacciones Dopamínicas Obligatorias
-- **Framer Motion:** Rebotes de botones, barras de progreso elásticas y sacudida de pantalla (*screen shake*) en fallos o ataques.
-- **Canvas-Confetti:** Disparar lluvia de estrellas doradas y confeti en cada victoria, logro o entrega de misión.
-- **Web Audio 8-bit:** Disparar efectos de audio retro sintetizados de 8-bits/16-bits para clics de menú, monedas recolectadas y fanfarrias de nivel superado (`soundFx`).
-- **Feedback Numérico Flotante:** Cada vez que se sume XP o Pokédólares, mostrar números flotantes animados verdes o dorados (ej. `+25 💰`, `+15m 🔋`) que suben y se desvanecen hacia la barra superior.
+## 3. Paleta de Color "Johto Heritage"
+- **Tinta:** Carbón cálido profundo (`#1C1B18`) para títulos y números; gris cálido (`#706E66`) para subtítulos.
+- **Rojo Ho-Oh Editorial:** `#D9383A` (botones primarios y vigor físico).
+- **Oro Campana Clara:** `#C59B46` (disciplina y rachas).
+- **Azul Zafiro Lugia:** `#2D68C4` (batería de emulador y sesiones de foco mental).
+- **Verde Pueblo Primavera:** `#2E8555` (hábitos completados).
+
+## 4. Contraste & Ergonomía Mobile-First
+- **Prohibido texto blanco sobre fondos claros.**
+- **Viewport Centrado en Desktop:** La experiencia se visualiza como un dispositivo móvil moderno y centrado (máx. 440px de ancho) con respiración exterior.
+- **Cero Jerga Corporativa:** Desterrar menús de oficina o paneles de empresa en la experiencia del usuario. La app es para hábitos personales, tu Pokémon y tu tiempo de emulador.

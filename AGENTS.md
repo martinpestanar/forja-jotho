@@ -10,36 +10,43 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 
 <!-- BEGIN:nintendo-visual-ui-rule -->
-# REGLA MAESTRA DE DISEÑO: Nintendo Visual UI & Dopamine Design System
+# REGLA MAESTRA DE DISEÑO: SynDex Editorial Retro-Premium (Audiencia Adulta)
 
-Actúa bajo el estándar obligatorio de diseño: **"Nintendo Visual UI & Dopamine Design System"**. En todas las fases de este proyecto, queda estrictamente prohibido generar paredes de texto o interfaces aburridas tipo blog. Aplica siempre estas reglas en cada componente:
+Actúa bajo el estándar obligatorio de diseño: **"SynDex Editorial Retro-Premium"** (definido en detalle en `.agents/skills/johto-arcade-design-system/SKILL.md`). En todas las fases de este proyecto, queda estrictamente prohibido generar interfaces infantiles tipo cómic con bordes negros toscos o tableros aburridos de oficina corporativa. Aplica siempre estas reglas:
 
-## 1. Política Cero Bloques de Texto
-- Prohibido mostrar párrafos de más de 2 líneas.
-- Toda explicación debe sustituirse por:
-  - Diagramas de cartas visuales con iconos.
-  - Barras de vida/energía elásticas.
-  - Insignias de estado pixel-art.
-  - Números rodantes o contadores visuales.
-- Las intervenciones de la IA o personajes deben ir en un cuadro de diálogo clásico de RPG de Nintendo de máximo 2 oraciones cortas con efecto teletipo (*typewriter*) y sonido retro.
+## 1. Audiencia Objetivo & Tono Visual
+- **Público:** Adultos de **24 a 38 años** que entrenan, leen, trabajan y buscan disciplina real. Valoran la nostalgia sobria de Pokémon Johto (Oro/Plata/Cristal).
+- **Inspiración:** Diseño industrial de hardware minimalista (*Analogue Pocket*, *Teenage Engineering*).
+- **Sensación:** Un dispositivo portátil de alta gama en tu mano, no un juego para niños de 10 años.
 
-## 2. Estándar de Doble Tema Nintendo (Light & Dark)
-- **Modo Light (Game Boy Color / Pokédex Clásica):**
-  - Fondo marfil/crema retro (`#F4F1EA`).
-  - Bordes biselados con sombras duras negras estilo neo-arcade (`shadow-[4px_4px_0px_0px_#000]`).
-  - Botones táctiles rojo Nintendo (`#E60012`) y azul zafiro (`#2563EB`) que se hunden físicamente al hacer clic (`active:translate-x-1 active:translate-y-1 active:shadow-none`).
-- **Modo Dark (Game Boy Advance SP / Cyber-Johto):**
-  - Fondo grafito oscuro (`#121214`).
-  - Bordes con sutil brillo neón.
-  - Acentos verde Game Boy (`#22C55E`), cian (`#06B6D4`) y oro de Johto (`#F59E0B`).
+## 2. Acabados, Bordes y Superficies
+- **Light Mode Obligatorio:** Fondo marfil cálido (`#FAF9F5`), tarjetas blanco puro (`#FFFFFF`). Cero fondos oscuros o apagados.
+- **Bordes Finos de Precisión (1px):** `border border-[#E4E1D8]`. **TERMINANTEMENTE PROHIBIDO usar bordes negros gruesos de historieta (`border-2 border-black` o `shadow-[3px_3px_0px_#1A1915]`).**
+- **Elevación Suave:** `shadow-[0_2px_8px_rgba(26,25,21,0.04)]` o reborde sutil `shadow-[0_2px_0px_#DCD8CD]`.
 
-## 3. Micro-interacciones Dopamínicas Obligatorias
-- **Framer Motion:** Rebotes de botones, barras de progreso elásticas y sacudida de pantalla (*screen shake*) en fallos o ataques.
-- **Canvas-Confetti:** Disparar lluvia de estrellas doradas y confeti en cada victoria, logro o entrega de misión.
-- **Web Audio 8-bit:** Disparar efectos de audio retro sintetizados de 8-bits/16-bits para clics de menú, monedas recolectadas y fanfarrias de nivel superado (`soundFx`).
-- **Feedback Numérico Flotante:** Cada vez que se sume XP o Pokédólares, mostrar números flotantes animados verdes o dorados (ej. `+25 💰`, `+15m 🔋`) que suben y se desvanecen hacia la barra superior.
+## 3. Paleta de Color "Johto Heritage"
+- **Tinta:** Carbón cálido profundo (`#1C1B18`) y gris cálido (`#706E66`).
+- **Rojo Ho-Oh Editorial:** `#D9383A` (botones de acción principal y vigor).
+- **Oro Campana Clara:** `#C59B46` (disciplina y rachas).
+- **Azul Zafiro Lugia:** `#2D68C4` (batería de juego y foco mental).
+- **Verde Pueblo Primavera:** `#2E8555` (hábitos completados).
+
+## 4. Ergonomía Mobile-First & Cero Fricción
+- **Mobile-First Real:** En pantallas grandes, la app vive centrada en un marco de teléfono elegante (máximo 440px de ancho).
+- **Cero Jerga de Oficina:** Nada de dashboards corporativos con paneles laterales densos; solo tus hábitos de vida, tu Pokémon acompañante y tu cartucho de GBA.
+- **Contraste Seguro:** Jamás colocar texto blanco sobre fondos claros.
 <!-- END:nintendo-visual-ui-rule -->
 
+
+<!-- BEGIN:syndex-financial-intelligence -->
+# REGLA MAESTRA FINANCIERA: Modo Difícil, Escasez Real y Cero Legendarios a la Venta
+
+Actúa bajo el estándar obligatorio: **"Syndex Financial Intelligence"** (definido en `.agents/skills/syndex-financial-intelligence/SKILL.md`). Queda estrictamente prohibido generar interfaces o códigos que abaraten la experiencia o regalen progreso:
+
+1. **PROHIBICIÓN ABSOLUTA DE VENDER POKÉMON LEGENDARIOS O MÍTICOS:** Mew, Celebi, Lugia, Ho-Oh, Suicune, Raikou, Entei, Rayquaza, etc., **NUNCA se compran ni venden en tiendas o bazares**. Se capturan con mérito exclusivo en la historia de la ROM.
+2. **Precios Caros de Escasez Real:** Nada de ítems a ₽30 o ₽50. Los suministros reflejan la economía oficial (Poción ₽300, Poké Balls ₽1,000) y las MTs/Crianza cuestan entre ₽3,000 y ₽15,000. La meta cumbre (Dratini/Larvitar) cuesta ₽40,000-₽50,000 y requiere meses de ahorro y operaciones en la Bolsa de Trigal.
+3. **El Servidor SIEMPRE Manda:** Cero transacciones con precios inventados en el front-end. Toda deducción y compra pasa por las RPCs de Supabase (`rpc_purchase_shop_item`, `rpc_valdr_dispatch_vault_item`, `rpc_valdr_buy_market_item`).
+<!-- END:syndex-financial-intelligence -->
 
 <!-- BEGIN:syndex-mcp-connections -->
 # CONEXIONES MCP SIEMPRE DISPONIBLES (Supabase / GitHub / n8n)

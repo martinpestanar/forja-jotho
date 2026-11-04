@@ -42,9 +42,7 @@ export const PokedexBagViewer: React.FC = () => {
 
   const party = profile?.gba_party_json && profile.gba_party_json.length > 0
     ? profile.gba_party_json
-    : [
-        { name: 'Cyndaquil', speciesId: 155, level: 5, hp: 20, maxHp: 20, isShiny: false },
-      ];
+    : [];
 
   const filteredPokemon = JOHTO_POKEDEX_CATALOG.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -184,8 +182,17 @@ export const PokedexBagViewer: React.FC = () => {
       {/* SECCIÓN 1: MI EQUIPO ACTUAL (Sprites 3D Animados de la partida real) */}
       {/* ========================================================================= */}
       {activeSection === 'party' && (
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pr-1">
-          {party.map((pkmn: any, idx: number) => {
+        party.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-[#E8E5DD] bg-[#FAF9F5] text-center">
+            <ShieldCheck className="w-10 h-10 text-[#8A877E] opacity-40 mb-3" />
+            <h4 className="font-editorial font-semibold text-base text-[#1F1E1B]">Tu equipo está vacío</h4>
+            <p className="text-xs text-[#706E66] font-mono mt-1 max-w-sm">
+              Aún no tienes Pokémon en tu equipo. Elige a tu compañero inicial para comenzar tu aventura.
+            </p>
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pr-1">
+            {party.map((pkmn: any, idx: number) => {
             const speciesId = pkmn.speciesId || (pkmn.name.toLowerCase() === 'cyndaquil' ? 155 : 25);
             const isShiny = !!pkmn.isShiny;
             const hpPct = Math.round(((pkmn.hp || 35) / (pkmn.maxHp || 35)) * 100);
@@ -252,6 +259,7 @@ export const PokedexBagViewer: React.FC = () => {
             );
           })}
         </div>
+        )
       )}
 
       {/* ========================================================================= */}

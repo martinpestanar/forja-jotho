@@ -26,37 +26,36 @@ export const NintendoNoticeModal: React.FC<NintendoNoticeModalProps> = ({
 
   const handleClose = () => {
     soundFx.playClick();
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(12);
+    }
     onClose();
   };
 
   const typeConfig = {
     error: {
-      border: 'border-[#E60012]',
-      bgHeader: 'bg-[#E60012]/15 text-[#E60012]',
-      btnBg: 'bg-[#E60012] hover:bg-[#cc0010] text-white',
+      bgHeader: 'bg-[#D9383A]/10 text-[#D9383A] border-[#D9383A]/20',
+      btnBg: 'bg-[#D9383A] text-white shadow-[0_2px_0px_#B32628] hover:bg-[#C92F31]',
       icon: AlertTriangle,
-      defaultTitle: 'Aviso de la Forja',
+      defaultTitle: 'Aviso del Sistema',
     },
     warning: {
-      border: 'border-[#F59E0B]',
-      bgHeader: 'bg-[#F59E0B]/15 text-[#F59E0B]',
-      btnBg: 'bg-[#F59E0B] hover:bg-[#d97706] text-black',
+      bgHeader: 'bg-[#C59B46]/10 text-[#9A7025] border-[#C59B46]/25',
+      btnBg: 'bg-[#C59B46] text-white shadow-[0_2px_0px_#A07828] hover:bg-[#B78E3C]',
       icon: AlertTriangle,
-      defaultTitle: 'Advertencia',
+      defaultTitle: 'Atención Entrenador',
     },
     info: {
-      border: 'border-[#06B6D4]',
-      bgHeader: 'bg-[#06B6D4]/15 text-[#06B6D4]',
-      btnBg: 'bg-[#06B6D4] hover:bg-[#0891b2] text-black',
+      bgHeader: 'bg-[#2D68C4]/10 text-[#2D68C4] border-[#2D68C4]/20',
+      btnBg: 'bg-[#2D68C4] text-white shadow-[0_2px_0px_#23529B] hover:bg-[#255BB0]',
       icon: Info,
-      defaultTitle: 'Oráculo',
+      defaultTitle: 'Mensaje Pokédex',
     },
     success: {
-      border: 'border-[#22C55E]',
-      bgHeader: 'bg-[#22C55E]/15 text-[#22C55E]',
-      btnBg: 'bg-[#22C55E] hover:bg-[#16a34a] text-black',
+      bgHeader: 'bg-[#2E8555]/10 text-[#2E8555] border-[#2E8555]/20',
+      btnBg: 'bg-[#2E8555] text-white shadow-[0_2px_0px_#246E46] hover:bg-[#27744A]',
       icon: CheckCircle2,
-      defaultTitle: '¡Conquista Lograda!',
+      defaultTitle: 'Conquista Lograda',
     },
   }[type];
 
@@ -64,41 +63,41 @@ export const NintendoNoticeModal: React.FC<NintendoNoticeModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 bg-[#1C1B18]/40 backdrop-blur-sm flex items-center justify-center p-4 select-none font-sans">
         <motion.div
-          initial={{ scale: 0.9, opacity: 0, y: 15 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.9, opacity: 0, y: 15 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-          className={`max-w-sm w-full bg-[#14171C] rounded-2xl border-2 ${typeConfig.border} p-5 space-y-4 shadow-[0_8px_30px_rgba(0,0,0,0.85)] text-[#E2E8F0] font-sans`}
+          initial={{ opacity: 0, scale: 0.94, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 8 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+          className="max-w-sm w-full bg-white rounded-2xl border border-[#E4E1D8] p-5 space-y-4 shadow-[0_12px_40px_rgba(26,25,21,0.12)] text-[#1C1B18]"
         >
-          {/* Header */}
-          <div className="flex items-center justify-between pb-2 border-b border-white/10">
-            <div className="flex items-center gap-2">
-              <div className={`p-1.5 rounded-lg ${typeConfig.bgHeader}`}>
-                <Icon className="w-4 h-4" />
+          {/* Header Pop-up Minimalista */}
+          <div className="flex items-center justify-between pb-3 border-b border-[#E4E1D8]">
+            <div className="flex items-center gap-2.5">
+              <div className={`p-1.5 rounded-lg border ${typeConfig.bgHeader}`}>
+                <Icon className="w-4 h-4 stroke-[2.2]" />
               </div>
-              <h3 className="text-sm font-black uppercase tracking-wider">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#1C1B18]">
                 {title || typeConfig.defaultTitle}
               </h3>
             </div>
             <button
               onClick={handleClose}
-              className="text-[#64748B] hover:text-[#E2E8F0] p-1 cursor-pointer transition-colors"
+              className="w-7 h-7 rounded-lg border border-[#E4E1D8] bg-[#FAF9F5] text-[#706E66] hover:text-[#1C1B18] hover:bg-white flex items-center justify-center cursor-pointer active:scale-95 transition-all"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 stroke-[2]" />
             </button>
           </div>
 
-          {/* Dialog Box RPG Nintendo */}
-          <div className="p-3.5 rounded-xl bg-[#0B0C0E] border border-white/5 text-xs text-[#CBD5E1] leading-relaxed font-mono">
+          {/* Caja de Diálogo */}
+          <div className="p-3.5 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] text-xs text-[#1C1B18] leading-relaxed font-mono">
             {message}
           </div>
 
-          {/* Botón táctil */}
+          {/* Botón Táctil Refinado */}
           <button
             onClick={handleClose}
-            className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer transition-all border-2 border-black shadow-[0_3px_0_0_#000] active:translate-y-0.5 active:shadow-none ${typeConfig.btnBg}`}
+            className={`w-full py-3 rounded-xl text-xs font-semibold uppercase tracking-wider cursor-pointer active:translate-y-[1px] active:shadow-none transition-all ${typeConfig.btnBg}`}
           >
             Entendido
           </button>
