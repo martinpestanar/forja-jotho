@@ -167,15 +167,7 @@ export const ArcadeRoomTheater: React.FC = () => {
   const party: PartyMember[] =
     profile?.gba_party_json && profile.gba_party_json.length > 0
       ? (profile.gba_party_json as PartyMember[])
-      : [
-          {
-            name: profile?.starter_pokemon || 'Cyndaquil',
-            level: 12,
-            hp: 35,
-            maxHp: 35,
-            type: 'fire',
-          },
-        ];
+      : [];
 
   const batteryMinutes = profile?.battery_minutes ?? 0;
 
@@ -296,7 +288,16 @@ export const ArcadeRoomTheater: React.FC = () => {
           </div>
 
           <div className="space-y-2.5">
-            {party.map((pkmn, idx) => {
+            {party.length === 0 ? (
+              <div className="bg-white border border-[#E4E1D8] rounded-2xl p-5 text-center shadow-sm">
+                <ShieldCheck className="h-8 w-8 mx-auto mb-2 text-[#C59B46] opacity-75" />
+                <p className="text-xs font-semibold text-[#1C1B18]">Esperando inicial</p>
+                <p className="text-[10px] mt-1 text-[#706E66] font-mono leading-relaxed">
+                  Visita al Prof. Elm en la consola, elige tu inicial y guarda la partida para sincronizarlo.
+                </p>
+              </div>
+            ) : (
+              party.map((pkmn, idx) => {
               const hpPct = Math.round(
                 ((pkmn.hp || 35) / (pkmn.maxHp || 35)) * 100
               );
@@ -353,7 +354,8 @@ export const ArcadeRoomTheater: React.FC = () => {
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
 
           <div className="hq-panel p-3 text-[11px] leading-relaxed text-[#5E5C56]">
@@ -389,7 +391,7 @@ export const ArcadeRoomTheater: React.FC = () => {
           <div className="hq-card flex items-center justify-between p-3">
             <div className="flex items-center gap-2">
               <Layers className="h-4 w-4 text-[#C49347]" />
-              <span className="hq-title text-sm">Mochila</span>
+              <span className="hq-title text-sm">Bazar Suministros</span>
             </div>
             <span className="hq-mono flex items-center gap-1 text-[11px] text-[#C49347]">
               <Coins className="h-3.5 w-3.5" />
