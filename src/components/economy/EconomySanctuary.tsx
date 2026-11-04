@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useEconomyStore } from '@/store/useEconomyStore';
 import { GoldenrodShop } from '@/components/shop/GoldenrodShop';
-import { ElasticProgress, Stat } from '@/components/hq/ui/primitives';
+import { ElasticProgress, Stat } from '@/components/ui/EcoPrimitives';
 import { soundFx } from '@/lib/soundFx';
 
 import { RanchSection } from '@/components/economy/RanchSection';

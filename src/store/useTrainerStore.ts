@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { ActiveTab, TrainerProfile } from '@/types/trainer';
 import { supabase } from '@/lib/supabase';
-import { useHqStore } from '@/store/useHqStore';
 
 interface PurchaseResult {
   success: boolean;
