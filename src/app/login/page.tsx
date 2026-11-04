@@ -31,11 +31,8 @@ export default function LoginPage() {
         .eq('id', userId)
         .maybeSingle();
 
-      if (profile?.is_admin) {
-        router.replace('/hq');
-      } else {
-        router.replace('/dashboard');
-      }
+      // Toda la experiencia unificada SynDex vive en /dashboard (Editorial Retro-Premium)
+      router.replace('/dashboard');
     } catch {
       router.replace('/dashboard');
     }
