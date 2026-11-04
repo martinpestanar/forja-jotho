@@ -492,6 +492,37 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       if (liveData) {
         updateProfile({ gba_party_json: liveData.party as any, in_game_money: liveData.money });
         useEconomyStore.getState().syncGameMoney(liveData.money);
+
+        // Si el usuario tiene al menos 1 Pokémon en el equipo (eligió su inicial con el Prof. Elm)
+        // y tiene un regalo Shiny pendiente de sintonización, inyectarlo automáticamente con su OT
+        if (liveData.party && liveData.party.length >= 1 && currentUid) {
+          try {
+            const pendingKey = 'syndex_pending_shiny_' + currentUid;
+            const pendingRaw = localStorage.getItem(pendingKey);
+            if (pendingRaw) {
+              const pending = JSON.parse(pendingRaw);
+              if (!pending.transferred_to_sav && pending.species_id) {
+                console.info('[GBA] Inyectando Shiny inicial con Trainer ID real del jugador:', liveData.trainerName);
+                bridgeRef.current?.injectPokemonToGbaParty({
+                  speciesId: pending.species_id,
+                  nickname: pending.species_name,
+                  level: pending.level || 5,
+                  isShiny: true,
+                  targetDestination: 'pc',
+                }, true).then((res) => {
+                  if (res?.success) {
+                    pending.transferred_to_sav = true;
+                    localStorage.setItem(pendingKey, JSON.stringify(pending));
+                    soundFx.playLevelUp();
+                    setShowSaveSuccess('✨ ¡' + pending.species_name + ' Shiny transferido a tu PC!');
+                  }
+                });
+              }
+            }
+          } catch (e) {
+            console.warn('[GBA] Error inyectando shiny pendiente:', e);
+          }
+        }
       }
 
       // 6. Notificación visual estilo Nintendo + sonido retro
@@ -756,9 +787,15 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         romBytes = customRomBytes;
         if (customName) setRomTitle(customName.replace('.gba', '').toUpperCase());
       } else {
-        let resp = await fetch('/roms/pokemonHnS.gba');
-        if (!resp.ok) {
-          resp = await fetch(romUrl);
+        // Descargar la ROM oficial desde romUrl (Supabase Storage) con fallback a la local
+        let resp: Response;
+        try {
+          resp = await fetch(romUrl, { cache: 'no-store' });
+          if (!resp.ok && romUrl !== '/roms/pokemonHnS.gba') {
+            resp = await fetch('/roms/pokemonHnS.gba', { cache: 'no-store' });
+          }
+        } catch {
+          resp = await fetch('/roms/pokemonHnS.gba', { cache: 'no-store' });
         }
         if (!resp.ok) {
           throw new Error(`HTTP ${resp.status} al descargar ROM`);
