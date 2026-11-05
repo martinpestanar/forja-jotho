@@ -22,8 +22,36 @@ export function FlexibleCompanionBar({
   onOpenTutorial,
 }: FlexibleCompanionBarProps) {
   const profile = useTrainerStore((state) => state.profile);
-  const speciesId = profile?.equipped_pokemon_cosmetics?.targetPokemonId || 155;
-  const spriteUrl = POKEMON_ASSETS.getAnimatedSprite(speciesId, false);
+  // Resolver especie acompañante: 1. Equipo GBA, 2. Accesorio/Shiny, 3. Cosmético
+  let speciesId = profile?.gba_party_json?.[0]?.speciesId;
+  let isShiny = Boolean(profile?.gba_party_json?.[0]?.isShiny);
+
+  if (!speciesId && profile?.equipped_accessory) {
+    const clean = profile.equipped_accessory.toLowerCase().replace('shiny_', '');
+    const map: Record<string, number> = {
+      mareep: 179,
+      growlithe: 58,
+      houndour: 228,
+      ponyta: 77,
+      wooper: 194,
+      marill: 183,
+      horsea: 116,
+      larvitar: 246,
+      teddiursa: 216,
+      eevee: 133,
+      dratini: 147,
+    };
+    if (map[clean]) {
+      speciesId = map[clean];
+      isShiny = profile.equipped_accessory.startsWith('shiny_');
+    }
+  }
+
+  if (!speciesId) {
+    speciesId = profile?.equipped_pokemon_cosmetics?.targetPokemonId || 179;
+  }
+
+  const spriteUrl = POKEMON_ASSETS.getAnimatedSprite(speciesId, isShiny);
 
   const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllDone = percent === 100 && totalCount > 0;

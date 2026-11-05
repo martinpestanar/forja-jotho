@@ -58,7 +58,7 @@ const DEFAULT_PROFILE: TrainerProfile = {
     clothing: null,
   },
   equipped_pokemon_cosmetics: {
-    targetPokemonId: 155,
+    targetPokemonId: 0,
     eyewear: null,
     headwear: null,
     aura: null,
@@ -176,7 +176,7 @@ export const useTrainerStore = create<TrainerState>((set, get) => ({
         const currentPkmn = profile.equipped_pokemon_cosmetics || {};
         const updatedPkmn = {
           ...currentPkmn,
-          targetPokemonId: targetPokemonId || currentPkmn.targetPokemonId || 155,
+          targetPokemonId: targetPokemonId || currentPkmn.targetPokemonId || 0,
           [slot]: cosmeticId,
         };
         return {

@@ -23,6 +23,9 @@ import { FlexibleCompanionBar } from '@/components/dashboard/FlexibleCompanionBa
 import { MidnightJournalModal } from '@/components/dashboard/MidnightJournalModal';
 import { SovereignTutorialModal } from '@/components/dashboard/SovereignTutorialModal';
 import { LockedPactBanner } from '@/components/dashboard/LockedPactBanner';
+import { TemperanceSanctuaryModal } from '@/components/dashboard/TemperanceSanctuaryModal';
+import { OnboardingInitiationModal, OnboardingPresetHabit, OnboardingPactData } from '@/components/dashboard/OnboardingInitiationModal';
+import { EditHabitModal } from '@/components/dashboard/EditHabitModal';
 import {
   FloatingDopamineRewards,
   FloatingReward,
@@ -44,13 +47,14 @@ import {
   Calendar,
   Package,
   Sprout,
-  Users
+  Users,
+  Sparkles
 } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
 
 interface HabitItem {
   id: string;
-  front_type: 'vigor' | 'templanza' | 'expansion';
+  front_type: 'vigor' | 'templanza' | 'expansion' | 'oficio' | 'maestria' | 'claridad';
   title: string;
   subtitle: string;
   duration_minutes?: number;
@@ -59,6 +63,7 @@ interface HabitItem {
   requires_proof: boolean;
   is_custom?: boolean;
   completed?: boolean;
+  edit_count?: number;
 }
 
 interface OathItem {
@@ -84,6 +89,8 @@ export default function DashboardPage() {
   const [proofText, setProofText] = useState('');
   const [createHabitModalOpen, setCreateHabitModalOpen] = useState(false);
   const [createOathModalOpen, setCreateOathModalOpen] = useState(false);
+  const [onboardingInitiationOpen, setOnboardingInitiationOpen] = useState(false);
+  const [editHabitModalTarget, setEditHabitModalTarget] = useState<HabitItem | null>(null);
   const [journeyModalOpen, setJourneyModalOpen] = useState(false);
   const [starterModalOpen, setStarterModalOpen] = useState(false);
   const [silphTunerOpen, setSilphTunerOpen] = useState(false);
@@ -213,24 +220,38 @@ export default function DashboardPage() {
       }
     }
 
-    // Sincronizar starter_pokemon y gba_party_json desde tabla profiles
+    // Sincronizar starter_pokemon, equipped_accessory y gba_party_json desde tabla profiles
     try {
       const { data: trainerProf } = await supabase
         .from('profiles')
-        .select('starter_pokemon, gba_party_json')
+        .select('starter_pokemon, gba_party_json, equipped_accessory')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (trainerProf) {
         useTrainerStore.getState().updateProfile({
           starter_pokemon: trainerProf.starter_pokemon,
           gba_party_json: trainerProf.gba_party_json || [],
+          equipped_accessory: trainerProf.equipped_accessory,
         });
 
-        const alreadyTuned = typeof window !== 'undefined' && localStorage.getItem(`syndex_shiny_tuned_${user.id}`) === 'true';
+        const hasChosenStarter = Boolean(
+          trainerProf.starter_pokemon ||
+          (trainerProf.gba_party_json && trainerProf.gba_party_json.length > 0) ||
+          trainerProf.equipped_accessory
+        );
 
-        // Si es un usuario nuevo que aún no ha calibrado su frecuencia Silph, abrir el sintonizador
-        if (!alreadyTuned) {
+        const alreadyTuned =
+          (typeof window !== 'undefined' && localStorage.getItem(`syndex_shiny_tuned_${user.id}`) === 'true') ||
+          hasChosenStarter;
+
+        // Si ya tiene un Pokémon o ya sintonizó, marcar en localStorage para que no se reabra
+        if (hasChosenStarter && typeof window !== 'undefined') {
+          localStorage.setItem(`syndex_shiny_tuned_${user.id}`, 'true');
+        }
+
+        // Solo abrir si realmente es un usuario 100% virgen sin Pokémon
+        if (!alreadyTuned && !hasChosenStarter) {
           setSilphTunerOpen(true);
         }
       } else {
@@ -243,7 +264,13 @@ export default function DashboardPage() {
       console.warn('Error al verificar perfil de entrenador:', e);
     }
 
-    // Catálogo y logs
+    // Catálogo y hábitos guardados en Supabase (valdr_habits + catalog)
+    const { data: dbCustomHabits } = await supabase
+      .from('valdr_habits')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true });
+
     const { data: catalog } = await supabase
       .from('valdr_habits_catalog')
       .select('*')
@@ -264,9 +291,10 @@ export default function DashboardPage() {
 
     const completedIds = new Set((logs || []).map((l: any) => l.habit_id));
 
-    // Combinar catálogo remoto + hábitos creados por el usuario
+    // Combinar hábitos de BD + catálogo + locales
     const allHabitsMap = new Map();
     (catalog || []).forEach((h: any) => allHabitsMap.set(h.id, h));
+    (dbCustomHabits || []).forEach((h: any) => allHabitsMap.set(h.id, h));
     localCustomHabits.forEach((h: any) => allHabitsMap.set(h.id, h));
 
     const combinedHabits = Array.from(allHabitsMap.values());
@@ -355,24 +383,34 @@ export default function DashboardPage() {
     const clientY = e?.clientY || window.innerHeight / 2;
 
     try {
-      // 1. Intentar registrar a través de RPC seguro
+      // 1. Intentar registrar a través de RPC seguro de servidor
       let rpcSuccess = false;
+      const habitObj = habits.find((h) => h.id === habitId);
+      const goldVal = habitObj?.gold_reward || 100;
+      const battVal = habitObj?.game_battery_reward || 15;
+
       try {
-        const { error } = await supabase.rpc('seal_daily_habit', {
+        const { error: logRpcErr } = await supabase.rpc('rpc_valdr_seal_habit_log', {
           p_habit_id: habitId,
-          p_proof_text: proof,
+          p_gold_reward: goldVal,
+          p_battery_reward: battVal,
         });
-        if (!error) {
+
+        if (!logRpcErr) {
           rpcSuccess = true;
         } else {
-          console.warn('[seal_daily_habit rpc error, intentando inserción directa]:', error);
+          // Intentar el RPC alternativo
+          const { error: altErr } = await supabase.rpc('seal_daily_habit', {
+            p_habit_id: habitId,
+            p_proof_text: proof,
+          });
+          if (!altErr) rpcSuccess = true;
         }
       } catch (rpcErr) {
-        console.warn('[seal_daily_habit rpc catch]:', rpcErr);
+        console.warn('[seal habit rpc catch]:', rpcErr);
       }
 
-      // 2. Si el RPC falló, solo registramos la bitácora. Las recompensas
-      //    económicas SOLO las concede el servidor (sin fallback optimista).
+      // 2. Si el RPC falló, registramos en valdr_daily_logs directamente
       if (!rpcSuccess) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -381,7 +419,6 @@ export default function DashboardPage() {
             user_id: user.id,
             habit_id: habitId,
             log_date: todayStr,
-            proof_text: proof,
             created_at: new Date().toISOString(),
           }, { onConflict: 'user_id,habit_id,log_date' });
         }
@@ -393,10 +430,6 @@ export default function DashboardPage() {
       }
 
       // Disparar números flotantes de dopamina
-      const habitObj = habits.find((h) => h.id === habitId);
-      const goldVal = habitObj?.gold_reward || 50;
-      const battVal = habitObj?.game_battery_reward || 30;
-
       soundFx.playCoin();
       setFloatingRewards((prev) => [
         ...prev,
@@ -539,83 +572,256 @@ export default function DashboardPage() {
     }
   };
 
-  // Sellar Juramento
-  const startOathHold = () => {
-    if (!oathTitle.trim() || !oathSig.trim()) {
-      showNotice('Debes ingresar el título y tu firma rúnica antes de jurar.', 'Pacto Incompleto', 'warning');
-      return;
+  // Ceremonia de Iniciación Onboarding: Guardar los 4 Retos + Pacto de Templanza en Supabase
+  const handleCompleteInitiation = async ({
+    habits: initialHabits,
+    pact: initialPact,
+  }: {
+    habits: OnboardingPresetHabit[];
+    pact: OnboardingPactData;
+  }) => {
+    setSubmitting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Entrenador no autenticado.');
+
+      // 1. Guardar los 4 hábitos en Supabase (tabla valdr_habits)
+      const habitsToInsert = initialHabits.map((h) => ({
+        user_id: user.id,
+        title: h.title,
+        subtitle: h.subtitle,
+        front_type: h.pilar,
+        gold_reward: h.gold,
+        game_battery_reward: h.battery,
+        requires_proof: false,
+        is_custom: true,
+      }));
+
+      const { data: insertedHabits, error: habitsErr } = await supabase
+        .from('valdr_habits')
+        .insert(habitsToInsert)
+        .select();
+
+      if (habitsErr) {
+        console.warn('Error insertando en valdr_habits, guardando copia de respaldo:', habitsErr);
+      }
+
+      // También respaldo en localStorage para inmutabilidad inmediata
+      const existingLocal = JSON.parse(localStorage.getItem(`syndex_custom_habits_${user.id}`) || '[]');
+      const backupHabits = initialHabits.map((h, i) => ({
+        id: `init-${h.pilar}-${Date.now()}-${i}`,
+        title: h.title,
+        subtitle: h.subtitle,
+        front_type: h.pilar,
+        gold_reward: h.gold,
+        game_battery_reward: h.battery,
+        requires_proof: false,
+        is_custom: true,
+      }));
+      localStorage.setItem(
+        `syndex_custom_habits_${user.id}`,
+        JSON.stringify([...existingLocal, ...(insertedHabits || backupHabits)])
+      );
+
+      // 2. Sellar el Pacto de Templanza
+      await handleSealTemperanceOath({
+        title: initialPact.title,
+        vow: initialPact.vow,
+        durationDays: initialPact.durationDays,
+        signature: initialPact.signature,
+      });
+
+      soundFx.playLevelUp();
+      showNotice(
+        '¡Ceremonia de Iniciación completada! Tus 4 pilares y tu Pacto de Templanza están listos.',
+        'Iniciación Conquistada',
+        'success'
+      );
+      await loadValdrData();
+    } catch (err: any) {
+      showNotice(err.message || 'Error durante la iniciación', 'Error', 'error');
+      throw err;
+    } finally {
+      setSubmitting(false);
     }
+  };
+  // Modificar Hábito (Máximo 2 veces de edición estricta)
+  const handleSaveEditedHabit = async (
+    habitId: string,
+    updatedData: {
+      title: string;
+      subtitle: string;
+      front_type: string;
+      gold_reward: number;
+      game_battery_reward: number;
+    }
+  ) => {
+    setSubmitting(true);
+    try {
+      // 1. Intentar vía RPC atómico de Supabase
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('rpc_valdr_edit_habit', {
+        p_habit_id: habitId,
+        p_title: updatedData.title,
+        p_subtitle: updatedData.subtitle,
+        p_front_type: updatedData.front_type,
+        p_gold_reward: updatedData.gold_reward,
+        p_battery_reward: updatedData.game_battery_reward,
+      });
 
-    clearInterval(holdIntervalRef.current);
-    let progress = 0;
-    holdIntervalRef.current = setInterval(() => {
-      progress += 10;
-      setHoldProgress(progress);
-      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-        navigator.vibrate(30);
+      if (rpcErr) {
+        // Fallback directo a valdr_habits
+        const { data: currentHabit } = await supabase
+          .from('valdr_habits')
+          .select('edit_count')
+          .eq('id', habitId)
+          .single();
+
+        const currentEdits = currentHabit?.edit_count || 0;
+        if (currentEdits >= 2) {
+          throw new Error('Límite alcanzado: este hábito ya ha sido editado 2 veces (inmutable).');
+        }
+
+        const { error: updateErr } = await supabase
+          .from('valdr_habits')
+          .update({
+            title: updatedData.title,
+            subtitle: updatedData.subtitle,
+            front_type: updatedData.front_type,
+            gold_reward: updatedData.gold_reward,
+            game_battery_reward: updatedData.game_battery_reward,
+            edit_count: currentEdits + 1,
+          })
+          .eq('id', habitId);
+
+        if (updateErr) throw updateErr;
       }
-      if (progress >= 100) {
-        clearInterval(holdIntervalRef.current);
-        executeSealOath();
-      }
-    }, 150);
+
+      showNotice('Hábito actualizado exitosamente.', 'Ajuste Forjado', 'success');
+      await loadValdrData();
+    } catch (err: any) {
+      showNotice(err.message || 'Error al actualizar hábito', 'Aviso', 'warning');
+      throw err;
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const cancelOathHold = () => {
-    clearInterval(holdIntervalRef.current);
-    setHoldProgress(0);
+  // Eliminar Hábito de la lista
+  const handleDeleteHabit = async (habitObj: HabitItem) => {
+    if (!confirm(`¿Eliminar la misión "${habitObj.title}"?`)) return;
+    setSubmitting(true);
+    try {
+      await supabase.rpc('rpc_valdr_delete_habit', { p_habit_id: habitObj.id });
+      await supabase.from('valdr_habits').delete().eq('id', habitObj.id);
+
+      // Limpiar también en localStorage de contingencia
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const local = JSON.parse(localStorage.getItem(`syndex_custom_habits_${user.id}`) || '[]');
+        const filtered = local.filter((h: any) => h.id !== habitObj.id);
+        localStorage.setItem(`syndex_custom_habits_${user.id}`, JSON.stringify(filtered));
+      }
+
+      soundFx.playDamage();
+      showNotice('Misión eliminada.', 'Registro Actualizado', 'info');
+      await loadValdrData();
+    } catch (err: any) {
+      showNotice(err.message || 'Error al eliminar', 'Aviso', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const executeSealOath = async () => {
+  const handleSealTemperanceOath = async ({
+    title,
+    vow,
+    durationDays,
+    signature,
+  }: {
+    title: string;
+    vow: string;
+    durationDays: number;
+    signature: string;
+  }) => {
     setSubmitting(true);
     try {
       const today = new Date();
       const endDate = new Date();
-      endDate.setDate(today.getDate() + oathDays);
+      endDate.setDate(today.getDate() + durationDays);
       const todayStr = today.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      // Intentar primero vía RPC si existe
+      // 1. Intentar vía RPC
       const { error: rpcError } = await supabase.rpc('rpc_valdr_seal_oath', {
-        p_title: oathTitle.trim(),
-        p_duration_days: oathDays,
-        p_front_vow: oathVow.trim() || 'Pacto de autodominio y disciplina inquebrantable',
-        p_runic_signature: oathSig.trim(),
+        p_title: title.trim(),
+        p_duration_days: durationDays,
+        p_front_vow: vow.trim(),
+        p_runic_signature: signature.trim(),
       });
 
       if (rpcError) {
-        // Fallback seguro directo a tabla valdr_oaths con sesión de usuario autenticado
+        // Fallback directo con usuario autenticado
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Entrenador no autenticado.');
 
         const { error: insertError } = await supabase.from('valdr_oaths').insert({
           user_id: user.id,
-          title: oathTitle.trim(),
-          duration_days: oathDays,
-          front_vow: oathVow.trim() || 'Pacto de autodominio y disciplina inquebrantable',
-          runic_signature: oathSig.trim(),
+          title: title.trim(),
+          duration_days: durationDays,
+          front_vow: vow.trim(),
+          runic_signature: signature.trim(),
           start_date: todayStr,
           end_date: endDateStr,
           status: 'locked_active',
         });
 
-        if (insertError) {
-          throw insertError;
-        }
+        if (insertError) throw insertError;
       }
 
       soundFx.playLevelUp();
-      setCreateOathModalOpen(false);
-      setOathTitle('');
-      setOathVow('');
-      setOathSig('');
-      setHoldProgress(0);
-      showNotice(`¡Pacto de ${oathDays} días sellado y bloqueado! Mantén la disciplina diaria.`, 'Pacto Inquebrantable', 'success');
+      showNotice(
+        `¡Pacto de Templanza de ${durationDays} días sellado y bloqueado! Mantén la pureza y foco mental.`,
+        'Pacto Inquebrantable',
+        'success'
+      );
       await loadValdrData();
     } catch (err: any) {
-      showNotice(err.message || 'Error al sellar el pacto', 'Pacto Fallido', 'error');
+      showNotice(err.message || 'Error al sellar el pacto de templanza', 'Pacto Fallido', 'error');
+      throw err;
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Confirmar victoria diaria de templanza
+  const handleConfirmDailyVictory = async () => {
+    soundFx.playLevelUp();
+    showNotice(
+      '¡Día victorioso registrado! Vínculo con tu Pokémon fortalecido y multiplicador 1.25x activo.',
+      'Templanza Defendida',
+      'success'
+    );
+  };
+
+  // Declarar recaída
+  const handleDeclareRelapse = async () => {
+    try {
+      const activeOath = oaths.find((o) => o.status === 'locked_active' || o.status === 'active');
+      if (activeOath) {
+        await supabase
+          .from('valdr_oaths')
+          .update({ status: 'broken' })
+          .eq('id', activeOath.id);
+      }
+      soundFx.playDamage();
+      showNotice(
+        'Has registrado tu recaída con valentía. Respira, limpia tu mente y vuelve a forjar tu pacto cuando estés listo.',
+        'Honor & Resiliencia',
+        'warning'
+      );
+      await loadValdrData();
+    } catch (err: any) {
+      showNotice(err.message || 'Error al registrar recaída', 'Error', 'error');
     }
   };
 
@@ -633,10 +839,10 @@ export default function DashboardPage() {
         {/* PESTAÑA 1: FRENTE DE VIGOR */}
         {activeTab === 'vigor' && (
           <div className="space-y-3.5">
-            {/* Banner de Pacto Inquebrantable Bloqueado (7, 15, 30 días) */}
+            {/* Banner de Pacto Inquebrantable de Templanza (7, 15, 30 días) */}
             <LockedPactBanner
               oaths={oaths}
-              onOpenNewPact={() => setCreateOathModalOpen(true)}
+              onOpenSanctuary={() => setCreateOathModalOpen(true)}
             />
 
             {/* Altar de Resumen Visual de Batalla */}
@@ -656,35 +862,51 @@ export default function DashboardPage() {
 
             {/* Listado Bento de Hábitos o Estado Vacío Intuitivo */}
             <div className="space-y-2.5">
-              {habits.filter((h) => h.front_type === 'vigor' || h.front_type === 'expansion').length === 0 ? (
-                <div className="p-6 rounded-2xl bg-white border border-[#E8E5DD] text-center space-y-3 shadow-sm">
-                  <div className="w-12 h-12 rounded-2xl bg-[#D97043]/10 border border-[#D97043]/20 flex items-center justify-center text-[#D97043] mx-auto">
+              {habits.filter((h) => h.front_type !== 'templanza').length === 0 ? (
+                <div className="p-6 rounded-2xl bg-white border border-[#E8E5DD] text-center space-y-3.5 shadow-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-[#D9383A]/10 border border-[#D9383A]/20 flex items-center justify-center text-[#D9383A] mx-auto shadow-xs">
                     <Plus className="w-6 h-6 stroke-[2.2]" />
                   </div>
                   <div>
-                    <h3 className="font-editorial text-base font-semibold text-[#1F1E1B]">
-                      Sin retos activos esta semana
+                    <h3 className="font-editorial text-base font-bold text-[#1C1B18]">
+                      Sin misiones activas para hoy
                     </h3>
                     <p className="text-xs text-[#706E66] max-w-xs mx-auto mt-1 leading-relaxed">
-                      Define 2 o 3 hábitos para conquistar tus próximos 7 días y ganar minutos de cartucho.
+                      Elige tus 4 hábitos esenciales (Vigor, Oficio, Maestría y Claridad) y sella tu Pacto de Templanza.
                     </p>
                   </div>
-                  <button
-                    onClick={() => setCreateHabitModalOpen(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl johto-bg-red text-white text-xs font-bold johto-border-arcade johto-shadow-sm johto-btn-tactile transition-all cursor-pointer"
-                  >
-                    <Plus className="w-4 h-4 stroke-[2.5]" />
-                    <span>Crear Mi Primer Reto Semanal</span>
-                  </button>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundFx.playClick();
+                        setOnboardingInitiationOpen(true);
+                      }}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#D9383A] hover:bg-[#C92F31] text-white text-xs font-mono font-bold tracking-wider shadow-[0_2px_0px_#B22B2D] active:translate-y-[1px] active:shadow-none transition-all cursor-pointer"
+                    >
+                      <Sparkles className="w-4 h-4 stroke-[2.5]" />
+                      <span>INICIAR CEREMONIA ONBOARDING (4 RETOS)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCreateHabitModalOpen(true)}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-3 rounded-xl bg-white border border-[#E4E1D8] text-[#1C1B18] text-xs font-mono font-medium hover:bg-[#FAF9F5] cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Crear Manual</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 habits
-                  .filter((h) => h.front_type === 'vigor' || h.front_type === 'expansion')
+                  .filter((h) => h.front_type !== 'templanza')
                   .map((h) => (
                     <RunicHabitCard
                       key={h.id}
                       habit={h}
                       onSeal={(habitObj, e) => handleHabitSeal(habitObj, e)}
+                      onEdit={(habitObj) => setEditHabitModalTarget(habitObj as HabitItem)}
+                      onDelete={(habitObj) => handleDeleteHabit(habitObj as HabitItem)}
                     />
                   ))
               )}
@@ -750,35 +972,39 @@ export default function DashboardPage() {
                 {!editingInnerBeast && (
                   <button
                     onClick={() => {
-                      setInnerBeastInput(profileData?.inner_beast || 'Procrastinación y Distracción Nocturna');
+                      setInnerBeastInput(profileData?.inner_beast || 'Porno & Masturbación');
                       setEditingInnerBeast(true);
                     }}
                     className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E8E5DD] text-[11px] font-mono text-[#706E66] hover:text-[#1F1E1B] transition-colors cursor-pointer"
                   >
                     <Edit2 className="w-3 h-3" />
-                    <span>Personalizar</span>
+                    <span>Cambiar</span>
                   </button>
                 )}
               </div>
 
-              <div className="mt-3 pt-3 border-t border-[#F2EFE9] flex flex-wrap gap-1.5">
-                <span className="text-[10px] text-[#8A877E] font-mono mr-1">Sugerencias:</span>
-                {[
-                  'Porno & Masturbación',
-                  'Scroll Infinito TikTok/Reels',
-                  'Comida Chatarra / Azúcar',
-                  'Videojuegos sin límite',
-                  'Procrastinación Nocturna'
-                ].map((sug) => (
-                  <button
-                    key={sug}
-                    onClick={() => handleUpdateInnerBeast(sug)}
-                    className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FAF9F5] hover:bg-[#D97043]/10 border border-[#E8E5DD] hover:border-[#D97043]/30 text-[#706E66] hover:text-[#D97043] transition-all cursor-pointer"
-                  >
-                    {sug}
-                  </button>
-                ))}
-              </div>
+              {/* Si está editando, mostrar sugerencias rápidas; si ya está elegido, ocultarlas para no estorbar */}
+              {editingInnerBeast && (
+                <div className="mt-3 pt-3 border-t border-[#F2EFE9] flex flex-wrap gap-1.5 animate-in fade-in duration-150">
+                  <span className="text-[10px] text-[#8A877E] font-mono mr-1">Sugerencias rápidas:</span>
+                  {[
+                    'Porno & Masturbación',
+                    'Scroll Infinito TikTok/Reels',
+                    'Comida Chatarra / Azúcar',
+                    'Videojuegos sin límite',
+                    'Procrastinación Nocturna'
+                  ].map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => handleUpdateInnerBeast(sug)}
+                      className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#FAF9F5] hover:bg-[#D97043]/10 border border-[#E8E5DD] hover:border-[#D97043]/30 text-[#706E66] hover:text-[#D97043] transition-all cursor-pointer"
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl bg-white border border-[#E8E5DD] p-6 text-center space-y-4 shadow-sm">
@@ -961,7 +1187,7 @@ export default function DashboardPage() {
                 onClick={async () => {
                   soundFx.playClick();
                   await supabase.auth.signOut();
-                  window.location.href = '/admin/login';
+                  window.location.href = '/login';
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-medium cursor-pointer active:scale-95 transition-all"
               >
@@ -1136,109 +1362,31 @@ export default function DashboardPage() {
         totemName={profileData?.guide_totem?.toUpperCase() || 'OSO'}
       />
 
-      {/* Modal 2: Juramento (Línea Gráfica Editorial Serena & Cálida) */}
-      {createOathModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="rounded-2xl bg-white max-w-sm w-full p-5 space-y-4 border border-[#E8E5DD] shadow-[0_12px_32px_rgba(31,30,27,0.12)] animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-[#D97043]/10 border border-[#D97043]/20 flex items-center justify-center text-[#D97043]">
-                  <Scroll className="w-4 h-4 stroke-[2.2]" />
-                </div>
-                <h3 className="font-editorial text-sm font-semibold text-[#1F1E1B]">
-                  Pacto Inviolable
-                </h3>
-              </div>
-              <button
-                onClick={() => setCreateOathModalOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-[#706E66] hover:text-[#1F1E1B] hover:bg-[#F2EFE9] transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* Modal 1.5: Ceremonia de Iniciación Onboarding (4 Retos + Templanza) */}
+      <OnboardingInitiationModal
+        isOpen={onboardingInitiationOpen}
+        onClose={() => setOnboardingInitiationOpen(false)}
+        trainerName={profileData?.leader_name || 'Marty'}
+        onCompleteInitiation={handleCompleteInitiation}
+      />
 
-            <p className="text-[11px] text-[#706E66] leading-relaxed">
-              Una vez sellado con tu firma, quedará bloqueado por el plazo elegido. Es un compromiso inquebrantable de disciplina.
-            </p>
+      {/* Modal 2: Santuario del Pacto de Templanza (Dopamínico & Editorial) */}
+      <TemperanceSanctuaryModal
+        isOpen={createOathModalOpen}
+        onClose={() => setCreateOathModalOpen(false)}
+        activeOath={oaths.find((o) => o.status === 'locked_active' || o.status === 'active') || null}
+        onSealOath={handleSealTemperanceOath}
+        onConfirmDailyVictory={handleConfirmDailyVictory}
+        onDeclareRelapse={handleDeclareRelapse}
+      />
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-[11px] font-mono text-[#706E66] block mb-1">Título del Pacto:</label>
-                <input
-                  type="text"
-                  required
-                  value={oathTitle}
-                  onChange={(e) => setOathTitle(e.target.value)}
-                  placeholder="Ej. Pacto de Hierro: Cero Procrastinación"
-                  className="w-full bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl p-2.5 text-xs text-[#1F1E1B] focus:outline-none focus:border-[#D97043] focus:bg-white transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-mono text-[#706E66] block mb-1">Duración del Sol:</label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[7, 14, 30, 90].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setOathDays(d)}
-                      className={`py-2 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all johto-border-arcade johto-btn-tactile ${
-                        oathDays === d
-                          ? 'johto-bg-ink text-white johto-shadow-sm'
-                          : 'bg-[#FAF9F5] text-[#1A1915] hover:bg-[#F2EFE9]'
-                      }`}
-                    >
-                      {d}d
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-mono text-[#706E66] block mb-1">Voto Específico:</label>
-                <textarea
-                  value={oathVow}
-                  onChange={(e) => setOathVow(e.target.value)}
-                  placeholder="Compromiso: no fallaré en mis hábitos ni buscaré atajos..."
-                  className="w-full h-20 bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl p-2.5 text-xs text-[#1F1E1B] focus:outline-none focus:border-[#D97043] focus:bg-white transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-mono text-[#706E66] block mb-1">Tu Firma:</label>
-                <input
-                  type="text"
-                  required
-                  value={oathSig}
-                  onChange={(e) => setOathSig(e.target.value)}
-                  placeholder="Escribe tu alias de líder"
-                  className="w-full bg-[#FAF9F5] border border-[#E8E5DD] rounded-xl p-2.5 text-xs font-mono text-[#D97043] focus:outline-none focus:border-[#D97043] focus:bg-white transition-all"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onMouseDown={startOathHold}
-                  onMouseUp={cancelOathHold}
-                  onMouseLeave={cancelOathHold}
-                  onTouchStart={startOathHold}
-                  onTouchEnd={cancelOathHold}
-                  className="w-full relative overflow-hidden py-3.5 johto-bg-red text-white text-xs font-bold rounded-xl tracking-wider cursor-pointer johto-border-arcade johto-shadow-sm johto-btn-tactile transition-all"
-                >
-                  <div
-                    className="absolute inset-0 bg-black/20 transition-all duration-150"
-                    style={{ width: `${holdProgress}%` }}
-                  />
-                  <span className="relative z-10">
-                    {holdProgress > 0 ? `SELLANDO PACTO (${holdProgress}%)` : 'MANTÉN PRESIONADO 3S PARA SELLAR'}
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal 2.5: Edición Rúnica de Hábito (Máximo 2 veces) */}
+      <EditHabitModal
+        habit={editHabitModalTarget}
+        isOpen={Boolean(editHabitModalTarget)}
+        onClose={() => setEditHabitModalTarget(null)}
+        onSave={handleSaveEditedHabit}
+      />
 
       {/* Modal 3: Comprobante Proof-of-Work (Línea Gráfica Editorial Serena) */}
       {proofModalHabit && (

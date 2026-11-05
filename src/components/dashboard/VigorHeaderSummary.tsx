@@ -30,7 +30,7 @@ export function VigorHeaderSummary({
   const percent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const isAllDone = percent === 100 && totalCount > 0;
 
-  // Especie activa o inicial
+  // Mapa de iniciales y pokémon shiny de bienvenida
   const starterSpeciesMap: Record<string, number> = {
     chikorita: 152,
     cyndaquil: 155,
@@ -41,9 +41,31 @@ export function VigorHeaderSummary({
     treecko: 252,
     torchic: 255,
     mudkip: 258,
+    growlithe: 58,
+    houndour: 228,
+    ponyta: 77,
+    wooper: 194,
+    marill: 183,
+    horsea: 116,
+    larvitar: 246,
+    mareep: 179,
+    teddiursa: 216,
+    eevee: 133,
+    dratini: 147,
   };
   const firstPartyMon = profile?.gba_party_json?.[0]?.speciesId;
   const isFirstPartyShiny = profile?.gba_party_json?.[0]?.isShiny ?? false;
+
+  // Extraer shiny si fue elegido en el sintonizador Silph (ej. "shiny_mareep")
+  let accessoryShinyId: number | null = null;
+  let isAccessoryShiny = false;
+  if (profile?.equipped_accessory) {
+    const cleanAcc = profile.equipped_accessory.toLowerCase().replace('shiny_', '');
+    if (starterSpeciesMap[cleanAcc]) {
+      accessoryShinyId = starterSpeciesMap[cleanAcc];
+      isAccessoryShiny = profile.equipped_accessory.startsWith('shiny_');
+    }
+  }
   
   // Revisar si hay un shiny reclamado en tránsito en localStorage
   let pendingShinySpeciesId: number | null = null;
@@ -59,19 +81,27 @@ export function VigorHeaderSummary({
 
   const hasPokemon = Boolean(
     firstPartyMon ||
+    pendingShinySpeciesId ||
+    accessoryShinyId ||
     profile?.equipped_pokemon_cosmetics?.targetPokemonId ||
-    (profile?.starter_pokemon && starterSpeciesMap[profile.starter_pokemon]) ||
-    pendingShinySpeciesId
+    (profile?.starter_pokemon && starterSpeciesMap[profile.starter_pokemon])
   );
 
+  // PRIORIDAD DE COMPAÑERO:
+  // 1. Primer Pokémon del equipo GBA
+  // 2. Shiny ganado en el sintonizador Silph (pending o en perfil)
+  // 3. Inicial clásico de la historia
   const speciesId =
     firstPartyMon ||
     pendingShinySpeciesId ||
-    profile?.equipped_pokemon_cosmetics?.targetPokemonId ||
+    accessoryShinyId ||
     (profile?.starter_pokemon && starterSpeciesMap[profile.starter_pokemon]) ||
+    profile?.equipped_pokemon_cosmetics?.targetPokemonId ||
     null;
 
-  const isShiny = firstPartyMon ? isFirstPartyShiny : Boolean(pendingShinySpeciesId);
+  const isShiny = firstPartyMon
+    ? isFirstPartyShiny
+    : Boolean(pendingShinySpeciesId || isAccessoryShiny);
   const spriteUrl = speciesId ? POKEMON_ASSETS.getAnimatedSprite(speciesId, isShiny) : POKEMON_ASSETS.getEggSprite();
 
   // Matriz de reactividad sobria de Johto
