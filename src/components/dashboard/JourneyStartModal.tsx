@@ -47,10 +47,29 @@ export const JourneyStartModal: React.FC<JourneyStartModalProps> = ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // 1. Actualizar fecha de inicio en valdr_profiles
         await supabase
           .from('valdr_profiles')
-          .update({ journey_start_date: targetDate })
+          .update({ 
+            journey_start_date: targetDate,
+            temperance_streak_days: 0 
+          })
           .eq('id', user.id);
+
+        // 2. Sincronizar también la fecha de inicio del pacto activo en valdr_oaths
+        const newStartDate = new Date(targetDate);
+        const newEndDate = new Date(newStartDate);
+        newEndDate.setDate(newStartDate.getDate() + 30);
+        const newEndDateStr = newEndDate.toISOString().split('T')[0];
+
+        await supabase
+          .from('valdr_oaths')
+          .update({
+            start_date: targetDate,
+            end_date: newEndDateStr,
+          })
+          .eq('user_id', user.id)
+          .eq('status', 'locked_active');
       }
 
       soundFx.playLevelUp();

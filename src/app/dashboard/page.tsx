@@ -1016,9 +1016,15 @@ export default function DashboardPage() {
                 <span className="text-4xl font-semibold text-[#1F1E1B] font-mono tabular-nums block">
                   {profileData?.temperance_streak_days ?? 0} / 30
                 </span>
-                <span className="text-xs text-[#3B7582] font-semibold uppercase tracking-wider">
+                <span className="text-xs text-[#3B7582] font-semibold uppercase tracking-wider block">
                   Días Invicto en Retención
                 </span>
+                {profileData?.journey_start_date && (
+                  <span className="text-[10px] font-mono text-[#706E66] mt-1 inline-flex items-center gap-1 bg-[#FAF9F5] px-2 py-0.5 rounded-full border border-[#E8E5DD]">
+                    <span>📅 Inicio oficial:</span>
+                    <strong className="text-[#1F1E1B]">{profileData.journey_start_date}</strong>
+                  </span>
+                )}
               </div>
 
               {/* Barra de Progreso Visual hacia el Día 30 */}
@@ -1039,23 +1045,46 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Botón táctil para marcar la victoria de hoy */}
-              <button
-                disabled={temperanceConfirmedToday || submitting}
-                onClick={handleConfirmTemperance}
-                className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all johto-border-arcade johto-shadow-sm johto-btn-tactile ${
-                  temperanceConfirmedToday
-                    ? 'bg-[#EBF7EE] text-[#15803D] cursor-default opacity-85'
-                    : 'johto-bg-blue text-white'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4 fill-current" />
-                <span>
-                  {temperanceConfirmedToday
-                    ? '✓ ¡Hoy Permaneciste Invicto!'
-                    : 'Marcar Victoria: Hoy no caí (+100 ₽)'}
-                </span>
-              </button>
+              {/* Botón táctil para marcar la victoria de hoy o aviso de fecha futura */}
+              {profileData?.journey_start_date && profileData.journey_start_date > new Date().toISOString().split('T')[0] ? (
+                <div className="p-3.5 rounded-xl bg-[#FAF4E8] border border-[#C59B46]/30 text-center space-y-1">
+                  <span className="text-xs font-mono font-bold text-[#9A7025] uppercase tracking-wider block">
+                    ⏳ Cuenta Regresiva: El Pacto inicia mañana ({profileData.journey_start_date})
+                  </span>
+                  <p className="text-[11px] text-[#706E66]">
+                    Prepara tu entorno y despeja tu mente. A partir de las 00:00 se desbloqueará tu primer check-in.
+                  </p>
+                </div>
+              ) : (
+                <button
+                  disabled={temperanceConfirmedToday || submitting}
+                  onClick={handleConfirmTemperance}
+                  className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all johto-border-arcade johto-shadow-sm johto-btn-tactile ${
+                    temperanceConfirmedToday
+                      ? 'bg-[#EBF7EE] text-[#15803D] cursor-default opacity-85'
+                      : 'johto-bg-blue text-white'
+                  }`}
+                >
+                  <ShieldCheck className="w-4 h-4 fill-current" />
+                  <span>
+                    {temperanceConfirmedToday
+                      ? '✓ ¡Hoy Permaneciste Invicto!'
+                      : 'Marcar Victoria: Hoy no caí (+100 ₽)'}
+                  </span>
+                </button>
+              )}
+
+              {/* Acceso directo para cambiar fecha de inicio */}
+              <div className="pt-1 flex items-center justify-between text-[11px] font-mono text-[#706E66] border-t border-[#F2EFE9]">
+                <span>¿Deseas programar otra fecha?</span>
+                <button
+                  type="button"
+                  onClick={() => setJourneyModalOpen(true)}
+                  className="text-[#2D68C4] hover:underline font-bold cursor-pointer"
+                >
+                  Cambiar Fecha
+                </button>
+              </div>
 
               <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E8E5DD] text-xs text-[#706E66] leading-relaxed">
                 ✨ Recompensa al Día 30: Huevo Místico con Pokémon Shiny de 6 IVs perfectos inyectado al cartucho.
