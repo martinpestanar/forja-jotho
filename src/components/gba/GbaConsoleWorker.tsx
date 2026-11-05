@@ -814,6 +814,9 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         return;
       }
 
+      // Eliminar copia previa en VFS para forzar escritura en limpio del nuevo binario
+      try { Module.FS.unlink(ROM_PATH_VFS); } catch {}
+
       // Escribir ROM al sistema de archivos virtual
       Module.FS.writeFile(ROM_PATH_VFS, romBytes);
 
