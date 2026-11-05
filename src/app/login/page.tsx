@@ -46,6 +46,33 @@ export default function LoginPage() {
     });
   }, [router]);
 
+  const handleQuickLoginMarty = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/dev-login', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.otp) {
+        throw new Error(data.error || 'Error al conectar');
+      }
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        email: data.email,
+        token: data.otp,
+        type: 'magiclink',
+      });
+      if (verifyErr) throw verifyErr;
+      soundFx.playLevelUp();
+      setSuccessMsg('¡Sesión de Marty restaurada! Entrando a Johto...');
+      setTimeout(() => {
+        router.replace('/dashboard');
+      }, 500);
+    } catch (e: any) {
+      soundFx.playDamage();
+      setError(e.message || 'No se pudo iniciar sesión rápida.');
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (loading) return;
@@ -332,6 +359,19 @@ export default function LoginPage() {
                 </>
               )}
             </button>
+
+            {/* Acceso Rápido Desarrollador / Localhost */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleQuickLoginMarty}
+                disabled={loading}
+                className="w-full py-2.5 px-3 rounded-xl border border-[#C59B46]/40 bg-[#FFFDF7] hover:bg-[#FFF9E6] text-[#8C6B1B] text-xs font-mono font-medium flex items-center justify-center gap-2 transition-all cursor-pointer shadow-[0_1px_2px_rgba(197,155,70,0.08)] active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#C59B46] fill-[#C59B46]" />
+                <span>⚡ Iniciar Sesión Rápida como Marty</span>
+              </button>
+            </div>
           </form>
 
           {/* Micro-píldoras informativas */}

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { soundFx } from '@/lib/soundFx';
 import confetti from 'canvas-confetti';
+import { supabase } from '@/lib/supabase';
 import { triggerGbaItemInjection, triggerGbaPokemonInjection } from '@/lib/gba/PokemonMemoryBridge';
 import { HNS_ITEM_IDS } from '@/lib/gba/gbaSaveEngine';
 import { POKEMON_ASSETS } from '@/lib/pokemonAssets';
@@ -88,6 +89,30 @@ export const ArcadeRoomTheater: React.FC = () => {
   const [shopSubTab, setShopSubTab] = useState<'items' | 'pokemon'>('items');
   const [pokemonDestination, setPokemonDestination] = useState<'pc' | 'party'>('pc');
   const [injectedNotification, setInjectedNotification] = useState<string | null>(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(false);
+
+  const handleQuickRestoreSession = async () => {
+    setIsRestoringSession(true);
+    soundFx.playClick();
+    try {
+      const res = await fetch('/api/auth/dev-login', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.otp) throw new Error(data.error || 'Error al conectar');
+      const { error } = await supabase.auth.verifyOtp({
+        email: data.email,
+        token: data.otp,
+        type: 'magiclink',
+      });
+      if (error) throw error;
+      soundFx.playLevelUp();
+      window.location.reload();
+    } catch (e: any) {
+      soundFx.playDamage();
+      console.error(e);
+      alert('Error restaurando sesión: ' + (e.message || 'Desconocido'));
+      setIsRestoringSession(false);
+    }
+  };
 
   // Escuchar tecla ESC para salir de la sala arcade
   useEffect(() => {
@@ -376,6 +401,26 @@ export const ArcadeRoomTheater: React.FC = () => {
                 {batteryMinutes} min disponibles
               </span>
             </div>
+            {(!profile || profile.id === 'guest-trainer-id') && (
+              <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-[#C59B46]/40 bg-[#FFFDF7] p-2.5 text-xs text-[#8C6B1B] shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">⚠️</span>
+                  <div>
+                    <p className="font-semibold text-[#1C1B18] text-[11px]">Modo Invitado (Sesión no iniciada)</p>
+                    <p className="text-[10px] text-[#706E66]">Carga tu partida de Marty en la nube con tu Shiny Mareep y ₽1,550.</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleQuickRestoreSession}
+                  disabled={isRestoringSession}
+                  className="shrink-0 flex items-center gap-1.5 rounded-lg bg-[#C59B46] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-[#B38A3B] active:scale-95 transition-all cursor-pointer"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>{isRestoringSession ? 'Cargando...' : 'Restaurar Partida'}</span>
+                </button>
+              </div>
+            )}
             <div className="min-h-0 flex-1 overflow-hidden rounded-none sm:rounded-xl bg-[#0F1112]">
               {isArcadeOpen && <GbaPanel />}
             </div>
