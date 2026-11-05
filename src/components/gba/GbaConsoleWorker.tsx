@@ -30,6 +30,8 @@ import {
   Zap,
   Maximize2,
   Minimize2,
+  Download,
+  Upload,
 } from 'lucide-react';
 
 const ROM_PATH_VFS = '/data/games/pokemonHnS.gba';
@@ -68,6 +70,76 @@ function loadLocalBackup(slot: string): Uint8Array | null {
     return bytes.length >= 0x1C000 ? bytes : null;
   } catch (e) {
     console.warn('[GBA] Error cargando respaldo local:', e);
+    return null;
+  }
+}
+
+/**
+ * Guarda el archivo .sav en la nube a través del endpoint seguro /api/gba/save-sync
+ */
+async function syncSavToCloud(slot: string, data: Uint8Array, keepalive = false): Promise<boolean> {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      console.warn('[GBA Cloud Sync] No hay sesión activa de usuario para sincronizar.');
+      return false;
+    }
+
+    // Crear un Uint8Array fresco o Blob para BodyInit estándar
+    const cleanBytes = new Uint8Array(data.byteLength);
+    cleanBytes.set(data);
+    const bodyBlob = new Blob([cleanBytes], { type: 'application/octet-stream' });
+
+    const resp = await fetch(`/api/gba/save-sync?slot=${encodeURIComponent(slot)}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: bodyBlob,
+      keepalive,
+    });
+
+    if (!resp.ok) {
+      console.warn('[GBA Cloud Sync] Falló guardado en la nube HTTP', resp.status);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.warn('[GBA Cloud Sync] Error de red al sincronizar con la nube:', e);
+    return false;
+  }
+}
+
+/**
+ * Descarga el archivo .sav desde la nube a través del endpoint seguro /api/gba/save-sync
+ */
+async function loadSavFromCloud(slot: string): Promise<Uint8Array | null> {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) return null;
+
+    const resp = await fetch(`/api/gba/save-sync?slot=${encodeURIComponent(slot)}&t=${Date.now()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (resp.ok) {
+      const arrayBuffer = await resp.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      if (bytes.length >= 0x1C000) {
+        console.info(`[GBA Cloud Sync] ✅ Partida cargada desde la nube (${bytes.length} bytes).`);
+        return bytes;
+      }
+    }
+    return null;
+  } catch (e) {
+    console.warn('[GBA Cloud Sync] Error descargando partida desde la nube:', e);
     return null;
   }
 }
@@ -516,16 +588,12 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       const activeSlot = currentSlotRef.current;
       saveLocalBackup(activeSlot, savBytes);
 
-      // 4. Subir a Supabase Storage (Nube)
+      // 4. Subir a la Nube vía Endpoint Seguro /api/gba/save-sync
       const currentUid = userIdRef.current;
-      await supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/${activeSlot}`, savBytes, {
-        contentType: 'application/octet-stream',
-        upsert: true,
-      });
-
-      await supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/savegame.sav`, savBytes, {
-        contentType: 'application/octet-stream',
-        upsert: true,
+      syncSavToCloud(activeSlot, savBytes).then((ok) => {
+        if (ok) {
+          console.info(`[GBA Cloud Sync] ✅ Auto-guardado en la nube completado (${activeSlot}).`);
+        }
       });
 
       // 5. Sincronizar equipo y dinero del cartucho al perfil Zustand y Supabase en tiempo real
@@ -624,17 +692,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         // Respaldo local en LocalStorage
         saveLocalBackup(slotId, savBytes);
 
-        // Subir a la nube (Supabase)
-        const currentUid = userIdRef.current;
-        await supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/${slotId}`, savBytes, {
-          contentType: 'application/octet-stream',
-          upsert: true,
-        });
-
-        await supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/savegame.sav`, savBytes, {
-          contentType: 'application/octet-stream',
-          upsert: true,
-        });
+        // Subir a la nube a través del endpoint seguro
+        await syncSavToCloud(slotId, savBytes);
 
         setCurrentSlot(slotId);
 
@@ -662,6 +721,42 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       setTimeout(() => setShowSaveSuccess(null), 2800);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Descargar archivo .SAV al disco local del usuario
+  const downloadSavToPc = () => {
+    const mod = moduleRef.current;
+    if (!mod) return;
+    try {
+      let bytes: Uint8Array | null = null;
+      if (typeof mod.getSave === 'function') bytes = mod.getSave();
+      if (!bytes && mod.FS?.analyzePath(SAV_PATH_VFS).exists) {
+        bytes = mod.FS.readFile(SAV_PATH_VFS);
+      }
+      if (!bytes || bytes.length < 0x1C000) {
+        bytes = loadLocalBackup(currentSlotRef.current) || loadLocalBackup('slot_1.sav');
+      }
+      if (!bytes) {
+        setShowSaveSuccess('⚠️ No hay datos de guardado para descargar.');
+        setTimeout(() => setShowSaveSuccess(null), 2500);
+        return;
+      }
+
+      const blob = new Blob([bytes as any], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pokemonHnS_${currentSlotRef.current || 'slot_1.sav'}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      soundFx.playCoin();
+      setShowSaveSuccess('💾 Partida .SAV descargada a tu PC.');
+      setTimeout(() => setShowSaveSuccess(null), 2800);
+    } catch (e) {
+      console.error('[GBA] Error descargando .sav:', e);
     }
   };
 
@@ -870,28 +965,11 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         initialSavBytes = pendingSav;
         pendingSavBytesRef.current = null;
       } else {
-        const currentUid = userIdRef.current;
         const activeSlot = currentSlotRef.current;
 
-        // 2. Descargar desde Supabase Storage (Nube)
+        // 2. Descargar prioritariamente desde la Nube (API segura /api/gba/save-sync)
         try {
-          const { data: savData } = await supabase.storage
-            .from(SAV_BUCKET)
-            .download(`${currentUid}/${activeSlot}`);
-          if (savData) {
-            initialSavBytes = new Uint8Array(await savData.arrayBuffer());
-          } else {
-            // Fallback a savegame.sav
-            const { data: fallbackData } = await supabase.storage
-              .from(SAV_BUCKET)
-              .download(`${currentUid}/savegame.sav`);
-            if (fallbackData) {
-              initialSavBytes = new Uint8Array(await fallbackData.arrayBuffer());
-            } else if (currentUid !== 'guest-trainer-id') {
-              // Fallback a guest save si el usuario recién se logueó
-              // Usuario nuevo: arrancar partida limpia sin heredar el savegame de pruebas de admin
-            }
-          }
+          initialSavBytes = await loadSavFromCloud(activeSlot);
         } catch (cloudErr) {
           console.warn('[mGBA] Error en descarga de nube, probando fuentes locales:', cloudErr);
         }
@@ -1010,8 +1088,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           if (savBytes && savBytes.length >= 0x1C000) {
             try { mod.FSSync?.(); } catch {}
             saveLocalBackup(currentSlotRef.current, savBytes);
-            const currentUid = userIdRef.current;
-            supabase.storage.from(SAV_BUCKET).upload(`${currentUid}/${currentSlotRef.current}`, savBytes, { upsert: true }).catch(() => {});
+            syncSavToCloud(currentSlotRef.current, savBytes, true).catch(() => {});
           }
         } catch {}
 
@@ -1951,6 +2028,16 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           >
             <Zap className="h-3 w-3" />
             <span className="hidden sm:inline">⚡ Rápido</span>
+          </button>
+
+          {/* Botón Descargar Copia .SAV a PC */}
+          <button
+            onClick={downloadSavToPc}
+            className="hidden sm:flex cursor-pointer items-center gap-1 rounded-lg border border-[#E8E5DD] bg-white px-2 py-1 text-[10px] font-semibold text-[#5E5C56] transition-all hover:bg-[#F2EFE9]"
+            title="Descargar copia del archivo .SAV a tu ordenador"
+          >
+            <Download className="h-3 w-3 text-[#706E66]" />
+            <span>Descargar .SAV</span>
           </button>
 
           {/* Botón Respaldar Partida en Supabase */}
