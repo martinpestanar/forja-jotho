@@ -787,15 +787,16 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         romBytes = customRomBytes;
         if (customName) setRomTitle(customName.replace('.gba', '').toUpperCase());
       } else {
-        // Descargar la ROM oficial desde romUrl (Supabase Storage) con fallback a la local
+        // Descargar la ROM oficial con cache-busting (?v=timestamp) para evitar caché del navegador o CDN
+        const bustUrl = (u: string) => u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now();
         let resp: Response;
         try {
-          resp = await fetch(romUrl, { cache: 'no-store' });
+          resp = await fetch(bustUrl(romUrl), { cache: 'no-store' });
           if (!resp.ok && romUrl !== '/roms/pokemonHnS.gba') {
-            resp = await fetch('/roms/pokemonHnS.gba', { cache: 'no-store' });
+            resp = await fetch(bustUrl('/roms/pokemonHnS.gba'), { cache: 'no-store' });
           }
         } catch {
-          resp = await fetch('/roms/pokemonHnS.gba', { cache: 'no-store' });
+          resp = await fetch(bustUrl('/roms/pokemonHnS.gba'), { cache: 'no-store' });
         }
         if (!resp.ok) {
           throw new Error(`HTTP ${resp.status} al descargar ROM`);
