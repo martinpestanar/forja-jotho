@@ -118,8 +118,22 @@ async function syncSavToCloud(slot: string, data: Uint8Array, keepalive = false)
 async function loadSavFromCloud(slot: string): Promise<Uint8Array | null> {
   try {
     const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-    if (!token) return null;
+    let token = sessionData.session?.access_token;
+    
+    // Si la página acaba de refrescar, la sesión puede tardar unos milisegundos en hidratarse
+    if (!token) {
+      for (let i = 0; i < 6; i++) {
+        await new Promise((r) => setTimeout(r, 250));
+        const retry = await supabase.auth.getSession();
+        token = retry.data.session?.access_token;
+        if (token) break;
+      }
+    }
+
+    if (!token) {
+      console.warn('[GBA Cloud Sync] No se pudo obtener token de sesión tras reintentos.');
+      return null;
+    }
 
     const resp = await fetch(`/api/gba/save-sync?slot=${encodeURIComponent(slot)}&t=${Date.now()}`, {
       method: 'GET',
