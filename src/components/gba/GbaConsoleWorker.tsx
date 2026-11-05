@@ -147,6 +147,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
     };
   }, [emuState]);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [speedMultiplier, setSpeedMultiplier] = useState<number>(1);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [showSaveSuccess, setShowSaveSuccess] = useState<string | null>(null);
   const [romTitle, setRomTitle] = useState<string>('POKEMON H&S');
@@ -162,6 +163,46 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
   const [availableSlots, setAvailableSlots] = useState<SaveSlotInfo[]>([]);
   const [bootCount, setBootCount] = useState<number>(0);
   const pendingSavBytesRef = useRef<Uint8Array | null>(null);
+
+  // Ciclar velocidad turbo del emulador (1x -> 2x -> 3x -> 4x -> 1x)
+  const cycleSpeed = useCallback(() => {
+    setSpeedMultiplier((prev) => {
+      const next = prev === 1 ? 2 : prev === 2 ? 3 : prev === 3 ? 4 : 1;
+      const mod = moduleRef.current;
+      if (mod && typeof mod.setFastForwardMultiplier === 'function') {
+        try {
+          mod.setFastForwardMultiplier(next);
+        } catch (e) {
+          console.warn('[mGBA] Error configurando velocidad turbo:', e);
+        }
+      }
+      soundFx.playClick();
+      setShowSaveSuccess(next > 1 ? `⚡ Velocidad Turbo: ${next}x` : '⚡ Velocidad Normal: 1x');
+      setTimeout(() => setShowSaveSuccess(null), 1600);
+      return next;
+    });
+  }, []);
+
+  // Silenciar / Activar sonido en mGBA
+  const toggleMute = useCallback(() => {
+    soundFx.playClick();
+    setIsMuted((prev) => {
+      const next = !prev;
+      const mod = moduleRef.current;
+      if (mod) {
+        try {
+          if (typeof mod.setVolume === 'function') {
+            mod.setVolume(next ? 0.0 : 1.0);
+          } else if (next && typeof mod.pauseAudio === 'function') {
+            mod.pauseAudio();
+          } else if (!next && typeof mod.resumeAudio === 'function') {
+            mod.resumeAudio();
+          }
+        } catch {}
+      }
+      return next;
+    });
+  }, []);
 
   // Reiniciar mGBA de manera limpia y determinista recreando el canvas con el SaveBlock inyectado
   const rebootEmulator = useCallback((freshSavBytes?: Uint8Array) => {
@@ -910,6 +951,13 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       // Arrancar juego pasando SAV_PATH_VFS explícito para carga determinista del SaveBlock
       Module.loadGame(ROM_PATH_VFS, SAV_PATH_VFS);
 
+      // Aplicar multiplicador de velocidad si ya estaba configurado
+      if (speedMultiplier > 1) {
+        try {
+          Module.setFastForwardMultiplier?.(speedMultiplier);
+        } catch {}
+      }
+
       // Registrar callbacks centrales para detectar cuando el jugador guarda DENTRO del juego
       try {
         Module.pauseGame?.();
@@ -1132,6 +1180,15 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       const target = e.target as HTMLElement;
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
 
+      // Atajo para velocidad Turbo en PC: Tecla Tab o tecla F
+      if (e.code === 'Tab' || (!codeToGba[e.code] && (e.code === 'KeyF' || e.key?.toLowerCase() === 'f'))) {
+        e.preventDefault();
+        if (!e.repeat) {
+          cycleSpeed();
+        }
+        return;
+      }
+
       let gbaBtn = codeToGba[e.code];
       // Fallback directo por carácter físico (cero fallos sin importar layout de teclado o locale)
       if (!gbaBtn && e.key) {
@@ -1198,7 +1255,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleBlur);
     };
-  }, [keyBindings, handleButton, releaseAllButtons, rebindingAction]);
+  }, [keyBindings, handleButton, releaseAllButtons, rebindingAction, cycleSpeed]);
 
 
   // Pausa / Reanudar (Sin sobreescribir la partida automáticamente)
@@ -1673,8 +1730,22 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           {/* Badge de FPS */}
           <div className="flex items-center gap-1 rounded-full border border-[#5A7D62]/25 bg-[#5A7D62]/10 px-2 py-0.5 text-[9px] font-mono font-semibold text-[#4C6151]">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5A7D62]" />
-            <span>{emuState === 'running' ? '60 FPS' : emuState.toUpperCase()}</span>
+            <span>{emuState === 'running' ? `${Math.round(60 * speedMultiplier)} FPS` : emuState.toUpperCase()}</span>
           </div>
+
+          {/* Botón Velocidad Turbo */}
+          <button
+            onClick={cycleSpeed}
+            title="Acelerar emulador (1x / 2x / 3x / 4x) [Atajo: Tecla TAB o F]"
+            className={`flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] font-mono font-bold transition-all ${
+              speedMultiplier > 1
+                ? 'border-[#C59B46] bg-[#C59B46] text-white shadow-sm ring-1 ring-[#C59B46]/50'
+                : 'border-[#E8E5DD] bg-white text-[#5E5C56] hover:bg-[#F2EFE9]'
+            }`}
+          >
+            <Zap className={`h-3 w-3 ${speedMultiplier > 1 ? 'fill-current text-white animate-pulse' : 'text-[#C59B46]'}`} />
+            <span>{speedMultiplier}x</span>
+          </button>
 
           {/* Botón Partidas Guardadas */}
           <button
@@ -1751,6 +1822,14 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       {/* Pantalla del Emulador (Marco CRT Oficial mGBA) */}
       <div className="relative flex min-h-0 aspect-[3/2] w-full items-center justify-center overflow-hidden rounded-none sm:rounded-xl border-y sm:border border-[#2A2723] bg-[#0F1112]">
         <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-transparent via-white/5 to-transparent" />
+
+        {/* Indicador Flotante de Velocidad Turbo */}
+        {speedMultiplier > 1 && (
+          <div className="pointer-events-none absolute top-3 right-3 z-20 flex items-center gap-1 rounded-md bg-black/80 px-2 py-0.5 font-mono text-[10px] font-bold text-[#F5A623] shadow-md backdrop-blur-sm border border-[#F5A623]/40 animate-pulse">
+            <Zap className="h-3 w-3 fill-current text-[#F5A623]" />
+            <span>TURBO {speedMultiplier}x</span>
+          </div>
+        )}
 
         {/* Controles flotantes de pantalla */}
         <button
@@ -1843,13 +1922,25 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           </button>
 
           <button
-            onClick={() => {
-              soundFx.playClick();
-              setIsMuted(!isMuted);
-            }}
+            onClick={toggleMute}
             className="cursor-pointer rounded-lg border border-[#E8E5DD] bg-white p-1 text-[#5E5C56] transition-all hover:bg-[#F2EFE9]"
+            title={isMuted ? 'Activar Sonido' : 'Silenciar'}
           >
             {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* Botón Velocidad Rápida */}
+          <button
+            onClick={cycleSpeed}
+            className={`cursor-pointer rounded-lg border p-1 text-[10px] font-mono font-bold transition-all flex items-center gap-0.5 ${
+              speedMultiplier > 1
+                ? 'border-[#C59B46] bg-[#C59B46] text-white shadow-sm'
+                : 'border-[#E8E5DD] bg-white text-[#5E5C56] hover:bg-[#F2EFE9]'
+            }`}
+            title="Acelerar velocidad del juego (TAB o F)"
+          >
+            <Zap className={`w-3.5 h-3.5 ${speedMultiplier > 1 ? 'fill-current' : 'text-[#C59B46]'}`} />
+            <span className="text-[9px]">{speedMultiplier}x</span>
           </button>
 
           {/* Botón Guardado Rápido Instantáneo desde afuera */}
