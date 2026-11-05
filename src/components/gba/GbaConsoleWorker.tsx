@@ -476,7 +476,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
   }, []);
 
   // Pulsar boton con ciclo de bajada y subida garantizado (edge transition 0 -> 1 -> 0)
-  const pulseButton = useCallback((button: string, holdMs = 90) => {
+  const pulseButton = useCallback((button: string, holdMs = 45) => {
     const mod = moduleRef.current;
     if (mod) {
       try {
@@ -1227,30 +1227,39 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
   // Controles por teclado físico mapeados dinámicamente
   useEffect(() => {
     // Generar mapeo inverso: e.code -> GBA Action ('Up', 'A', etc.)
-    const codeToGba: Record<string, string> = {};
+    const codeToGba: Record<string, string> = {
+      // 1. D-Pad por defecto (Flechas de dirección)
+      ArrowUp: 'Up',
+      ArrowDown: 'Down',
+      ArrowLeft: 'Left',
+      ArrowRight: 'Right',
 
-    // Mapear configuraciones personalizadas del usuario
+      // 2. D-Pad alternativo (WASD)
+      KeyW: 'Up',
+      KeyS: 'Down',
+      KeyD: 'Right',
+
+      // 3. Botones de acción estándar de emulador (Z = A, X = B)
+      KeyZ: 'A',
+      KeyX: 'B',
+
+      // 4. Teclas intuitivas directas (A = Botón A, B = Botón B, C = A, Backspace = B)
+      KeyA: 'A',
+      KeyB: 'B',
+      KeyC: 'A',
+      Backspace: 'B',
+
+      // 5. Botones de sistema
+      Enter: 'Start',
+      Space: 'Select',
+      ShiftRight: 'Select',
+      ShiftLeft: 'Select',
+    };
+
+    // Mapear configuraciones personalizadas del usuario (TIENEN PRIORIDAD ABSOLUTA)
     Object.entries(keyBindings).forEach(([action, code]) => {
       codeToGba[code] = action;
     });
-
-    // 1. Movimiento WASD completo:
-    codeToGba['KeyW'] = 'Up';
-    codeToGba['KeyA'] = 'Left';    // ¡Tecla A = Mover a la Izquierda!
-    codeToGba['KeyS'] = 'Down';
-    codeToGba['KeyD'] = 'Right';
-
-    // 2. Movimiento Flechas:
-    codeToGba['ArrowUp'] = 'Up';
-    codeToGba['ArrowDown'] = 'Down';
-    codeToGba['ArrowLeft'] = 'Left';
-    codeToGba['ArrowRight'] = 'Right';
-
-    // 3. Botones de acción GBA:
-    codeToGba['KeyZ'] = 'A';        // Tecla Z = Botón A (Aceptar / Interactuar)
-    codeToGba['KeyX'] = 'B';        // Tecla X = Botón B (Cancelar / Correr)
-    codeToGba['Enter'] = 'Start';    // Enter = Start (Menú)
-    codeToGba['Space'] = 'Select';   // Espacio = Select
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (rebindingAction) return;
@@ -1271,20 +1280,16 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       if (!gbaBtn && e.key) {
         const k = e.key.toLowerCase();
         if (k === 'w') gbaBtn = 'Up';
-        else if (k === 'a') gbaBtn = 'Left';
         else if (k === 's') gbaBtn = 'Down';
         else if (k === 'd') gbaBtn = 'Right';
-        else if (k === 'z') gbaBtn = 'A';
-        else if (k === 'x') gbaBtn = 'B';
+        else if (k === 'z' || k === 'a' || k === 'c') gbaBtn = 'A';
+        else if (k === 'x' || k === 'b' || k === 'backspace') gbaBtn = 'B';
         else if (k === 'enter') gbaBtn = 'Start';
-        else if (k === ' ') gbaBtn = 'Select';
+        else if (k === ' ' || k === 'shift') gbaBtn = 'Select';
       }
 
       if (gbaBtn) {
         e.preventDefault();
-        // Si el usuario mantiene pulsada la tecla o hay repetición del sistema operativo,
-        // forzamos una transición limpia (unpress -> press) para que el motor GBA (JOY_NEW)
-        // registre cada pulsación sin ignorar menús como el del equipo Pokémon.
         // Evitar re-disparo por repetición del sistema operativo (evita cerrar menús al instante)
         if (e.repeat) {
           return;
@@ -1303,13 +1308,12 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       if (!gbaBtn && e.key) {
         const k = e.key.toLowerCase();
         if (k === 'w') gbaBtn = 'Up';
-        else if (k === 'a') gbaBtn = 'Left';
         else if (k === 's') gbaBtn = 'Down';
         else if (k === 'd') gbaBtn = 'Right';
-        else if (k === 'z') gbaBtn = 'A';
-        else if (k === 'x') gbaBtn = 'B';
+        else if (k === 'z' || k === 'a' || k === 'c') gbaBtn = 'A';
+        else if (k === 'x' || k === 'b' || k === 'backspace') gbaBtn = 'B';
         else if (k === 'enter') gbaBtn = 'Start';
-        else if (k === ' ') gbaBtn = 'Select';
+        else if (k === ' ' || k === 'shift') gbaBtn = 'Select';
       }
 
       if (gbaBtn) {
@@ -2065,35 +2069,79 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           {/* Boton A interactivo */}
           <button
             type="button"
-            onMouseDown={() => { soundFx.playClick(); handleButton('A', true); }}
-            onMouseUp={() => handleButton('A', false)}
-            onClick={() => pulseButton('A')}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 border-[#991B1B] bg-[#DC2626] text-white font-bold text-xs shadow-[0_2px_0_0_#7F1D1D] active:translate-y-0.5 active:shadow-none hover:bg-[#EF4444] transition-all cursor-pointer"
-            title="Pulsar Boton A (Aceptar / Ver stats / Hablar). Tambien puedes pulsar las teclas A o Z en el teclado."
+            onPointerDown={(e) => {
+              e.preventDefault();
+              soundFx.playClick();
+              handleButton('A', true);
+            }}
+            onPointerUp={(e) => {
+              e.preventDefault();
+              handleButton('A', false);
+            }}
+            onPointerLeave={(e) => {
+              e.preventDefault();
+              handleButton('A', false);
+            }}
+            onPointerCancel={(e) => {
+              e.preventDefault();
+              handleButton('A', false);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 border-[#991B1B] bg-[#DC2626] text-white font-bold text-xs shadow-[0_2px_0_0_#7F1D1D] active:translate-y-0.5 active:shadow-none hover:bg-[#EF4444] transition-all cursor-pointer select-none touch-none"
+            title="Pulsar Botón A (Aceptar / Ver stats / Hablar). Teclas físicas: Z o A."
           >
-            <span className="inline-block px-1 py-0.2 bg-black/20 rounded text-[10px]">Z</span>
+            <span className="inline-block px-1 py-0.2 bg-black/25 rounded text-[10px]">Z / A</span>
             <span>BOTÓN A</span>
           </button>
 
           {/* Boton B interactivo */}
           <button
             type="button"
-            onMouseDown={() => { soundFx.playClick(); handleButton('B', true); }}
-            onMouseUp={() => handleButton('B', false)}
-            onClick={() => pulseButton('B')}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 border-[#1E3A8A] bg-[#2563EB] text-white font-bold text-xs shadow-[0_2px_0_0_#1E40AF] active:translate-y-0.5 active:shadow-none hover:bg-[#3B82F6] transition-all cursor-pointer"
-            title="Pulsar Boton B (Cancelar / Correr). Tambien puedes pulsar B o X en el teclado."
+            onPointerDown={(e) => {
+              e.preventDefault();
+              soundFx.playClick();
+              handleButton('B', true);
+            }}
+            onPointerUp={(e) => {
+              e.preventDefault();
+              handleButton('B', false);
+            }}
+            onPointerLeave={(e) => {
+              e.preventDefault();
+              handleButton('B', false);
+            }}
+            onPointerCancel={(e) => {
+              e.preventDefault();
+              handleButton('B', false);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg border-2 border-[#1E3A8A] bg-[#2563EB] text-white font-bold text-xs shadow-[0_2px_0_0_#1E40AF] active:translate-y-0.5 active:shadow-none hover:bg-[#3B82F6] transition-all cursor-pointer select-none touch-none"
+            title="Pulsar Botón B (Cancelar / Correr / Borrar letra). Teclas físicas: X o B."
           >
-            <span className="inline-block px-1 py-0.2 bg-black/20 rounded text-[10px]">X</span>
+            <span className="inline-block px-1 py-0.2 bg-black/25 rounded text-[10px]">X / B</span>
             <span>BOTÓN B</span>
           </button>
 
           {/* Boton START interactivo */}
           <button
             type="button"
-            onClick={() => { soundFx.playClick(); pulseButton('Start'); }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded border border-[#C8C2B6] bg-white text-[#1F1E1B] font-bold text-[10px] shadow-[0_1px_0_0_#C8C2B6] active:translate-y-0.5 active:shadow-none hover:bg-[#F2EFE9] transition-all cursor-pointer"
-            title="Abrir Menu Pokemon (Enter)"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              soundFx.playClick();
+              handleButton('Start', true);
+            }}
+            onPointerUp={(e) => {
+              e.preventDefault();
+              handleButton('Start', false);
+            }}
+            onPointerLeave={(e) => {
+              e.preventDefault();
+              handleButton('Start', false);
+            }}
+            onPointerCancel={(e) => {
+              e.preventDefault();
+              handleButton('Start', false);
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded border border-[#C8C2B6] bg-white text-[#1F1E1B] font-bold text-[10px] shadow-[0_1px_0_0_#C8C2B6] active:translate-y-0.5 active:shadow-none hover:bg-[#F2EFE9] transition-all cursor-pointer select-none touch-none"
+            title="Abrir Menú Pokémon (Enter)"
           >
             <span>[Enter] START</span>
           </button>
@@ -2101,9 +2149,25 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           {/* Boton SELECT interactivo */}
           <button
             type="button"
-            onClick={() => { soundFx.playClick(); pulseButton('Select'); }}
-            className="flex items-center gap-1 px-2.5 py-1 rounded border border-[#C8C2B6] bg-white text-[#1F1E1B] font-bold text-[10px] shadow-[0_1px_0_0_#C8C2B6] active:translate-y-0.5 active:shadow-none hover:bg-[#F2EFE9] transition-all cursor-pointer"
-            title="Ordenar / Select"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              soundFx.playClick();
+              handleButton('Select', true);
+            }}
+            onPointerUp={(e) => {
+              e.preventDefault();
+              handleButton('Select', false);
+            }}
+            onPointerLeave={(e) => {
+              e.preventDefault();
+              handleButton('Select', false);
+            }}
+            onPointerCancel={(e) => {
+              e.preventDefault();
+              handleButton('Select', false);
+            }}
+            className="flex items-center gap-1 px-2.5 py-1 rounded border border-[#C8C2B6] bg-white text-[#1F1E1B] font-bold text-[10px] shadow-[0_1px_0_0_#C8C2B6] active:translate-y-0.5 active:shadow-none hover:bg-[#F2EFE9] transition-all cursor-pointer select-none touch-none"
+            title="Ordenar / Select (Espacio)"
           >
             <span>[Espacio] SELECT</span>
           </button>
