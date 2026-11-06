@@ -295,7 +295,7 @@ export default function DashboardPage() {
       console.warn('Error al verificar perfil de entrenador:', e);
     }
 
-    // Catálogo y hábitos guardados en Supabase (valdr_habits + catalog)
+    // Catálogo y hábitos guardados en Supabase (valdr_habits)
     let dbCustomHabits: any[] = [];
     try {
       const { data } = await supabase
@@ -307,13 +307,6 @@ export default function DashboardPage() {
     } catch {}
 
     let catalog: any[] = [];
-    try {
-      const { data, error } = await supabase
-        .from('valdr_habits_catalog')
-        .select('*')
-        .order('sort_order', { ascending: true });
-      if (!error && data) catalog = data;
-    } catch {}
 
     // Recuperar también hábitos locales de contingencia
     let localCustomHabits: any[] = [];
@@ -358,22 +351,6 @@ export default function DashboardPage() {
         .order('created_at', { ascending: false });
 
       if (oathsData) setOaths(oathsData);
-    } catch {}
-
-    // Cofres Rúnicos Disponibles (ej. Drop 12:01 AM)
-    try {
-      const { data: boxes, error: boxesErr } = await supabase
-        .from('valdr_loot_boxes')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_opened', false)
-        .lte('available_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-
-      if (!boxesErr && boxes && boxes.length > 0) {
-        setActiveLootBox(boxes[0] as LootBoxData);
-        setLootBoxModalOpen(true);
-      }
     } catch {}
 
     // Chequeo de Liquidación de Medianoche del día anterior

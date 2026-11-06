@@ -107,11 +107,11 @@ export function OracleForgeModal({
 
       if (user) {
         const { error: insertError } = await supabase
-          .from('valdr_habits_catalog')
+          .from('valdr_habits')
           .insert(newHabitRecord);
 
         if (insertError) {
-          console.warn('[valdr_habits_catalog] Error al insertar en Supabase, guardando en contingencia local:', insertError);
+          console.warn('[valdr_habits] Error al insertar en Supabase, guardando en contingencia local:', insertError);
           // Contingencia en localStorage para que el usuario NUNCA pierda su hábito creado
           try {
             const localCustom = JSON.parse(localStorage.getItem(`syndex_custom_habits_${user.id}`) || '[]');
