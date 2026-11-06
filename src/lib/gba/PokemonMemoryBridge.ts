@@ -16,6 +16,7 @@ import {
   type BagPocketType,
   type PokemonInjectionOptions,
   type PokemonInjectionResult,
+  type PokemonExtractionResult,
 } from './gbaSaveEngine';
 import { supabase } from '@/lib/supabase';
 
@@ -524,6 +525,54 @@ export class PokemonMemoryBridge {
     }
   }
 
+  /**
+   * Extrae un Pokémon del equipo de la ROM (1 a 6) para mandarlo al Rancho/Bóveda,
+   * compacta los slots restantes, decrementa partyCount, recalcula el checksum,
+   * actualiza en VFS y sincroniza con Supabase Storage y el perfil.
+   */
+  public async extractPokemonFromGbaParty(
+    slotNumber: number,
+    syncAfter = true
+  ): Promise<PokemonExtractionResult | null> {
+    if (!this.emulator) {
+      console.warn('[MemoryBridge] No emulator bound.');
+      return null;
+    }
+
+    try {
+      this.emulator.pause();
+      const rawSav = this.emulator.readSaveFile();
+      if (!rawSav || rawSav.byteLength < 0x1C000) {
+        this.emulator.resume();
+        return null;
+      }
+
+      const manipulator = new GbaSaveManipulator(rawSav);
+      const result = manipulator.removePokemonFromParty(slotNumber);
+
+      if (!result.success) {
+        this.emulator.resume();
+        return result;
+      }
+
+      this.emulator.writeSaveFile(manipulator.getBuffer());
+      this.emulator.resume();
+
+      if (syncAfter) {
+        await this.syncSaveToCloud();
+      }
+
+      console.info(
+        `[MemoryBridge] Pokémon extracted: ${result.nickname} (Lv. ${result.level}) Slot #${slotNumber}. Remaining: ${result.remainingPartyCount}`
+      );
+      return result;
+    } catch (err) {
+      console.error('[MemoryBridge] Error extracting pokemon:', err);
+      this.emulator.resume();
+      return null;
+    }
+  }
+
   private resolveItemMapping(
     itemId: string
   ): { gbaItemId: number; quantity: number; pocket: BagPocketType } | null {
@@ -566,6 +615,19 @@ export function triggerGbaPokemonInjection(options: PokemonInjectionOptions) {
     window.dispatchEvent(
       new CustomEvent('syndex:inject-pokemon', {
         detail: options,
+      })
+    );
+  }
+}
+
+/**
+ * Disparador global para extraer un Pokémon del equipo GBA y enviarlo al Rancho
+ */
+export function triggerGbaPokemonExtraction(slot: number, callback?: (result: PokemonExtractionResult) => void) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('syndex:extract-pokemon', {
+        detail: { slot, callback },
       })
     );
   }

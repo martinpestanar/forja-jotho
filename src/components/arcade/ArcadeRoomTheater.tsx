@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useTrainerStore } from '@/store/useTrainerStore';
@@ -290,7 +290,7 @@ export const ArcadeRoomTheater: React.FC = () => {
       {injectedNotification && (
         <div className="pointer-events-none absolute left-1/2 top-16 z-50 -translate-x-1/2">
           <div className="flex items-center gap-2 rounded-xl border border-[#5A7D62]/30 bg-white px-4 py-2 text-xs font-medium text-[#4C6151] shadow-lg">
-            <Sparkles className="h-4 w-4 text-[#5A7D62]" />
+            <Sparkles className="h-4 w-4 text-[#2E8555]" />
             <span>{injectedNotification}</span>
           </div>
         </div>
@@ -304,12 +304,12 @@ export const ArcadeRoomTheater: React.FC = () => {
             mobileTab === 'party' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          <div className="hq-card flex items-center justify-between p-3">
+          <div className="bg-white border border-[#E4E1D8] rounded-2xl flex items-center justify-between p-3.5 shadow-[0_2px_8px_rgba(26,25,21,0.04)] select-none">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-[#5A7D62]" />
-              <span className="hq-title text-sm">Tu equipo</span>
+              <ShieldCheck className="h-4 w-4 text-[#2E8555]" />
+              <span className="text-sm font-semibold tracking-tight text-[#1C1B18]">Tu equipo</span>
             </div>
-            <span className="hq-chip text-[9px]">en vivo</span>
+            <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#2E8555]/10 text-[#2E8555] border border-[#2E8555]/25">En Vivo</span>
           </div>
 
           <div className="space-y-2.5">
@@ -327,7 +327,7 @@ export const ArcadeRoomTheater: React.FC = () => {
                 ((pkmn.hp || 35) / (pkmn.maxHp || 35)) * 100
               );
               return (
-                <div key={idx} className="hq-card p-3">
+                <div key={idx} className="bg-white border border-[#E4E1D8] rounded-2xl p-3.5 shadow-[0_2px_8px_rgba(26,25,21,0.04)] space-y-2 select-none">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -340,7 +340,7 @@ export const ArcadeRoomTheater: React.FC = () => {
                         {pkmn.name}
                       </span>
                     </div>
-                    <span className="hq-mono text-[10px] text-[#8A877E]">
+                    <span className="font-mono text-[10px] font-semibold text-[#706E66]">
                       NV. {pkmn.level || 12}
                     </span>
                   </div>
@@ -358,7 +358,7 @@ export const ArcadeRoomTheater: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2 text-[10px]">
-                    <span className="hq-mono text-[#8A877E]">PS</span>
+                    <span className="font-mono text-[10px] font-bold text-[#706E66]">PS</span>
                     <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#EAE7DF]">
                       <div
                         className="h-full rounded-full transition-all duration-300"
@@ -366,14 +366,14 @@ export const ArcadeRoomTheater: React.FC = () => {
                           width: `${hpPct}%`,
                           backgroundColor:
                             hpPct > 50
-                              ? 'var(--hq-cto)'
+                              ? '#2E8555'
                               : hpPct > 20
-                                ? 'var(--hq-gold)'
-                                : 'var(--hq-danger)',
+                                ? '#C59B46'
+                                : '#D9383A',
                         }}
                       />
                     </div>
-                    <span className="hq-mono text-[#5E5C56]">
+                    <span className="font-mono text-[10px] font-semibold text-[#1C1B18]">
                       {pkmn.hp || 35}/{pkmn.maxHp || 35}
                     </span>
                   </div>
@@ -383,7 +383,7 @@ export const ArcadeRoomTheater: React.FC = () => {
           )}
           </div>
 
-          <div className="hq-panel p-3 text-[11px] leading-relaxed text-[#5E5C56]">
+          <div className="p-3 bg-white border border-[#E4E1D8] rounded-2xl text-[11px] leading-relaxed text-[#706E66] font-mono shadow-[0_1px_3px_rgba(26,25,21,0.02)]">
             Al capturar o subir de nivel dentro del juego, el equipo se sincroniza aquí.
           </div>
         </section>
@@ -396,8 +396,8 @@ export const ArcadeRoomTheater: React.FC = () => {
         >
           <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-none sm:rounded-2xl border-0 sm:border sm:border-[#E8E5DD] bg-transparent sm:bg-[#F2EFE9] p-0 sm:p-3">
             <div className="mb-2 flex items-center justify-between px-1">
-              <span className="hq-label">Consola</span>
-              <span className="hq-mono text-[10px] text-[#8A877E]">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#706E66]">Consola</span>
+              <span className="font-mono text-[10px] font-semibold text-[#706E66]">
                 {batteryMinutes} min disponibles
               </span>
             </div>
@@ -433,12 +433,12 @@ export const ArcadeRoomTheater: React.FC = () => {
             mobileTab === 'bag' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          <div className="hq-card flex items-center justify-between p-3">
+          <div className="bg-white border border-[#E4E1D8] rounded-2xl flex items-center justify-between p-3.5 shadow-[0_2px_8px_rgba(26,25,21,0.04)] select-none">
             <div className="flex items-center gap-2">
               <Layers className="h-4 w-4 text-[#C49347]" />
-              <span className="hq-title text-sm">Bazar Suministros</span>
+              <span className="text-sm font-semibold tracking-tight text-[#1C1B18]">Bazar Suministros</span>
             </div>
-            <span className="hq-mono flex items-center gap-1 text-[11px] text-[#C49347]">
+            <span className="font-mono flex items-center gap-1 text-xs font-bold text-[#9A7025] px-2 py-0.5 rounded-lg bg-[#C59B46]/10 border border-[#C59B46]/25">
               <Coins className="h-3.5 w-3.5" />
               ₽{profile?.pokedollars ?? 150}
             </span>
@@ -470,7 +470,7 @@ export const ArcadeRoomTheater: React.FC = () => {
           {shopSubTab === 'items' ? (
             <div className="space-y-2">
               {QUICK_ITEMS.map((item) => (
-                <div key={item.id} className="hq-card p-3">
+                <div key={item.id} className="bg-white border border-[#E4E1D8] rounded-2xl p-3.5 shadow-[0_2px_8px_rgba(26,25,21,0.04)] space-y-2 select-none">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E8E5DD] bg-[#FAF9F5]">
@@ -481,14 +481,14 @@ export const ArcadeRoomTheater: React.FC = () => {
                         <div className="text-[10px] text-[#8A877E]">{item.desc}</div>
                       </div>
                     </div>
-                    <span className="hq-mono text-[11px] font-semibold text-[#C49347]">
+                    <span className="font-mono text-[11px] font-bold text-[#9A7025] px-2 py-0.5 rounded-lg bg-[#C59B46]/10 border border-[#C59B46]/25 tabular-nums">
                       ₽{item.cost}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleInjectItem(item)}
-                    className="hq-btn hq-btn-ghost mt-2 w-full py-1.5 text-[10px]"
+                    className="w-full mt-2 py-2 px-3 rounded-xl bg-[#2D68C4] text-white text-xs font-mono font-semibold hover:bg-[#255BB0] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_2px_0px_#1F4E99]"
                   >
                     <Zap className="h-3.5 w-3.5 text-[#C49347]" />
                     Inyectar a la mochila
@@ -498,8 +498,8 @@ export const ArcadeRoomTheater: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="hq-panel p-2.5">
-                <div className="hq-label mb-1.5">Destino de entrega</div>
+              <div className="p-2.5 bg-[#FAF9F5] border border-[#E4E1D8] rounded-xl">
+                <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#706E66] mb-1.5">Destino de entrega</div>
                 <div className="grid grid-cols-2 gap-1.5">
                   <button
                     type="button"
@@ -533,7 +533,7 @@ export const ArcadeRoomTheater: React.FC = () => {
               </div>
 
               {QUICK_POKEMON_REWARDS.map((pkmn) => (
-                <div key={pkmn.id} className="hq-card p-3">
+                <div key={pkmn.id} className="bg-white border border-[#E4E1D8] rounded-2xl p-3.5 shadow-[0_2px_8px_rgba(26,25,21,0.04)] space-y-2 select-none">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -548,7 +548,7 @@ export const ArcadeRoomTheater: React.FC = () => {
                       <div>
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-semibold">{pkmn.name}</span>
-                          <span className="hq-mono rounded-full bg-[#C49347]/10 px-1.5 py-0.5 text-[8px] text-[#A6752C]">
+                          <span className="font-mono rounded-md bg-[#C59B46]/10 px-1.5 py-0.5 text-[8px] font-bold text-[#9A7025]">
                             {pkmn.badge}
                           </span>
                         </div>
@@ -557,14 +557,14 @@ export const ArcadeRoomTheater: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                    <span className="hq-mono text-[11px] font-semibold text-[#C49347]">
+                    <span className="font-mono text-[11px] font-bold text-[#9A7025] px-2 py-0.5 rounded-lg bg-[#C59B46]/10 border border-[#C59B46]/25 tabular-nums">
                       ₽{pkmn.cost}
                     </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleInjectPokemonReward(pkmn)}
-                    className="hq-btn hq-btn-primary mt-2 w-full py-1.5 text-[10px]"
+                    className="w-full mt-2 py-2 px-3 rounded-xl bg-[#D9383A] text-white text-xs font-mono font-bold hover:bg-[#C92F31] active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_2px_0px_#B22B2D]"
                   >
                     <Crown className="h-3.5 w-3.5" />
                     {pokemonDestination === 'pc' ? 'Guardar en PC Box 1' : 'Inyectar al equipo'}

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Check, 
   ChevronRight, 
@@ -14,6 +14,8 @@ import {
   Edit2,
   Trash2,
   Lock,
+  FileCheck,
+  RotateCcw,
   X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -36,6 +38,7 @@ export interface HabitVisualData {
 interface RunicHabitCardProps {
   habit: HabitVisualData;
   onSeal: (habit: HabitVisualData, e: React.MouseEvent) => void;
+  onUndo?: (habit: HabitVisualData) => void;
   onEdit?: (habit: HabitVisualData) => void;
   onDelete?: (habit: HabitVisualData) => void;
 }
@@ -103,9 +106,90 @@ function getHabitTheme(h: HabitVisualData) {
   };
 }
 
-export function RunicHabitCard({ habit, onSeal, onEdit, onDelete }: RunicHabitCardProps) {
+/** Toast de Deshacer que se autodestruye en 6 segundos */
+function UndoToast({
+  habitTitle,
+  onUndo,
+  onDismiss,
+}: {
+  habitTitle: string;
+  onUndo: () => void;
+  onDismiss: () => void;
+}) {
+  const [progress, setProgress] = useState(100);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const DURATION = 6000;
+    const TICK = 80;
+    const step = (TICK / DURATION) * 100;
+
+    intervalRef.current = setInterval(() => {
+      setProgress((prev) => {
+        const next = prev - step;
+        if (next <= 0) {
+          clearInterval(intervalRef.current!);
+          onDismiss();
+          return 0;
+        }
+        return next;
+      });
+    }, TICK);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [onDismiss]);
+
+  const handleUndo = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    onUndo();
+    onDismiss();
+  };
+
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20 overflow-hidden rounded-b-2xl">
+      {/* Barra de cuenta regresiva */}
+      <div className="h-0.5 bg-[#E4E1D8]">
+        <div
+          className="h-full bg-[#2E8555] transition-none"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      {/* Toast */}
+      <div className="bg-[#1C1B18] flex items-center justify-between gap-2 px-3 py-2">
+        <span className="text-[10px] font-mono text-white/80 truncate leading-tight">
+          ✓ Sellado: <strong className="text-white">{habitTitle}</strong>
+        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleUndo}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] font-mono font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-2.5 h-2.5" />
+            Deshacer
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (intervalRef.current) clearInterval(intervalRef.current);
+              onDismiss();
+            }}
+            className="p-0.5 rounded-md text-white/40 hover:text-white/80 transition-colors cursor-pointer"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function RunicHabitCard({ habit, onSeal, onUndo, onEdit, onDelete }: RunicHabitCardProps) {
   const theme = getHabitTheme(habit);
   const MainIcon = theme.icon;
+  const [showUndoToast, setShowUndoToast] = useState(false);
 
   const currentEdits = habit.edit_count || 0;
   const remainingEdits = Math.max(0, 2 - currentEdits);
@@ -128,6 +212,11 @@ export function RunicHabitCard({ habit, onSeal, onEdit, onDelete }: RunicHabitCa
     });
 
     onSeal(habit, e as any);
+
+    // Mostrar toast de deshacer sólo para hábitos sin prueba (direct-seal)
+    if (!habit.requires_proof) {
+      setShowUndoToast(true);
+    }
   };
 
   const handleActionClick = (e: React.MouseEvent) => {
@@ -144,10 +233,16 @@ export function RunicHabitCard({ habit, onSeal, onEdit, onDelete }: RunicHabitCa
     }
   };
 
+  const handleUndo = () => {
+    soundFx.playClick();
+    if (onUndo) onUndo(habit);
+    setShowUndoToast(false);
+  };
+
   return (
     <div
       onClick={handleActionClick}
-      className={`group relative overflow-hidden rounded-2xl border border-[#E4E1D8] transition-all select-none p-3.5 sm:p-4 cursor-pointer active:scale-[0.99] ${
+      className={`group relative overflow-hidden rounded-2xl border border-[#E4E1D8] transition-all select-none p-3 sm:p-3.5 cursor-pointer active:scale-[0.99] ${
         habit.completed
           ? 'bg-[#FAF9F5]/70 opacity-75 shadow-none'
           : 'bg-[#FFFFFF] shadow-[0_2px_8px_rgba(26,25,21,0.04)] hover:border-[#D5D1C5] hover:shadow-[0_4px_12px_rgba(26,25,21,0.06)]'
@@ -155,41 +250,52 @@ export function RunicHabitCard({ habit, onSeal, onEdit, onDelete }: RunicHabitCa
     >
       <div className="relative z-10 flex items-center justify-between gap-3">
         {/* Lado Izquierdo: Icono + Título + Recompensas */}
-        <div className="flex items-start gap-3 flex-1 min-w-0">
+        <div className="flex items-start gap-2.5 flex-1 min-w-0">
           {/* Contenedor del Icono estilo Hardware Analogue */}
           <div
-            className={`w-11 h-11 rounded-xl flex items-center justify-center border shrink-0 transition-all ${
+            className={`w-10 h-10 rounded-xl flex items-center justify-center border shrink-0 transition-all ${
               habit.completed
                 ? 'bg-[#2E8555]/10 text-[#2E8555] border-[#2E8555]/20'
                 : `${theme.iconBg} shadow-[0_1px_2px_rgba(26,25,21,0.03)]`
             }`}
           >
             {habit.completed ? (
-              <Check className="w-5 h-5 stroke-[2.5]" />
+              <Check className="w-4.5 h-4.5 stroke-[2.5]" />
             ) : (
-              <MainIcon className="w-5 h-5 stroke-[2]" />
+              <MainIcon className="w-4.5 h-4.5 stroke-[2]" />
             )}
           </div>
 
           {/* Textos y Badges */}
-          <div className="space-y-1 flex-1 min-w-0 pr-1">
-            <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="space-y-0.5 flex-1 min-w-0 pr-1">
+            {/* Fila de badges: Pilar + Ediciones + Prueba requerida */}
+            <div className="flex items-center gap-1 flex-wrap">
               <span
-                className={`text-[9px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${theme.badgeColor}`}
+                className={`text-[8.5px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${theme.badgeColor}`}
               >
                 {theme.badgeText}
               </span>
 
+              {/* Badge prueba requerida */}
+              {habit.requires_proof && !habit.completed && (
+                <span className="text-[8.5px] font-mono font-semibold tracking-wider px-1.5 py-0.5 bg-[#2D68C4]/8 border border-[#2D68C4]/20 rounded-md text-[#2D68C4] flex items-center gap-0.5">
+                  <FileCheck className="w-2.5 h-2.5" />
+                  PRUEBA
+                </span>
+              )}
+
               {/* Indicador de Ediciones Restantes (Máximo 2) */}
-              {remainingEdits > 0 ? (
-                <span className="text-[9px] font-mono font-semibold tracking-wider px-1.5 py-0.5 bg-[#FAF9F5] border border-[#E4E1D8] rounded-md text-[#706E66]">
-                  {remainingEdits} {remainingEdits === 1 ? 'edición restante' : 'ediciones restantes'}
-                </span>
-              ) : (
-                <span className="text-[9px] font-mono font-bold tracking-wider px-1.5 py-0.5 bg-[#F7F5F0] border border-[#DCD8CD] rounded-md text-[#8C887E] flex items-center gap-0.5">
-                  <Lock className="w-2.5 h-2.5" />
-                  INMUTABLE
-                </span>
+              {!habit.completed && (
+                remainingEdits > 0 ? (
+                  <span className="text-[8.5px] font-mono tracking-wider px-1.5 py-0.5 bg-[#FAF9F5] border border-[#E4E1D8] rounded-md text-[#706E66]">
+                    {remainingEdits}✏
+                  </span>
+                ) : (
+                  <span className="text-[8.5px] font-mono font-bold tracking-wider px-1.5 py-0.5 bg-[#F7F5F0] border border-[#DCD8CD] rounded-md text-[#8C887E] flex items-center gap-0.5">
+                    <Lock className="w-2 h-2" />
+                    FIJO
+                  </span>
+                )
               )}
             </div>
 
@@ -202,30 +308,30 @@ export function RunicHabitCard({ habit, onSeal, onEdit, onDelete }: RunicHabitCa
             </h3>
 
             {habit.subtitle && (
-              <p className="text-xs font-mono text-[#706E66] leading-tight line-clamp-1">
+              <p className="text-[11px] font-mono text-[#706E66] leading-tight line-clamp-1">
                 {habit.subtitle}
               </p>
             )}
 
             {/* Píldoras de Recompensa + Botones CRUD */}
             <div className="flex items-center justify-between gap-1.5 pt-0.5">
-              <div className="flex items-center gap-1.5">
-                {/* Monedas 💰 */}
-                <div className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-[#C59B46]/10 text-[#9A7025] border border-[#C59B46]/25 flex items-center gap-1">
-                  <Coins className="w-3.5 h-3.5 text-[#C59B46]" />
-                  <span className="tabular-nums">+{habit.gold_reward} ₽</span>
+              <div className="flex items-center gap-1">
+                {/* Monedas */}
+                <div className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-lg bg-[#C59B46]/10 text-[#9A7025] border border-[#C59B46]/25 flex items-center gap-0.5">
+                  <Coins className="w-3 h-3 text-[#C59B46]" />
+                  <span className="tabular-nums">+{habit.gold_reward}₽</span>
                 </div>
 
-                {/* Batería 🔋 */}
+                {/* Batería */}
                 {habit.game_battery_reward > 0 && (
-                  <div className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-[#2D68C4]/8 text-[#2D68C4] border border-[#2D68C4]/20 flex items-center gap-1">
-                    <Battery className="w-3.5 h-3.5 stroke-[2.2]" />
-                    <span className="tabular-nums">+{habit.game_battery_reward}m GBA</span>
+                  <div className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-lg bg-[#2D68C4]/8 text-[#2D68C4] border border-[#2D68C4]/20 flex items-center gap-0.5">
+                    <Battery className="w-3 h-3 stroke-[2.2]" />
+                    <span className="tabular-nums">+{habit.game_battery_reward}m</span>
                   </div>
                 )}
               </div>
 
-              {/* Acciones CRUD Discretas */}
+              {/* Acciones CRUD Discretas pero con Target Táctil Seguro (32x32px) */}
               <div className="flex items-center gap-1">
                 {canEdit && onEdit && (
                   <button
@@ -235,8 +341,9 @@ export function RunicHabitCard({ habit, onSeal, onEdit, onDelete }: RunicHabitCa
                       soundFx.playClick();
                       onEdit(habit);
                     }}
-                    className="p-1 rounded-md text-[#706E66] hover:text-[#1C1B18] hover:bg-[#FAF9F5] transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#706E66] hover:text-[#1C1B18] hover:bg-[#FAF9F5] active:scale-95 transition-all cursor-pointer"
                     title={`Editar hábito (${remainingEdits} de 2 disponibles)`}
+                    aria-label="Editar hábito"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
@@ -250,8 +357,9 @@ export function RunicHabitCard({ habit, onSeal, onEdit, onDelete }: RunicHabitCa
                       soundFx.playWarning();
                       onDelete(habit);
                     }}
-                    className="p-1 rounded-md text-[#706E66] hover:text-[#D9383A] hover:bg-rose-50 transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#706E66] hover:text-[#D9383A] hover:bg-rose-50 active:scale-95 transition-all cursor-pointer"
                     title="Eliminar hábito"
+                    aria-label="Eliminar hábito"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -261,40 +369,47 @@ export function RunicHabitCard({ habit, onSeal, onEdit, onDelete }: RunicHabitCa
           </div>
         </div>
 
-        {/* Lado Derecho: Botón de Sellado Táctil de Precisión (48x48px) */}
+        {/* Lado Derecho: Botón de Sellado Táctil de Precisión */}
         <div className="shrink-0 flex items-center">
           {habit.completed ? (
-            <div className="w-12 h-12 rounded-xl bg-[#2E8555]/10 border border-[#2E8555]/25 flex flex-col items-center justify-center text-[#2E8555] select-none">
-              <Check className="w-5 h-5 stroke-[2.5]" />
-              <span className="text-[8px] font-mono font-bold uppercase tracking-wider mt-0.5">LISTO</span>
+            <div className="w-11 h-11 rounded-xl bg-[#2E8555]/10 border border-[#2E8555]/25 flex flex-col items-center justify-center text-[#2E8555] select-none">
+              <Check className="w-4.5 h-4.5 stroke-[2.5]" />
+              <span className="text-[7px] font-mono font-bold uppercase tracking-wider mt-0.5">LISTO</span>
             </div>
           ) : habit.requires_proof ? (
             <button
               type="button"
               onClick={handleActionClick}
               aria-label="Subir comprobante para sellar hábito"
-              className="w-12 h-12 rounded-xl bg-[#2D68C4] text-white border border-[#1F4E99] shadow-[0_2px_0px_#1A407E] hover:bg-[#255BB0] active:translate-y-[1px] active:shadow-none flex flex-col items-center justify-center cursor-pointer transition-all select-none"
+              className="w-11 h-11 rounded-xl bg-[#2D68C4] text-white border border-[#1F4E99] shadow-[0_2px_0px_#1A407E] hover:bg-[#255BB0] active:translate-y-[1px] active:shadow-none flex flex-col items-center justify-center cursor-pointer transition-all select-none"
               title="Subir comprobante"
             >
-              <ChevronRight className="w-5 h-5 stroke-[2.5]" />
-              <span className="text-[7px] font-mono font-bold uppercase tracking-wider">PRUEBA</span>
+              <FileCheck className="w-4.5 h-4.5 stroke-[2]" />
+              <span className="text-[7px] font-mono font-bold uppercase tracking-wider mt-0.5">PRUEBA</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={handleActionClick}
               aria-label="Sellar hábito a 1-tap"
-              className="w-12 h-12 rounded-xl bg-[#D9383A] text-white border border-[#B22B2D] shadow-[0_2px_0px_#A02426] hover:bg-[#C92F31] active:translate-y-[1px] active:shadow-none flex flex-col items-center justify-center cursor-pointer transition-all select-none"
+              className="w-11 h-11 rounded-xl bg-[#D9383A] text-white border border-[#B22B2D] shadow-[0_2px_0px_#A02426] hover:bg-[#C92F31] active:translate-y-[1px] active:shadow-none flex flex-col items-center justify-center cursor-pointer transition-all select-none"
               title="Sellar hábito a 1-tap"
             >
-              <Check className="w-5 h-5 stroke-[2.5]" />
-              <span className="text-[7px] font-mono font-bold uppercase tracking-wider mt-0.5">
-                SELLAR
-              </span>
+              <Check className="w-4.5 h-4.5 stroke-[2.5]" />
+              <span className="text-[7px] font-mono font-bold uppercase tracking-wider mt-0.5">SELLAR</span>
             </button>
           )}
         </div>
       </div>
+
+      {/* Toast de Deshacer (flota dentro de la tarjeta) */}
+      {showUndoToast && (
+        <UndoToast
+          habitTitle={habit.title}
+          onUndo={handleUndo}
+          onDismiss={() => setShowUndoToast(false)}
+        />
+      )}
     </div>
   );
 }

@@ -18,8 +18,11 @@ import {
   X
 } from 'lucide-react';
 import { useTrainerStore } from '@/store/useTrainerStore';
+import { useEconomyStore } from '@/store/useEconomyStore';
+import { supabase } from '@/lib/supabase';
 import { soundFx } from '@/lib/soundFx';
 import { POKEMON_ASSETS } from '@/lib/pokemonAssets';
+import { triggerGbaPokemonExtraction, triggerGbaPokemonInjection } from '@/lib/gba/PokemonMemoryBridge';
 
 interface RanchSector {
   id: string;
@@ -91,6 +94,9 @@ interface Shift {
   pokemon_name: string;
   pokemon_level: number;
   species_id: number;
+  is_shiny?: boolean;
+  raw_bytes_b64?: string;
+  source_slot?: number;
   finishes_at: number; // timestamp ms
   claimed: boolean;
 }
@@ -140,34 +146,79 @@ export function RanchSection() {
     setTimeout(() => setFloatingPill(null), 3000);
   };
 
-  const handleStartShift = (sector: RanchSector, mon: any) => {
+  const handleStartShift = (sector: RanchSector, mon: any, slotIdx: number) => {
     if (energyCharges < 1) {
       soundFx.playWarning();
       alert('Energía insuficiente. Cumple hábitos en la vida real para recargar Cargas de Vigor (⚡).');
       return;
     }
 
-    soundFx.playCoin();
-    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate(15);
+    if (party.length <= 1) {
+      soundFx.playWarning();
+      alert('Debes mantener al menos 1 Pokémon en tu equipo para explorar Johto.');
+      return;
     }
 
-    const newShift: Shift = {
-      id: Math.random().toString(36).substring(2, 9),
-      sector_id: sector.id,
-      pokemon_name: mon.nickname || mon.name || 'Pokémon',
-      pokemon_level: mon.level || 15,
-      species_id: mon.speciesId || 25,
-      finishes_at: Date.now() + sector.durationHours * 3600 * 1000,
-      claimed: false,
-    };
+    const gbaSlot = (mon.slot !== undefined) ? mon.slot : (slotIdx + 1);
 
-    setShifts((prev) => [...prev, newShift]);
-    setSelectedSector(null);
-    triggerFloatingPill('-1 ⚡ Carga de Vigor');
+    // Disparar extracción atómica del emulador GBA
+    triggerGbaPokemonExtraction(gbaSlot, async (res) => {
+      if (!res.success) {
+        soundFx.playWarning();
+        alert(res.error || 'No se pudo retirar el Pokémon del juego.');
+        return;
+      }
+
+      let rawB64 = '';
+      if (res.raw100Bytes) {
+        const binStr = Array.from(res.raw100Bytes).map((b) => String.fromCharCode(b)).join('');
+        rawB64 = btoa(binStr);
+      }
+
+      const newShift: Shift = {
+        id: Math.random().toString(36).substring(2, 9),
+        sector_id: sector.id,
+        pokemon_name: res.nickname || mon.nickname || mon.name || 'Pokémon',
+        pokemon_level: res.level || mon.level || 15,
+        species_id: res.speciesId || mon.speciesId || 25,
+        is_shiny: res.isShiny ?? mon.isShiny,
+        raw_bytes_b64: rawB64,
+        source_slot: gbaSlot,
+        finishes_at: Date.now() + sector.durationHours * 3600 * 1000,
+        claimed: false,
+      };
+
+      setShifts((prev) => [...prev, newShift]);
+      setSelectedSector(null);
+      triggerFloatingPill(`🌿 ${newShift.pokemon_name} asignado al ${sector.name}. Retirado del cartucho.`);
+
+      // Registrar también en Supabase valdr_vault como criatura trabajando
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('valdr_vault').insert({
+            user_id: user.id,
+            item_type: 'pokemon',
+            item_id_or_species: String(newShift.species_id),
+            display_name: `${newShift.pokemon_name} (En Rancho: ${sector.name})`,
+            quantity: 1,
+            is_shiny: Boolean(newShift.is_shiny),
+            status: 'ranch_working',
+            payload_json: {
+              shift_id: newShift.id,
+              sector: sector.id,
+              level: newShift.pokemon_level,
+              nickname: newShift.pokemon_name,
+            },
+          });
+        }
+      } catch (e) {
+        console.warn('[ranch start shift db]', e);
+      }
+    });
   };
 
-  const handleClaim = (shift: Shift) => {
+  const handleClaim = async (shift: Shift) => {
     soundFx.playFanfare();
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       navigator.vibrate([15, 30, 15]);
@@ -181,7 +232,67 @@ export function RanchSection() {
       });
     } catch {}
 
-    triggerFloatingPill(`+${SECTORS.find((s) => s.id === shift.sector_id)?.expReward || 2000} EXP & Cosecha`);
+    const sector = SECTORS.find((s) => s.id === shift.sector_id);
+    const expReward = sector?.expReward || 2000;
+    const levelUpBonus = Math.floor(expReward / 2000); // Sube 1 nivel por turno completado
+    const newLevel = Math.min(100, shift.pokemon_level + Math.max(1, levelUpBonus));
+
+    // Reinyectar el Pokémon de vuelta al cartucho GBA (al equipo o a la PC)
+    triggerGbaPokemonInjection({
+      speciesId: shift.species_id,
+      level: newLevel,
+      nickname: shift.pokemon_name,
+      isShiny: shift.is_shiny,
+      targetDestination: 'auto',
+    });
+
+    // Conectar cosecha con la Bóveda en Supabase (valdr_vault)
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        let itemId = 'BERRY_SITRUS';
+        let displayName = 'Baya Zidra (Cosecha Rancho)';
+        if (shift.sector_id === 'QUARRY') {
+          itemId = 'NUGGET';
+          displayName = 'Pepita de Oro (Mina)';
+        } else if (shift.sector_id === 'SAWMILL') {
+          itemId = 'HARD_STONE';
+          displayName = 'Madera Noble / Piedra';
+        } else if (shift.sector_id === 'GENERATOR') {
+          itemId = 'CELL_BATTERY';
+          displayName = 'Célula Eléctrica GBA';
+        }
+
+        // Insertar producto cosechado
+        await supabase.from('valdr_vault').insert({
+          user_id: user.id,
+          item_type: 'item',
+          item_id_or_species: itemId,
+          display_name: displayName,
+          quantity: 1,
+          status: 'in_vault',
+          payload_json: { source: 'ranch_shift', sector: shift.sector_id, pokemon: shift.pokemon_name },
+        });
+
+        // Actualizar registro en valdr_vault si existía como ranch_working
+        await supabase
+          .from('valdr_vault')
+          .update({ status: 'dispatched' })
+          .eq('user_id', user.id)
+          .eq('status', 'ranch_working')
+          .contains('payload_json', { shift_id: shift.id });
+
+        // Refrescar economía global
+        useEconomyStore.getState().loadEconomy();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('syndex:economy-updated'));
+        }
+      }
+    } catch (e) {
+      console.warn('[ranch claim vault error]', e);
+    }
+
+    triggerFloatingPill(`✨ ¡${shift.pokemon_name} subió a Nv. ${newLevel} y volvió al juego!`);
     setShifts((prev) => prev.filter((s) => s.id !== shift.id));
   };
 
@@ -278,36 +389,42 @@ export function RanchSection() {
               {activeShift ? (
                 <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] space-y-2 mt-auto">
                   <div className="flex items-center justify-between text-xs font-mono">
-                    <span className="flex items-center gap-1.5 text-[#D9383A] font-semibold">
-                      <Lock className="w-3.5 h-3.5" />
-                      {activeShift.pokemon_name} (Nv. {activeShift.pokemon_level})
+                    <span className="flex items-center gap-1.5 text-[#D9383A] font-semibold truncate max-w-[150px]">
+                      <Lock className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{activeShift.pokemon_name} (Nv. {activeShift.pokemon_level})</span>
                     </span>
-                    <span className="text-[#1C1B18] font-semibold tabular-nums">
+                    <span className="text-[#1C1B18] font-semibold tabular-nums shrink-0">
                       {isDone ? (
-                        <span className="text-[#2E8555]">¡Cosecha Lista!</span>
+                        <span className="text-[#2E8555] font-bold">¡Cosecha Lista!</span>
                       ) : (
                         `${hoursLeft}h ${minutesLeft}m ${secondsLeft}s`
                       )}
                     </span>
                   </div>
 
-                  {/* Barra elástica de progreso */}
-                  <div className="w-full h-1.5 rounded-full bg-white border border-[#E4E1D8] p-0.5 overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full bg-[#2E8555]"
-                      initial={{ width: 0 }}
-                      animate={{
-                        width: isDone
-                          ? '100%'
-                          : `${Math.min(
-                              100,
-                              ((sector.durationHours * 3600 - timeLeftSec) /
-                                (sector.durationHours * 3600)) *
-                                100
-                            )}%`,
-                      }}
-                      transition={{ ease: 'easeOut', duration: 0.5 }}
-                    />
+                  {/* Indicador Segmentado Analógico estilo Reloj Casio / Game Boy */}
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-8 gap-1 py-0.5">
+                      {Array.from({ length: 8 }).map((_, segmentIdx) => {
+                        const totalDuration = sector.durationHours * 3600;
+                        const elapsed = Math.max(0, totalDuration - timeLeftSec);
+                        const segmentThreshold = (totalDuration / 8) * (segmentIdx + 1);
+                        const isSegmentFilled = isDone || elapsed >= segmentThreshold;
+
+                        return (
+                          <div
+                            key={segmentIdx}
+                            className={`h-1.5 rounded-sm transition-all duration-300 ${
+                              isSegmentFilled
+                                ? isDone
+                                  ? 'bg-[#2E8555] shadow-[0_0_3px_rgba(46,133,85,0.4)]'
+                                  : 'bg-[#C59B46] shadow-[0_0_3px_rgba(197,155,70,0.3)]'
+                                : 'bg-[#E4E1D8]/60'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {isDone ? (
@@ -320,8 +437,9 @@ export function RanchSection() {
                       <span>Reclamar Cosecha & EXP</span>
                     </button>
                   ) : (
-                    <div className="text-center text-[10px] text-[#706E66] font-mono font-medium">
-                      Trabajando en el rancho...
+                    <div className="text-center text-[10px] text-[#706E66] font-mono font-medium flex items-center justify-center gap-1.5">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#C59B46] animate-pulse" />
+                      <span>Trabajando en el rancho...</span>
                     </div>
                   )}
                 </div>
@@ -340,18 +458,38 @@ export function RanchSection() {
         })}
       </div>
 
-      {/* Modal de Selección de Pokémon para el Turno */}
+      {/* Modal / Bottom Sheet Mobile-First de Selección de Pokémon para el Turno */}
       <AnimatePresence>
         {selectedSector && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1C1B18]/40 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#1C1B18]/50 backdrop-blur-sm p-0 sm:p-4">
+            {/* Backdrop click to close */}
+            <div 
+              className="absolute inset-0 cursor-pointer" 
+              onClick={() => setSelectedSector(null)} 
+            />
+
             <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 12 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 8 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-              className="w-full max-w-md p-5 rounded-2xl border border-[#E4E1D8] bg-white shadow-[0_12px_40px_rgba(26,25,21,0.12)] text-[#1C1B18]"
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0.05, bottom: 0.6 }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 400) {
+                  setSelectedSector(null);
+                  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                    navigator.vibrate(10);
+                  }
+                }
+              }}
+              initial={{ y: '100%', opacity: 0.5 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+              className="relative w-full max-w-md rounded-t-3xl sm:rounded-2xl border border-[#E4E1D8] bg-white p-5 pb-8 sm:pb-5 shadow-[0_-8px_30px_rgba(26,25,21,0.12)] text-[#1C1B18] max-h-[85vh] flex flex-col"
             >
-              <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#E4E1D8]">
+              {/* Barra de arrastre táctil para móvil */}
+              <div className="w-10 h-1 bg-[#DCD8CD] rounded-full mx-auto mb-3 shrink-0 sm:hidden" />
+
+              <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#E4E1D8] shrink-0">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#2E8555] stroke-[2.2]" />
                   <h3 className="font-semibold text-sm text-[#1C1B18]">Asignar a {selectedSector.name}</h3>
@@ -365,14 +503,20 @@ export function RanchSection() {
                 </button>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] text-xs text-[#1C1B18] mb-3 flex items-start gap-2">
+              <div className="p-3 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] text-xs text-[#1C1B18] mb-3 flex items-start gap-2 shrink-0">
                 <AlertCircle className="w-4 h-4 text-[#D9383A] shrink-0 mt-0.5" />
                 <span className="leading-snug">
-                  <strong>Work-Lock:</strong> El Pokémon trabajará durante 4h y consumirá <strong>1 ⚡</strong>.
+                  <strong>Work-Lock Real:</strong> El Pokémon se retira temporalmente de tu cartucho GBA, trabajará 4h en el Rancho y subirá de nivel al volver.
                 </span>
               </div>
 
-              <div className="space-y-2 max-h-60 overflow-y-auto mb-2 pr-1">
+              {/* Subtítulo de Dock de Cartuchos */}
+              <div className="flex items-center justify-between text-[10px] font-mono font-medium text-[#706E66] uppercase tracking-wider mb-2 shrink-0">
+                <span>Ranuras de tu Equipo GBA ({party.length}/6)</span>
+                <span>Desliza para cerrar ↓</span>
+              </div>
+
+              <div className="space-y-2 overflow-y-auto mb-2 pr-1 overscroll-contain flex-1">
                 {party.length === 0 ? (
                   <div className="text-center py-6 text-xs text-[#706E66] font-mono">
                     No hay Pokémon en el equipo.
@@ -380,18 +524,28 @@ export function RanchSection() {
                 ) : (
                   party.map((mon, idx) => {
                     const isBusy = shifts.some((s) => s.pokemon_name === (mon.nickname || mon.name));
+                    const isLastMon = party.length <= 1;
+
                     return (
-                      <div
+                      <motion.div
                         key={idx}
-                        onClick={() => !isBusy && handleStartShift(selectedSector, mon)}
-                        className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${
-                          isBusy
-                            ? 'opacity-40 cursor-not-allowed bg-[#FAF9F5] border-[#E4E1D8]'
-                            : 'cursor-pointer border-[#E4E1D8] bg-white hover:border-[#D5D1C5] shadow-[0_1px_3px_rgba(26,25,21,0.03)] active:scale-[0.98]'
+                        whileTap={!isBusy && !isLastMon ? { scale: 0.97 } : undefined}
+                        onClick={() => {
+                          if (isLastMon) {
+                            soundFx.playWarning();
+                            alert('Debes mantener al menos 1 Pokémon en tu equipo para explorar Johto.');
+                            return;
+                          }
+                          if (!isBusy) handleStartShift(selectedSector, mon, idx);
+                        }}
+                        className={`p-3 rounded-xl border flex items-center justify-between transition-all select-none ${
+                          isBusy || isLastMon
+                            ? 'opacity-50 cursor-not-allowed bg-[#FAF9F5] border-[#E4E1D8]'
+                            : 'cursor-pointer border-[#E4E1D8] bg-white hover:border-[#2E8555]/50 hover:bg-[#2E8555]/[0.02] shadow-[0_1px_3px_rgba(26,25,21,0.03)] active:border-[#2E8555]'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-9 h-9 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] flex items-center justify-center">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] flex items-center justify-center shrink-0">
                             {brokenImages[`ranch_mon_${mon.speciesId || idx}`] ? (
                               <Shield className="w-4 h-4 text-[#D9383A]" />
                             ) : (
@@ -405,20 +559,32 @@ export function RanchSection() {
                             )}
                           </div>
                           <div>
-                            <div className="font-semibold text-xs text-[#1C1B18]">{mon.nickname || mon.name || 'Pokémon'}</div>
-                            <div className="text-[10px] text-[#706E66] font-mono">Nivel {mon.level || 15}</div>
+                            <div className="font-semibold text-xs text-[#1C1B18] flex items-center gap-1.5">
+                              <span>{mon.nickname || mon.name || 'Pokémon'}</span>
+                              {mon.isShiny && (
+                                <span className="text-[9px] text-[#C59B46]">★</span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-[#706E66] font-mono">
+                              Ranura #{idx + 1} · Nivel {mon.level || 15}
+                            </div>
                           </div>
                         </div>
+
                         {isBusy ? (
-                          <span className="text-[10px] font-mono font-medium text-[#D9383A] flex items-center gap-1">
-                            <Lock className="w-3 h-3" /> Ocupado
+                          <span className="text-[10px] font-mono font-medium text-[#D9383A] flex items-center gap-1 px-2 py-1 rounded-md bg-[#D9383A]/8 border border-[#D9383A]/20">
+                            <Lock className="w-3 h-3" /> En Turno
+                          </span>
+                        ) : isLastMon ? (
+                          <span className="text-[10px] font-mono font-medium text-[#706E66] px-2 py-1 rounded-md bg-[#FAF9F5] border border-[#E4E1D8]">
+                            Único Pokémon
                           </span>
                         ) : (
-                          <span className="text-xs font-semibold text-[#2E8555] flex items-center gap-1">
+                          <span className="text-xs font-semibold text-[#2E8555] flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#2E8555]/10 border border-[#2E8555]/25 hover:bg-[#2E8555]/20">
                             Asignar ⚡
                           </span>
                         )}
-                      </div>
+                      </motion.div>
                     );
                   })
                 )}

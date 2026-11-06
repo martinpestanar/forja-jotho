@@ -9,10 +9,14 @@ interface MobileTopHudProps {
   profileData: any;
   timeUntilMidnight: string;
   completionPercent: number;
+  onNavigateTab?: (tab: 'vigor' | 'templanza' | 'vault' | 'game' | 'settings') => void;
+  onOpenVault?: () => void;
 }
 
 export function MobileTopHud({
   profileData,
+  onNavigateTab,
+  onOpenVault,
 }: MobileTopHudProps) {
   const wallet = useTrainerStore((s) => s.profile?.pokedollars);
   const gold = wallet ?? profileData?.sovereignty_gold ?? 250;
@@ -49,36 +53,49 @@ export function MobileTopHud({
           </div>
         </div>
 
-        {/* Píldoras Técnicas: Batería (Lugia), Monedas (Oro) y Racha (Ho-Oh) */}
+        {/* Píldoras Técnicas: Batería (Lugia), Monedas (Oro) y Racha (Ho-Oh) con navegación interactiva */}
         <div className="flex items-center gap-1.5 select-none">
-          {/* Batería Emulador GBA (Azul Zafiro Lugia) */}
+          {/* Batería Emulador GBA (Azul Zafiro Lugia) -> Salta a consola GBA */}
           <button
             type="button"
-            onClick={handleChipTap}
-            title="Minutos de batería disponibles"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#2D68C4]/8 border border-[#2D68C4]/20 text-[#2D68C4] hover:bg-[#2D68C4]/12 active:scale-95 cursor-pointer transition-all"
+            onClick={() => {
+              handleChipTap();
+              if (onNavigateTab) onNavigateTab('game');
+            }}
+            title="Minutos de batería disponibles (Toca para ir al cartucho)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#2D68C4]/8 border border-[#2D68C4]/20 text-[#2D68C4] hover:bg-[#2D68C4]/15 active:scale-95 cursor-pointer transition-all"
           >
             <BatteryCharging className="w-3.5 h-3.5 stroke-[2.2]" />
             <span className="tabular-nums font-mono text-xs font-semibold">{battery}m</span>
           </button>
 
-          {/* Monedas Johto (Oro Campana Clara) */}
+          {/* Monedas Johto (Oro Campana Clara) -> Salta a la Bóveda / Alijo */}
           <button
             type="button"
-            onClick={handleChipTap}
-            title="Pokédólares acumulados"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#C59B46]/10 border border-[#C59B46]/25 text-[#9A7025] hover:bg-[#C59B46]/15 active:scale-95 cursor-pointer transition-all"
+            onClick={() => {
+              handleChipTap();
+              if (onOpenVault) {
+                onOpenVault();
+              } else if (onNavigateTab) {
+                onNavigateTab('vault');
+              }
+            }}
+            title="Pokédólares acumulados (Toca para abrir la Bóveda)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#C59B46]/10 border border-[#C59B46]/25 text-[#9A7025] hover:bg-[#C59B46]/18 active:scale-95 cursor-pointer transition-all"
           >
             <Coins className="w-3.5 h-3.5 text-[#C59B46] stroke-[2]" />
             <span className="tabular-nums font-mono text-xs font-semibold">{gold}</span>
           </button>
 
-          {/* Racha de Fuego (Rojo Ho-Oh Editorial) */}
+          {/* Racha de Fuego (Rojo Ho-Oh Editorial) -> Salta a Templanza */}
           <button
             type="button"
-            onClick={handleChipTap}
-            title="Días de racha de disciplina"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#D9383A]/8 border border-[#D9383A]/20 text-[#D9383A] hover:bg-[#D9383A]/12 active:scale-95 cursor-pointer transition-all"
+            onClick={() => {
+              handleChipTap();
+              if (onNavigateTab) onNavigateTab('templanza');
+            }}
+            title="Días de racha de disciplina (Toca para ir a Templanza)"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#D9383A]/8 border border-[#D9383A]/20 text-[#D9383A] hover:bg-[#D9383A]/15 active:scale-95 cursor-pointer transition-all"
           >
             <Flame className="w-3.5 h-3.5 fill-current stroke-[1.5]" />
             <span className="tabular-nums font-mono text-xs font-semibold">{streak}d</span>

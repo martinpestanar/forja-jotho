@@ -1199,11 +1199,51 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       }
     };
 
+    const onExtractPokemon = async (e: Event) => {
+      const customEvent = e as CustomEvent<{ slot: number; callback?: (result: any) => void }>;
+      const { slot, callback } = customEvent.detail || {};
+      const bridge = bridgeRef.current;
+      const mod = moduleRef.current;
+      if (!bridge || !mod || typeof slot !== 'number') return;
+
+      try {
+        soundFx.playClick();
+        const result = await bridge.extractPokemonFromGbaParty(slot, true);
+        if (result && result.success && result.updatedSav) {
+          soundFx.playCoin();
+          setShowSaveSuccess(`🌿 ¡${result.nickname} (Nv. ${result.level}) enviado al Rancho! Equipo: ${result.remainingPartyCount}/6`);
+          setTimeout(() => setShowSaveSuccess(null), 4000);
+
+          const updatedParty = bridge.readPartyFromEmulator();
+          if (updatedParty) {
+            updateProfile({ gba_party_json: updatedParty as any });
+          }
+
+          if (callback) {
+            callback(result);
+          }
+
+          // Reinicio limpio e instantáneo del núcleo mGBA con el Pokémon extraído
+          rebootEmulator(result.updatedSav);
+        } else if (result?.error) {
+          setShowSaveSuccess(`⚠️ ${result.error}`);
+          setTimeout(() => setShowSaveSuccess(null), 3500);
+          if (callback) {
+            callback(result);
+          }
+        }
+      } catch (err) {
+        console.error('[GBA] Error extrayendo Pokémon:', err);
+      }
+    };
+
     window.addEventListener('syndex:inject-item', onInjectItem);
     window.addEventListener('syndex:inject-pokemon', onInjectPokemon);
+    window.addEventListener('syndex:extract-pokemon', onExtractPokemon);
     return () => {
       window.removeEventListener('syndex:inject-item', onInjectItem);
       window.removeEventListener('syndex:inject-pokemon', onInjectPokemon);
+      window.removeEventListener('syndex:extract-pokemon', onExtractPokemon);
     };
   }, [updateProfile, rebootEmulator]);
 

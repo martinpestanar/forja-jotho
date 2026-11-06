@@ -175,6 +175,11 @@ export const GoldenrodShop: React.FC = () => {
       await useTrainerStore.getState().loadSessionProfileRpc();
       await useEconomyStore.getState().loadEconomy();
 
+      // Disparar evento para que la Bóveda y el HUD superior sincronicen inmediatamente
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('syndex:economy-updated'));
+      }
+
       setQuantity(1);
     } catch (err: any) {
       console.error(err);

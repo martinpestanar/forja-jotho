@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTrainerStore } from '@/store/useTrainerStore';
 import { supabase } from '@/lib/supabase';
 import { ArcadeRoomTheater } from '@/components/arcade/ArcadeRoomTheater';
@@ -26,6 +27,8 @@ import { LockedPactBanner } from '@/components/dashboard/LockedPactBanner';
 import { TemperanceSanctuaryModal } from '@/components/dashboard/TemperanceSanctuaryModal';
 import { OnboardingInitiationModal, OnboardingPresetHabit, OnboardingPactData } from '@/components/dashboard/OnboardingInitiationModal';
 import { EditHabitModal } from '@/components/dashboard/EditHabitModal';
+import { DailyVaultBar } from '@/components/dashboard/DailyVaultBar';
+import { MidnightSettlementModal, MidnightSettlementData } from '@/components/dashboard/MidnightSettlementModal';
 import {
   FloatingDopamineRewards,
   FloatingReward,
@@ -102,6 +105,10 @@ export default function DashboardPage() {
   const [activeLootBox, setActiveLootBox] = useState<LootBoxData | null>(null);
   const [lootBoxModalOpen, setLootBoxModalOpen] = useState(false);
 
+  // Estado del Alijo de Medianoche (Settlement)
+  const [midnightSettlement, setMidnightSettlement] = useState<MidnightSettlementData | null>(null);
+  const [midnightSettlementOpen, setMidnightSettlementOpen] = useState(false);
+
   // Modal de Aviso Nativo Nintendo
   const [noticeModal, setNoticeModal] = useState<{
     isOpen: boolean;
@@ -150,10 +157,22 @@ export default function DashboardPage() {
   const openArcadeRoom = useTrainerStore((s) => s.openArcadeRoom);
   const walletPokedollars = useTrainerStore((s) => s.profile?.pokedollars ?? 0);
 
-  // 1. Contador de Asedio (Medianoche)
+  // 1. Contador de Asedio (Medianoche) con Detección Automática de Cruce de Día
+  const lastKnownDateRef = useRef<string>(new Date().toISOString().split('T')[0]);
+
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+
+      // CRUCE DE MEDIANOCHE DETECTADO (00:00 AM)
+      if (todayStr !== lastKnownDateRef.current) {
+        lastKnownDateRef.current = todayStr;
+        soundFx.playLevelUp();
+        // Recargar datos para que las tareas amanezcan desmarcadas
+        loadValdrData();
+      }
+
       const midnight = new Date();
       midnight.setHours(24, 0, 0, 0);
       const diffMs = midnight.getTime() - now.getTime();
@@ -207,13 +226,19 @@ export default function DashboardPage() {
       }
 
       setProfileData(prof);
-      // Sincronizar en el store global para que el emulador y la cabecera lean el perfil real
-      useTrainerStore.getState().setProfile({
-        ...useTrainerStore.getState().profile,
-        id: prof.id,
-        battery_minutes: prof.battery_minutes ?? 120,
-        pokedollars: prof.sovereignty_gold ?? 250,
-      } as any);
+      const currentProf = useTrainerStore.getState().profile;
+      if (
+        currentProf?.id !== prof.id ||
+        currentProf?.battery_minutes !== (prof.battery_minutes ?? 120) ||
+        currentProf?.pokedollars !== (prof.sovereignty_gold ?? 250)
+      ) {
+        useTrainerStore.getState().setProfile({
+          ...currentProf,
+          id: prof.id,
+          battery_minutes: prof.battery_minutes ?? 120,
+          pokedollars: prof.sovereignty_gold ?? 250,
+        } as any);
+      }
 
       if (prof.temperance_last_date === todayStr) {
         setTemperanceConfirmedToday(true);
@@ -229,11 +254,17 @@ export default function DashboardPage() {
         .maybeSingle();
 
       if (trainerProf) {
-        useTrainerStore.getState().updateProfile({
-          starter_pokemon: trainerProf.starter_pokemon,
-          gba_party_json: trainerProf.gba_party_json || [],
-          equipped_accessory: trainerProf.equipped_accessory,
-        });
+        const curProf = useTrainerStore.getState().profile;
+        if (
+          curProf?.starter_pokemon !== trainerProf.starter_pokemon ||
+          curProf?.equipped_accessory !== trainerProf.equipped_accessory
+        ) {
+          useTrainerStore.getState().updateProfile({
+            starter_pokemon: trainerProf.starter_pokemon,
+            gba_party_json: trainerProf.gba_party_json || [],
+            equipped_accessory: trainerProf.equipped_accessory,
+          });
+        }
 
         const hasChosenStarter = Boolean(
           trainerProf.starter_pokemon ||
@@ -265,16 +296,24 @@ export default function DashboardPage() {
     }
 
     // Catálogo y hábitos guardados en Supabase (valdr_habits + catalog)
-    const { data: dbCustomHabits } = await supabase
-      .from('valdr_habits')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: true });
+    let dbCustomHabits: any[] = [];
+    try {
+      const { data } = await supabase
+        .from('valdr_habits')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+      if (data) dbCustomHabits = data;
+    } catch {}
 
-    const { data: catalog } = await supabase
-      .from('valdr_habits_catalog')
-      .select('*')
-      .order('sort_order', { ascending: true });
+    let catalog: any[] = [];
+    try {
+      const { data, error } = await supabase
+        .from('valdr_habits_catalog')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (!error && data) catalog = data;
+    } catch {}
 
     // Recuperar también hábitos locales de contingencia
     let localCustomHabits: any[] = [];
@@ -283,11 +322,15 @@ export default function DashboardPage() {
     } catch {}
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const { data: logs } = await supabase
-      .from('valdr_daily_logs')
-      .select('habit_id')
-      .eq('user_id', user.id)
-      .eq('log_date', todayStr);
+    let logs: any[] = [];
+    try {
+      const { data } = await supabase
+        .from('valdr_daily_logs')
+        .select('habit_id')
+        .eq('user_id', user.id)
+        .eq('log_date', todayStr);
+      if (data) logs = data;
+    } catch {}
 
     const completedIds = new Set((logs || []).map((l: any) => l.habit_id));
 
@@ -307,26 +350,66 @@ export default function DashboardPage() {
     );
 
     // Juramentos
-    const { data: oathsData } = await supabase
-      .from('valdr_oaths')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data: oathsData } = await supabase
+        .from('valdr_oaths')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    if (oathsData) setOaths(oathsData);
+      if (oathsData) setOaths(oathsData);
+    } catch {}
 
     // Cofres Rúnicos Disponibles (ej. Drop 12:01 AM)
-    const { data: boxes } = await supabase
-      .from('valdr_loot_boxes')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('is_opened', false)
-      .lte('available_at', new Date().toISOString())
-      .order('created_at', { ascending: false });
+    try {
+      const { data: boxes, error: boxesErr } = await supabase
+        .from('valdr_loot_boxes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_opened', false)
+        .lte('available_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
 
-    if (boxes && boxes.length > 0) {
-      setActiveLootBox(boxes[0] as LootBoxData);
-      setLootBoxModalOpen(true);
+      if (!boxesErr && boxes && boxes.length > 0) {
+        setActiveLootBox(boxes[0] as LootBoxData);
+        setLootBoxModalOpen(true);
+      }
+    } catch {}
+
+    // Chequeo de Liquidación de Medianoche del día anterior
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const settlementKey = `syndex_midnight_settled_${user.id}_${yesterdayStr}`;
+
+    if (typeof window !== 'undefined' && localStorage.getItem(settlementKey) !== 'claimed') {
+      // Consultar cuántas tareas se sellaron ayer
+      const { data: yLogs } = await supabase
+        .from('valdr_daily_logs')
+        .select('habit_id')
+        .eq('user_id', user.id)
+        .eq('log_date', yesterdayStr);
+
+      const yCount = (yLogs || []).length;
+      if (yCount > 0) {
+        // Calcular el oro y batería acumulada de ayer
+        const yHabits = combinedHabits.filter((h: any) =>
+          yLogs?.some((l: any) => l.habit_id === h.id)
+        );
+        const yGold = yHabits.reduce((acc: number, curr: any) => acc + (curr.gold_reward || 0), 0);
+        const yBatt = yHabits.reduce((acc: number, curr: any) => acc + (curr.game_battery_reward || 0), 0);
+
+        setMidnightSettlement({
+          yesterdayDate: yesterdayStr,
+          goldSettled: yGold,
+          batterySettled: yBatt,
+          tasksCompleted: yCount,
+          totalTasks: combinedHabits.filter((h: any) => h.front_type !== 'templanza').length || 4,
+          allPillarsBonus: yCount >= 4,
+          streakDays: prof?.streak_fire_days ?? 1,
+        });
+        setMidnightSettlementOpen(true);
+      }
     }
   };
 
@@ -342,15 +425,40 @@ export default function DashboardPage() {
         (payload) => {
           if (payload.new) {
             setProfileData(payload.new);
+            // Sincronizar billetera inmediatamente en useTrainerStore para unificar
+            const updatedGold = (payload.new as any).sovereignty_gold;
+            const currentProfile = useTrainerStore.getState().profile;
+            if (typeof updatedGold === 'number' && currentProfile) {
+              useTrainerStore.getState().setProfile({
+                ...currentProfile,
+                pokedollars: updatedGold,
+              });
+            }
           }
         }
       )
       .subscribe();
 
+    // 4. Listener global para sincronización de economía en todo el frontend
+    const handleEconomyEvent = () => {
+      loadValdrData();
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('syndex:economy-updated', handleEconomyEvent);
+      window.addEventListener('syndex:battery-updated', handleEconomyEvent);
+    }
+
     return () => {
       supabase.removeChannel(channel);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('syndex:economy-updated', handleEconomyEvent);
+        window.removeEventListener('syndex:battery-updated', handleEconomyEvent);
+      }
     };
   }, []);
+
+  // Filtro de pilar activo en el módulo de Vigor
+  const [pillarFilter, setPillarFilter] = useState<'todos' | 'vigor' | 'oficio' | 'maestria' | 'claridad'>('todos');
 
   // Calcular porcentaje de cumplimiento diario
   const activeHabitsList = habits.filter(
@@ -361,6 +469,35 @@ export default function DashboardPage() {
     activeHabitsList.length > 0
       ? Math.round((completedHabitsCount / activeHabitsList.length) * 100)
       : 100;
+
+  // Handler de Deshacer: elimina el log del día para un hábito (optimista)
+  const handleUndoHabitSeal = async (habit: HabitItem) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const todayStr = new Date().toISOString().split('T')[0];
+      await supabase
+        .from('valdr_daily_logs')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('habit_id', habit.id)
+        .eq('log_date', todayStr);
+      // Revertir el wallet de forma optimista (si hay RPC disponible)
+      try {
+        await supabase.rpc('rpc_valdr_unseal_habit_log', {
+          p_habit_id: habit.id,
+          p_gold_reward: habit.gold_reward,
+          p_battery_reward: habit.game_battery_reward,
+        });
+      } catch {}
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('syndex:economy-updated'));
+      }
+      await loadValdrData();
+    } catch (err) {
+      console.warn('[undo seal]', err);
+    }
+  };
 
   // Sellar Hábito con Stored Procedure RPC Atómico
   const handleHabitSeal = (habit: HabitItem, e: React.MouseEvent) => {
@@ -827,18 +964,34 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F5] text-[#1F1E1B] flex flex-col font-sans select-none pb-28">
-      {/* 1. Top HUD Móvil de Alto Impacto */}
+      {/* 1. Top HUD Móvil de Alto Impacto con Navegación Interactiva */}
       <MobileTopHud
         profileData={profileData}
         timeUntilMidnight={timeUntilMidnight}
         completionPercent={completionPercent}
+        onNavigateTab={(tab) => {
+          setActiveTab(tab);
+          if (tab === 'vault') setSanctuaryTab('boveda');
+        }}
+        onOpenVault={() => {
+          setActiveTab('vault');
+          setSanctuaryTab('boveda');
+        }}
       />
 
       {/* 2. Contenedor Principal (Mobile-First / max-w-md centrado) */}
       <main className="flex-1 max-w-md w-full mx-auto p-4 space-y-4">
-        {/* PESTAÑA 1: FRENTE DE VIGOR */}
-        {activeTab === 'vigor' && (
-          <div className="space-y-3.5">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ type: 'spring', stiffness: 480, damping: 32 }}
+          >
+            {/* PESTAÑA 1: FRENTE DE VIGOR */}
+            {activeTab === 'vigor' && (
+              <div className="space-y-3">
             {/* Banner de Pacto Inquebrantable de Templanza (7, 15, 30 días) */}
             <LockedPactBanner
               oaths={oaths}
@@ -860,8 +1013,53 @@ export default function DashboardPage() {
               onOpenDatePicker={() => setJourneyModalOpen(true)}
             />
 
+            {/* Barra de Alijo Diario (Liquidación de Medianoche con Desglose Rúnico) */}
+            <DailyVaultBar
+              pendingGold={activeHabitsList
+                .filter((h) => h.completed)
+                .reduce((acc, curr) => acc + (curr.gold_reward || 0), 0)}
+              pendingBattery={activeHabitsList
+                .filter((h) => h.completed)
+                .reduce((acc, curr) => acc + (curr.game_battery_reward || 0), 0)}
+              completedTasks={completedHabitsCount}
+              totalTasks={activeHabitsList.length}
+              timeUntilMidnight={timeUntilMidnight}
+            />
+
+            {/* Chips de Filtro por Pilar */}
+            {habits.filter((h) => h.front_type !== 'templanza').length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                {(
+                  [
+                    { key: 'todos', label: 'Todos', color: 'bg-[#1C1B18] text-white border-[#1C1B18]', inactive: 'bg-white text-[#706E66] border-[#E4E1D8] hover:border-[#C5C2BA]' },
+                    { key: 'vigor', label: '🏋 Vigor', color: 'bg-[#D9383A] text-white border-[#B22B2D]', inactive: 'bg-white text-[#D9383A] border-[#D9383A]/30 hover:border-[#D9383A]/60' },
+                    { key: 'oficio', label: '💼 Oficio', color: 'bg-[#2D68C4] text-white border-[#1F4E99]', inactive: 'bg-white text-[#2D68C4] border-[#2D68C4]/30 hover:border-[#2D68C4]/60' },
+                    { key: 'maestria', label: '📚 Maestría', color: 'bg-[#9A7025] text-white border-[#7A5A1E]', inactive: 'bg-white text-[#9A7025] border-[#C59B46]/30 hover:border-[#C59B46]/60' },
+                    { key: 'claridad', label: '🧠 Claridad', color: 'bg-[#2E8555] text-white border-[#226040]', inactive: 'bg-white text-[#2E8555] border-[#2E8555]/30 hover:border-[#2E8555]/60' },
+                  ] as const
+                ).map(({ key, label, color, inactive }) => {
+                  const isActive = pillarFilter === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        soundFx.playClick();
+                        setPillarFilter(key);
+                      }}
+                      className={`shrink-0 px-3 py-1 rounded-xl text-[10.5px] font-mono font-bold uppercase tracking-wider border transition-all cursor-pointer active:scale-95 ${
+                        isActive ? color : inactive
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {/* Listado Bento de Hábitos o Estado Vacío Intuitivo */}
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               {habits.filter((h) => h.front_type !== 'templanza').length === 0 ? (
                 <div className="p-6 rounded-2xl bg-white border border-[#E8E5DD] text-center space-y-3.5 shadow-sm">
                   <div className="w-12 h-12 rounded-2xl bg-[#D9383A]/10 border border-[#D9383A]/20 flex items-center justify-center text-[#D9383A] mx-auto shadow-xs">
@@ -897,19 +1095,48 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-              ) : (
-                habits
-                  .filter((h) => h.front_type !== 'templanza')
-                  .map((h) => (
-                    <RunicHabitCard
-                      key={h.id}
-                      habit={h}
-                      onSeal={(habitObj, e) => handleHabitSeal(habitObj, e)}
-                      onEdit={(habitObj) => setEditHabitModalTarget(habitObj as HabitItem)}
-                      onDelete={(habitObj) => handleDeleteHabit(habitObj as HabitItem)}
-                    />
-                  ))
-              )}
+              ) : (() => {
+                // Mapeo de tipos para el filtro (incluye 'expansion' como 'oficio')
+                const pillarTypeMap: Record<string, string[]> = {
+                  vigor: ['vigor'],
+                  oficio: ['oficio', 'expansion'],
+                  maestria: ['maestria'],
+                  claridad: ['claridad'],
+                };
+                const filtered = habits.filter((h) => {
+                  if (h.front_type === 'templanza') return false;
+                  if (pillarFilter === 'todos') return true;
+                  return (pillarTypeMap[pillarFilter] || []).includes(h.front_type);
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="p-5 rounded-2xl bg-white border border-[#E8E5DD] text-center shadow-sm">
+                      <p className="text-xs text-[#706E66] font-mono">
+                        No hay misiones de este pilar todavía.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setPillarFilter('todos')}
+                        className="mt-2 text-xs font-mono font-semibold text-[#D9383A] hover:underline cursor-pointer"
+                      >
+                        Ver todos
+                      </button>
+                    </div>
+                  );
+                }
+
+                return filtered.map((h) => (
+                  <RunicHabitCard
+                    key={h.id}
+                    habit={h}
+                    onSeal={(habitObj, e) => handleHabitSeal(habitObj, e)}
+                    onUndo={(habitObj) => handleUndoHabitSeal(habitObj as HabitItem)}
+                    onEdit={(habitObj) => setEditHabitModalTarget(habitObj as HabitItem)}
+                    onDelete={(habitObj) => handleDeleteHabit(habitObj as HabitItem)}
+                  />
+                ));
+              })()}
             </div>
           </div>
         )}
@@ -953,7 +1180,7 @@ export default function DashboardPage() {
                         />
                         <button
                           onClick={() => handleUpdateInnerBeast(innerBeastInput)}
-                          className="p-1.5 johto-bg-blue text-white rounded-lg cursor-pointer transition-all johto-border-arcade johto-btn-tactile shadow-xs"
+                          className="p-1.5 bg-[#2D68C4] hover:bg-[#255BB0] text-white rounded-lg cursor-pointer transition-all border border-[#1F4E99] shadow-[0_1px_2px_rgba(45,104,196,0.2)] active:scale-95"
                           title="Guardar compulsión"
                         >
                           <Check className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -1059,10 +1286,10 @@ export default function DashboardPage() {
                 <button
                   disabled={temperanceConfirmedToday || submitting}
                   onClick={handleConfirmTemperance}
-                  className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all johto-border-arcade johto-shadow-sm johto-btn-tactile ${
+                  className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all border border-[#B22B2D] shadow-[0_2px_0px_#A02426] active:translate-y-[1px] active:shadow-none ${
                     temperanceConfirmedToday
                       ? 'bg-[#EBF7EE] text-[#15803D] cursor-default opacity-85'
-                      : 'johto-bg-blue text-white'
+                      : 'bg-[#2D68C4] hover:bg-[#255BB0] text-white'
                   }`}
                 >
                   <ShieldCheck className="w-4 h-4 fill-current" />
@@ -1158,7 +1385,7 @@ export default function DashboardPage() {
                 </div>
                 <button
                   onClick={() => setCreateOathModalOpen(true)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl johto-bg-red text-white text-[11px] font-bold cursor-pointer johto-border-arcade johto-shadow-sm johto-btn-tactile transition-all"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#D9383A] hover:bg-[#C92F31] text-white text-[11px] font-bold cursor-pointer border border-[#B22B2D] shadow-[0_2px_0px_#A02426] active:translate-y-[1px] active:shadow-none transition-all"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Nuevo Pacto</span>
@@ -1174,7 +1401,7 @@ export default function DashboardPage() {
                   <p className="text-xs text-[#706E66]">No tienes juramentos activos en curso.</p>
                   <button
                     onClick={() => setCreateOathModalOpen(true)}
-                    className="px-3.5 py-2 johto-bg-red text-white font-bold text-xs rounded-xl johto-border-arcade johto-shadow-sm johto-btn-tactile cursor-pointer inline-flex items-center gap-1.5 transition-all"
+                    className="px-3.5 py-2 bg-[#D9383A] hover:bg-[#C92F31] text-white font-bold text-xs rounded-xl border border-[#B22B2D] shadow-[0_2px_0px_#A02426] active:translate-y-[1px] active:shadow-none cursor-pointer inline-flex items-center gap-1.5 transition-all"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Sellar mi primer pacto</span>
@@ -1204,6 +1431,41 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+                        {/* Sub-Tarjeta 2.5: Sistema & Respaldos GBA */}
+            <div className="rounded-2xl bg-white border border-[#E8E5DD] p-4 space-y-3 shadow-sm select-none">
+              <div className="flex items-center justify-between border-b border-[#F2EFE9] pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Gamepad2 className="w-4 h-4 text-[#2E8555]" />
+                  <span className="text-xs font-semibold text-[#1C1B18] uppercase tracking-wide">
+                    Consola & Respaldos
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-[#2E8555]/10 text-[#2E8555] border border-[#2E8555]/25">
+                  CLOUD SYNC ACTIVO
+                </span>
+              </div>
+
+              <p className="text-[11px] text-[#706E66] leading-relaxed font-mono">
+                Tu progreso y Pokémon en Heart & Soul se sincronizan automáticamente con la nube de Supabase.
+              </p>
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[11px] font-mono text-[#1C1B18]">
+                  Emulador: <strong>mGBA 0.11 WebAssembly</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundFx.playClick();
+                    showNotice('Tu partida se guarda en caliente tras cada sesión y se respalda en Supabase Storage.', 'Estado del Cartucho', 'info');
+                  }}
+                  className="px-2.5 py-1 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] text-[10.5px] font-mono font-semibold text-[#1C1B18] hover:bg-white active:scale-95 transition-all cursor-pointer"
+                >
+                  Verificar Nube
+                </button>
+              </div>
             </div>
 
             {/* Sub-Tarjeta 3: Sesión & Cierre Seguro */}
@@ -1334,7 +1596,7 @@ export default function DashboardPage() {
 
               <button
                 onClick={openArcadeRoom}
-                className="w-full py-3.5 johto-bg-red text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer johto-border-arcade johto-shadow-md johto-btn-tactile transition-all tracking-wide uppercase"
+                className="w-full py-3.5 bg-[#D9383A] hover:bg-[#C92F31] text-white text-sm font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer border border-[#B22B2D] shadow-[0_2px_0px_#A02426] active:translate-y-[1px] active:shadow-none transition-all tracking-wide uppercase"
               >
                 <Zap className="w-4 h-4 fill-current text-[#FFE600]" />
                 <span>Encender Cartucho</span>
@@ -1342,6 +1604,8 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       {/* 3. Dock Táctil Flotante Inferior */}
@@ -1443,14 +1707,14 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setProofModalHabit(null)}
-                className="w-1/2 py-2.5 johto-border-arcade rounded-xl text-xs font-bold text-[#1A1915] bg-[#FAF9F5] hover:bg-[#F2EFE9] transition-all cursor-pointer johto-btn-tactile"
+                className="w-1/2 py-2.5 border border-[#E4E1D8] rounded-xl text-xs font-bold text-[#1C1B18] bg-[#FAF9F5] hover:bg-white transition-all cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 disabled={submitting || !proofText.trim()}
                 onClick={(e) => executeHabitSubmit(proofModalHabit.id, proofText, e)}
-                className="w-1/2 py-2.5 johto-bg-ink text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-all cursor-pointer johto-border-arcade johto-shadow-sm johto-btn-tactile"
+                className="w-1/2 py-2.5 bg-[#1C1B18] hover:bg-[#2C2B28] text-white rounded-xl text-xs font-bold disabled:opacity-50 transition-all cursor-pointer border border-[#B22B2D] shadow-[0_2px_0px_#A02426] active:translate-y-[1px] active:shadow-none"
               >
                 {submitting ? 'Sellando...' : 'Sellar Registro'}
               </button>
@@ -1477,6 +1741,23 @@ export default function DashboardPage() {
           setProfileData((prev: any) => ({ ...prev, journey_start_date: newDate }));
         }}
       />
+
+      {/* Modal de Liquidación de Medianoche (Alijo Nocturno) */}
+      {midnightSettlement && (
+        <MidnightSettlementModal
+          data={midnightSettlement}
+          isOpen={midnightSettlementOpen}
+          onClose={() => setMidnightSettlementOpen(false)}
+          onClaim={async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const key = `syndex_midnight_settled_${user.id}_${midnightSettlement.yesterdayDate}`;
+              localStorage.setItem(key, 'claimed');
+            }
+            await loadValdrData();
+          }}
+        />
+      )}
 
       {/* Modal del Cofre Rúnico de Recompensas */}
       {activeLootBox && (

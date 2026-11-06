@@ -228,6 +228,19 @@ export interface PokemonInjectionResult {
   error?: string;
 }
 
+export interface PokemonExtractionResult {
+  success: boolean;
+  slot: number;
+  speciesId: number;
+  nickname: string;
+  level: number;
+  isShiny: boolean;
+  raw100Bytes?: Uint8Array;
+  remainingPartyCount: number;
+  updatedSav?: Uint8Array;
+  error?: string;
+}
+
 // ============================================================================
 // Perfil dinámico desde GFRomHeader en tiempo de ejecución
 // ============================================================================
@@ -1073,6 +1086,122 @@ export class GbaSaveManipulator {
       nickname,
       level,
       isShiny,
+      updatedSav: this.buffer,
+    };
+  }
+
+  /**
+   * Extrae un Pokémon del equipo (100 bytes) por su ranura (1 a 6),
+   * compacta los slots restantes hacia la izquierda, decrementa partyCount
+   * y recalcula el checksum de SaveBlock1.
+   * Regla de seguridad: no permite extraer el último Pokémon si dejaría el equipo en 0.
+   */
+  public removePokemonFromParty(slotNumber: number, allowEmpty = false): PokemonExtractionResult {
+    const { sectorMap } = this.getActiveSlotMap();
+    const sec1Sector = sectorMap.get(1);
+    if (sec1Sector === undefined) {
+      return {
+        success: false,
+        slot: slotNumber,
+        speciesId: 0,
+        nickname: '',
+        level: 0,
+        isShiny: false,
+        remainingPartyCount: 0,
+        error: 'SaveBlock1 no encontrado en el slot activo.',
+      };
+    }
+    const sec1Base = sec1Sector * SECTOR_SIZE;
+    const partyCountRaw = this.view.getUint8(sec1Base + this.activeOffsets.SB1_PARTY_COUNT);
+    const partyCount = Math.min(6, Math.max(0, partyCountRaw));
+
+    if (slotNumber < 1 || slotNumber > partyCount) {
+      return {
+        success: false,
+        slot: slotNumber,
+        speciesId: 0,
+        nickname: '',
+        level: 0,
+        isShiny: false,
+        remainingPartyCount: partyCount,
+        error: `Ranura #${slotNumber} inválida. El equipo tiene ${partyCount} Pokémon.`,
+      };
+    }
+
+    if (!allowEmpty && partyCount <= 1) {
+      return {
+        success: false,
+        slot: slotNumber,
+        speciesId: 0,
+        nickname: '',
+        level: 0,
+        isShiny: false,
+        remainingPartyCount: partyCount,
+        error: 'Debes mantener al menos 1 Pokémon en tu equipo para explorar Johto.',
+      };
+    }
+
+    const targetIndex = slotNumber - 1;
+    const targetOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + targetIndex * 100;
+
+    // 1. Extraer los 100 bytes del Pokémon
+    const raw100Bytes = new Uint8Array(100);
+    raw100Bytes.set(this.buffer.subarray(targetOffset, targetOffset + 100));
+
+    // 2. Extraer metadata básica del Pokémon que se va
+    const personality = this.view.getUint32(targetOffset + 0x00, true);
+    const otId = this.view.getUint32(targetOffset + 0x04, true);
+    const nickname = decodeGbaString(this.buffer.subarray(targetOffset + 0x08, targetOffset + 0x12));
+    const level = this.view.getUint8(targetOffset + 0x54);
+
+    const decKey = (personality ^ otId) >>> 0;
+    const growthBlockIndex = GROWTH_SUBSTRUCT_ORDER[personality % 24];
+    const growthOffset = targetOffset + 0x20 + growthBlockIndex * 12;
+    const word0 = (this.view.getUint32(growthOffset, true) ^ decKey) >>> 0;
+    const speciesId = word0 & 0xFFFF;
+
+    const pHigh = personality >>> 16;
+    const pLow = personality & 0xFFFF;
+    const otHigh = otId >>> 16;
+    const otLow = otId & 0xFFFF;
+    const naturalShiny = (pHigh ^ pLow ^ otHigh ^ otLow) < 8;
+    const u16_1E = this.view.getUint16(targetOffset + 0x1E, true);
+    const shinyModifierBit = (u16_1E >> 14) & 1;
+    const isShiny = naturalShiny ? shinyModifierBit === 0 : shinyModifierBit === 1;
+
+    // 3. Compactar los Pokémon restantes hacia la izquierda
+    for (let i = targetIndex; i < partyCount - 1; i++) {
+      const srcOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + (i + 1) * 100;
+      const dstOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + i * 100;
+      const nextMonBytes = this.buffer.subarray(srcOffset, srcOffset + 100);
+      this.buffer.set(nextMonBytes, dstOffset);
+    }
+
+    // 4. Limpiar el último slot liberado con ceros
+    const lastSlotOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + (partyCount - 1) * 100;
+    this.buffer.fill(0, lastSlotOffset, lastSlotOffset + 100);
+
+    // 5. Decrementar el contador del equipo
+    const newPartyCount = partyCount - 1;
+    this.view.setUint8(sec1Base + this.activeOffsets.SB1_PARTY_COUNT, newPartyCount);
+
+    // 6. Recalcular el Checksum de SaveBlock1
+    const newChecksum = GbaSaveManipulator.calculateSectionChecksum(
+      this.view,
+      sec1Base,
+      this.activeSectionSizes[1]
+    );
+    this.view.setUint16(sec1Base + 0x0FF6, newChecksum, true);
+
+    return {
+      success: true,
+      slot: slotNumber,
+      speciesId,
+      nickname,
+      level,
+      isShiny,
+      raw100Bytes,
+      remainingPartyCount: newPartyCount,
       updatedSav: this.buffer,
     };
   }

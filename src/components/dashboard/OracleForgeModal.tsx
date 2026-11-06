@@ -81,12 +81,20 @@ export function OracleForgeModal({
         oracle_judgment: `El Tótem ${totemName} aprueba tu voto rúnico.`,
       };
 
-      // 3. Registrar el hábito evaluado en Supabase (o guardado local de contingencia)
+      // 3. Registrar el hábito evaluado en Supabase (asignando el pilar correspondiente)
+      const pilarMap: Record<string, 'vigor' | 'oficio' | 'maestria' | 'claridad'> = {
+        fisico: 'vigor',
+        negocio: 'oficio',
+        mente: 'claridad',
+        expansion: 'maestria',
+      };
+      const assignedFrontType = pilarMap[category] || 'vigor';
+
       const habitId = `custom_${Date.now()}`;
       const newHabitRecord = {
         id: habitId,
         user_id: user?.id || 'guest',
-        front_type: 'vigor' as const,
+        front_type: assignedFrontType,
         title: title.trim(),
         subtitle: description.trim() || 'Hábito sellado ante el Oráculo',
         duration_minutes: durationMinutes,

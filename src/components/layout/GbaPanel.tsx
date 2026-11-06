@@ -8,8 +8,12 @@ const GbaConsoleWorker = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-[#121214] border-4 border-black text-[#F59E0B] font-mono text-xs p-4 rounded-2xl shadow-[4px_4px_0px_0px_#000]">
-        <span className="animate-pulse">⚡ INICIANDO NÚCLEO mGBA...</span>
+      <div className="w-full h-full min-h-[220px] flex flex-col items-center justify-center bg-[#FAF9F5] border border-[#E4E1D8] text-[#1C1B18] font-mono text-xs p-6 rounded-2xl shadow-[0_2px_8px_rgba(26,25,21,0.04)] select-none">
+        <div className="w-10 h-10 rounded-xl bg-[#2D68C4]/10 border border-[#2D68C4]/20 text-[#2D68C4] flex items-center justify-center mb-2.5">
+          <span className="text-base animate-pulse">⚡</span>
+        </div>
+        <span className="font-bold tracking-wider uppercase text-[11px] text-[#1C1B18]">Iniciando Núcleo mGBA</span>
+        <span className="text-[10px] text-[#706E66] mt-0.5">Sintonizando cartucho WebAssembly...</span>
       </div>
     ),
   }
