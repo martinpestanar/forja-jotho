@@ -33,11 +33,30 @@ export interface ItemAssetMetadata {
 export const POKEMON_ASSETS = {
   /**
    * Sprites 3D Animados estilo Pokémon Showdown (Frente)
+   * Servidos a través de la red perimetral global jsDelivr CDN con alta disponibilidad y caché
    */
   getAnimatedSprite: (id: number, isShiny = false): string => {
     return isShiny
+      ? `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/showdown/shiny/${id}.gif`
+      : `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/showdown/${id}.gif`;
+  },
+
+  /**
+   * Espejo secundario GitHub Raw (para fallback si el CDN primario está inaccesible)
+   */
+  getRawAnimatedSprite: (id: number, isShiny = false): string => {
+    return isShiny
       ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/shiny/${id}.gif`
       : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`;
+  },
+
+  /**
+   * Sprite estático de alta velocidad (PNG transparente)
+   */
+  getStaticSprite: (id: number, isShiny = false): string => {
+    return isShiny
+      ? `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/shiny/${id}.png`
+      : `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/${id}.png`;
   },
 
   /**
@@ -45,15 +64,15 @@ export const POKEMON_ASSETS = {
    */
   getAnimatedBackSprite: (id: number, isShiny = false): string => {
     return isShiny
-      ? `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/back/shiny/${id}.gif`
-      : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/back/${id}.gif`;
+      ? `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/showdown/back/shiny/${id}.gif`
+      : `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/other/showdown/back/${id}.gif`;
   },
 
   /**
    * Mini ícono de caja / PC Box (Generación 7 oficial en PokeAPI)
    */
   getBoxIcon: (id: number): string => {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-vii/icons/${id}.png`;
+    return `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/versions/generation-vii/icons/${id}.png`;
   },
 
   /**
@@ -68,14 +87,14 @@ export const POKEMON_ASSETS = {
    * Sprite oficial frontal pixel-art nítido para tarjetas compactas
    */
   getPixelSprite: (id: number): string => {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+    return `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/pokemon/${id}.png`;
   },
 
   /**
    * Ítems oficiales en PNG transparente
    */
   getItemSprite: (slug: string): string => {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${slug}.png`;
+    return `https://cdn.jsdelivr.net/gh/PokeAPI/sprites@master/sprites/items/${slug}.png`;
   },
 };
 

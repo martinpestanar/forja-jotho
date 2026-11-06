@@ -242,10 +242,10 @@ export function RunicHabitCard({ habit, onSeal, onUndo, onEdit, onDelete }: Runi
   return (
     <div
       onClick={handleActionClick}
-      className={`group relative overflow-hidden rounded-2xl border border-[#E4E1D8] transition-all select-none p-3 sm:p-3.5 cursor-pointer active:scale-[0.99] ${
+      className={`group relative overflow-hidden rounded-2xl border border-[#E4E1D8] transition-all select-none p-3.5 sm:p-4 cursor-pointer ${
         habit.completed
           ? 'bg-[#FAF9F5]/70 opacity-75 shadow-none'
-          : 'bg-[#FFFFFF] shadow-[0_2px_8px_rgba(26,25,21,0.04)] hover:border-[#D5D1C5] hover:shadow-[0_4px_12px_rgba(26,25,21,0.06)]'
+          : 'bg-[#FFFFFF] shadow-[0_3px_0_#DCD8CD] hover:shadow-[0_4px_0_#D0CCC0] hover:border-[#D5D1C5] hover:-translate-y-[0.5px] active:translate-y-[1.5px] active:shadow-none'
       }`}
     >
       <div className="relative z-10 flex items-center justify-between gap-3">
