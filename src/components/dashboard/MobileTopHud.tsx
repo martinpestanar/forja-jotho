@@ -32,7 +32,7 @@ export function MobileTopHud({
 
   return (
     <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E4E1D8] shadow-[0_1px_3px_rgba(26,25,21,0.02)]">
-      <header className="px-3.5 py-2.5 flex items-center justify-between max-w-md mx-auto">
+      <header className="px-3.5 py-2.5 flex items-center justify-between max-w-4xl mx-auto">
         {/* Identidad / App Brand Editorial Retro-Premium Johto */}
         <div className="flex items-center gap-2.5 select-none">
           <div className="w-8 h-8 rounded-xl bg-[#D9383A] text-white flex items-center justify-center shadow-[0_2px_6px_rgba(217,56,58,0.25)]">

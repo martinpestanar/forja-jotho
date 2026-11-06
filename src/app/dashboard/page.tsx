@@ -956,8 +956,10 @@ export default function DashboardPage() {
         }}
       />
 
-      {/* 2. Contenedor Principal (Mobile-First / max-w-md centrado) */}
-      <main className="flex-1 max-w-md w-full mx-auto p-4 space-y-4">
+      {/* 2. Contenedor Principal (Mobile-First / Desktop-Expansive) */}
+      <main className={`flex-1 w-full mx-auto p-3 sm:p-4 md:p-6 space-y-4 transition-all duration-200 ${
+        activeTab === 'vault' ? 'max-w-4xl' : 'max-w-md'
+      }`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

@@ -68,7 +68,7 @@ export function MobileFloatingDock({ activeTab, onTabChange }: MobileFloatingDoc
   return (
     <nav 
       aria-label="Navegación principal de consola"
-      className="fixed bottom-3 inset-x-3 z-40 max-w-md mx-auto bg-white/95 backdrop-blur-md border border-[#E4E1D8] rounded-2xl p-1.5 shadow-[0_4px_20px_rgba(26,25,21,0.08),0_1px_3px_rgba(26,25,21,0.04)] flex items-center justify-between gap-1"
+      className="fixed bottom-3 inset-x-3 z-40 max-w-lg mx-auto bg-white/95 backdrop-blur-md border border-[#E4E1D8] rounded-2xl p-1.5 shadow-[0_4px_20px_rgba(26,25,21,0.08),0_1px_3px_rgba(26,25,21,0.04)] flex items-center justify-between gap-1"
     >
       {tabs.map((t) => {
         const Icon = t.icon;
