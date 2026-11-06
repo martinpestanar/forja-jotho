@@ -1543,8 +1543,8 @@ export default function DashboardPage() {
             )}
 
             {sanctuaryTab === 'equipo' && (
-              <div className="rounded-2xl bg-white border border-[#E8E5DD] p-3 shadow-sm">
-                <PartyPcManager onOpenStarterModal={() => setStarterModalOpen(true)} />
+              <div className="rounded-2xl bg-white border border-[#E4E1D8] p-3 sm:p-4 shadow-[0_2px_8px_rgba(26,25,21,0.04)]">
+                <PartyPcManager />
               </div>
             )}
           </div>
