@@ -22,8 +22,12 @@ import {
   Receipt,
   CheckCircle2,
   Briefcase,
+  Database,
+  Users,
+  X,
+  Loader2,
 } from 'lucide-react';
-import { useEconomyStore } from '@/store/useEconomyStore';
+import { useEconomyStore, VaultItem } from '@/store/useEconomyStore';
 import { GoldenrodShop } from '@/components/shop/GoldenrodShop';
 import { ElasticProgress, Stat } from '@/components/ui/EcoPrimitives';
 import { soundFx } from '@/lib/soundFx';
@@ -129,16 +133,58 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
     });
   }, [snapshot, marketFilter]);
 
-  const handleDispatch = async (vaultId: string) => {
+  const [injectModalItem, setInjectModalItem] = useState<VaultItem | null>(null);
+  const [targetDestination, setTargetDestination] = useState<'pc' | 'party'>('pc');
+  const [isInjecting, setIsInjecting] = useState<boolean>(false);
+
+  const handleDispatchClick = (item: VaultItem) => {
+    soundFx.playClick();
+    if (item.item_type === 'pokemon' || item.item_type === 'egg') {
+      setInjectModalItem(item);
+      setTargetDestination('pc'); // 'pc' por defecto (más rápido, seguro y sin bloqueo por equipo lleno)
+    } else {
+      handleDirectDispatch(item.id);
+    }
+  };
+
+  const handleDirectDispatch = async (vaultId: string) => {
     soundFx.playClick();
     const res = await dispatchVaultItem(vaultId);
     if (res.success) {
       soundFx.playLevelUp();
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 }, colors: ['#C49347', '#5A7D62', '#3B7A87'] });
-      flash('Enviado al cartucho. Pulsa CONTINUAR en el juego.');
+      flash('Enviado a tu Mochila GBA. Pulsa CONTINUAR en el juego.');
     } else {
       soundFx.playDamage();
       flash(res.error || 'No se pudo enviar.');
+    }
+  };
+
+  const handleConfirmPokemonInjection = async () => {
+    if (!injectModalItem) return;
+    setIsInjecting(true);
+    soundFx.playClick();
+    try {
+      const res = await dispatchVaultItem(injectModalItem.id, targetDestination);
+      if (res.success) {
+        soundFx.playLevelUp();
+        confetti({
+          particleCount: 70,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#D9383A', '#C59B46', '#2D68C4', '#2E8555'],
+        });
+        const locName = (res.inPcBox || targetDestination === 'pc')
+          ? 'las Cajas del PC (Box 1)'
+          : 'tu Equipo Activo';
+        flash(`✨ ¡${injectModalItem.display_name} inyectado con éxito a ${locName}!`);
+        setInjectModalItem(null);
+      } else {
+        soundFx.playDamage();
+        flash(res.error || 'No se pudo inyectar el Pokémon.');
+      }
+    } finally {
+      setIsInjecting(false);
     }
   };
 
@@ -299,7 +345,7 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
                     {item.item_type !== 'cosmetic' && (
                       <button
                         type="button"
-                        onClick={() => handleDispatch(item.id)}
+                        onClick={() => handleDispatchClick(item)}
                         className="px-3 py-1.5 rounded-xl bg-[#2D68C4] text-white text-xs font-semibold uppercase tracking-wider border border-[#2D68C4] shadow-[0_2px_4px_rgba(45,104,196,0.25)] hover:bg-[#255BB0] active:scale-95 shrink-0 cursor-pointer flex items-center gap-1.5 transition-all"
                       >
                         <Send className="h-3.5 w-3.5" />
@@ -844,6 +890,177 @@ export function EconomySanctuary({ initialTab = 'boveda' }: { initialTab?: EcoTa
         {/* ================= PESTAÑA 6: BAZAR ================= */}
         {tab === 'bazar' && <GoldenrodShop />}
       </div>
+
+      {/* ── Modal de Inyección de Pokémon / Huevo a GBA ── */}
+      <AnimatePresence>
+        {injectModalItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs font-sans">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-md rounded-2xl bg-[#FAF9F5] border border-[#E4E1D8] shadow-[0_8px_30px_rgba(26,25,21,0.12)] p-5 space-y-4"
+            >
+              {/* Encabezado */}
+              <div className="flex items-center justify-between pb-3 border-b border-[#E4E1D8]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-white border border-[#E4E1D8] flex items-center justify-center text-[#2D68C4] shadow-xs">
+                    <Database className="w-4 h-4 stroke-[2.2]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-[#1C1B18] tracking-tight">
+                      Inyectar Pokémon a Partida GBA
+                    </h3>
+                    <p className="text-[11px] text-[#706E66] font-mono">
+                      Selecciona el destino en tu cartucho
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInjectModalItem(null)}
+                  disabled={isInjecting}
+                  className="w-7 h-7 rounded-lg bg-white hover:bg-[#F2EFE9] border border-[#E4E1D8] flex items-center justify-center text-[#706E66] transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Ficha del Pokémon */}
+              <div className="p-3.5 rounded-xl bg-white border border-[#E4E1D8] flex items-center gap-3.5 shadow-xs">
+                <div className="w-12 h-12 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] flex items-center justify-center shrink-0">
+                  {injectModalItem.is_shiny ? (
+                    <Sparkles className="w-6 h-6 text-[#C59B46] animate-pulse" />
+                  ) : (
+                    <Package className="w-6 h-6 text-[#2D68C4]" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm text-[#1C1B18] truncate">
+                      {injectModalItem.display_name}
+                    </span>
+                    {injectModalItem.is_shiny && (
+                      <span className="text-[9px] font-mono font-semibold px-1.5 py-0.5 rounded bg-[#C59B46]/15 text-[#9A7025] uppercase">
+                        Shiny
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[#706E66] font-mono mt-0.5">
+                    {injectModalItem.item_type === 'egg' ? 'Huevo Especial de Guardería' : 'Listo para transferir al cartucho'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Selector de Destino */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-[#1C1B18] block">
+                  ¿A dónde deseas inyectarlo?
+                </label>
+
+                {/* Opción 1: PC Box 1 (Recomendado) */}
+                <button
+                  type="button"
+                  onClick={() => { soundFx.playClick(); setTargetDestination('pc'); }}
+                  className={`w-full p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    targetDestination === 'pc'
+                      ? 'bg-white border-[#2D68C4] ring-2 ring-[#2D68C4]/20 shadow-xs'
+                      : 'bg-white/60 border-[#E4E1D8] hover:border-[#D5D1C5]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                        targetDestination === 'pc' ? 'bg-[#2D68C4] text-white' : 'bg-[#FAF9F5] text-[#706E66]'
+                      }`}>
+                        <Database className="w-4 h-4 stroke-[2.2]" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-xs text-[#1C1B18]">
+                            Cajas de la PC (Almacenamiento)
+                          </span>
+                          <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#2D68C4]/15 text-[#2D68C4] uppercase">
+                            Recomendado
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#706E66] leading-relaxed mt-1">
+                          Se deposita en PC Box 1 del juego. Rápido y seguro: no se bloquea si tu equipo ya tiene 6 Pokémon. Retíralo en cualquier Centro Pokémon.
+                        </p>
+                      </div>
+                    </div>
+                    {targetDestination === 'pc' && (
+                      <CheckCircle2 className="w-4 h-4 text-[#2D68C4] shrink-0 mt-0.5" />
+                    )}
+                  </div>
+                </button>
+
+                {/* Opción 2: Equipo de Batalla */}
+                <button
+                  type="button"
+                  onClick={() => { soundFx.playClick(); setTargetDestination('party'); }}
+                  className={`w-full p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    targetDestination === 'party'
+                      ? 'bg-white border-[#D9383A] ring-2 ring-[#D9383A]/20 shadow-xs'
+                      : 'bg-white/60 border-[#E4E1D8] hover:border-[#D5D1C5]'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                        targetDestination === 'party' ? 'bg-[#D9383A] text-white' : 'bg-[#FAF9F5] text-[#706E66]'
+                      }`}>
+                        <Users className="w-4 h-4 stroke-[2.2]" />
+                      </div>
+                      <div>
+                        <span className="font-semibold text-xs text-[#1C1B18] block">
+                          Equipo Activo de Batalla
+                        </span>
+                        <p className="text-[11px] text-[#706E66] leading-relaxed mt-1">
+                          Entra directamente en tu equipo de 6 Pokémon. Si tu equipo está lleno (6/6), se redirigirá automáticamente a la PC.
+                        </p>
+                      </div>
+                    </div>
+                    {targetDestination === 'party' && (
+                      <CheckCircle2 className="w-4 h-4 text-[#D9383A] shrink-0 mt-0.5" />
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setInjectModalItem(null)}
+                  disabled={isInjecting}
+                  className="flex-1 py-2.5 px-4 rounded-xl border border-[#E4E1D8] bg-white hover:bg-[#FAF9F5] text-xs font-semibold text-[#706E66] transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmPokemonInjection}
+                  disabled={isInjecting}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#1C1B18] hover:bg-black text-xs font-semibold text-white shadow-[0_2px_4px_rgba(26,25,21,0.1)] active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isInjecting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-[#C59B46]" />
+                      <span>Inyectando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5 text-[#C59B46]" />
+                      <span>Confirmar Inyección</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {notice && (

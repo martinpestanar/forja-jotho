@@ -213,6 +213,17 @@ export interface PokemonInjectionOptions {
   perfectIVs?: boolean;
   friendship?: number;
   targetDestination?: 'party' | 'pc' | 'auto';
+  callback?: (result: PokemonInjectionResult) => void;
+}
+
+export interface BoxedPokemonSummary {
+  slot: number;
+  speciesId: number;
+  nickname: string;
+  level: number;
+  heldItemId: number;
+  isShiny: boolean;
+  isEgg: boolean;
 }
 
 export interface PokemonInjectionResult {
@@ -688,6 +699,73 @@ export class GbaSaveManipulator {
   }
 
   /**
+   * Extrae los 30 slots de PC Box 1 (Section 5 / PokemonStorage)
+   */
+  public extractPcBox1(): Array<BoxedPokemonSummary | null> {
+    const { sectorMap } = this.getActiveSlotMap();
+    const sec5Sector = sectorMap.get(5);
+    if (sec5Sector === undefined) {
+      return Array(30).fill(null);
+    }
+    const sec5Base = sec5Sector * SECTOR_SIZE;
+    const BOX_MON_SIZE = 80;
+    const BOX_CAPACITY = 30;
+    const BOX0_DATA_OFFSET = 0x0004;
+    const result: Array<BoxedPokemonSummary | null> = [];
+
+    for (let i = 0; i < BOX_CAPACITY; i++) {
+      const slotAddr = sec5Base + BOX0_DATA_OFFSET + i * BOX_MON_SIZE;
+      const personality = this.view.getUint32(slotAddr, true);
+      const otId = this.view.getUint32(slotAddr + 4, true);
+
+      if (personality === 0 && otId === 0) {
+        result.push(null);
+        continue;
+      }
+
+      const nickname = decodeGbaString(this.buffer.subarray(slotAddr + 0x08, slotAddr + 0x12));
+      const decKey = (personality ^ otId) >>> 0;
+      const growthBlockIndex = GROWTH_SUBSTRUCT_ORDER[personality % 24];
+      const growthOffset = slotAddr + 0x20 + growthBlockIndex * 12;
+
+      const word0 = (this.view.getUint32(growthOffset, true) ^ decKey) >>> 0;
+      const speciesId = word0 & 0xFFFF;
+      const heldItemId = (word0 >>> 16) & 0xFFFF;
+      const exp = (this.view.getUint32(growthOffset + 4, true) ^ decKey) >>> 0;
+
+      if (speciesId === 0) {
+        result.push(null);
+        continue;
+      }
+
+      const isEgg = speciesId === 0x019C;
+      const level = Math.max(1, Math.min(100, Math.floor(Math.cbrt(exp)) || 5));
+
+      const pHigh = personality >>> 16;
+      const pLow = personality & 0xFFFF;
+      const otHigh = otId >>> 16;
+      const otLow = otId & 0xFFFF;
+      const naturalShiny = (pHigh ^ pLow ^ otHigh ^ otLow) < 8;
+
+      const u16_1E = this.view.getUint16(slotAddr + 0x1E, true);
+      const shinyModifierBit = (u16_1E >> 14) & 1;
+      const isShiny = naturalShiny ? shinyModifierBit === 0 : shinyModifierBit === 1;
+
+      result.push({
+        slot: i,
+        speciesId,
+        nickname: nickname || `POKÉMON #${speciesId}`,
+        level,
+        heldItemId,
+        isShiny,
+        isEgg,
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Inyecta dinero e ítems en el Slot Activo, cifra con encryptionKey
    * y recalcula el Checksum de la Sección 1.
    */
@@ -908,7 +986,9 @@ export class GbaSaveManipulator {
           nickname: options.nickname || 'POKEMON',
           level: options.level,
           isShiny: !!options.isShiny,
-          error: 'Equipo lleno (6/6) y PC Box 1 lleno (30/30). Libera espacio en el PC.',
+          error: forcePc
+            ? 'PC Box 1 está lleno (30/30). Libera espacio en las cajas del juego.'
+            : 'Equipo lleno (6/6) y PC Box 1 lleno (30/30). Libera espacio en el juego.',
         };
       }
     }

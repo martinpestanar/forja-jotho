@@ -1190,9 +1190,16 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
           // Reinicio limpio e instantáneo del núcleo mGBA con el SaveBlock inyectado
           rebootEmulator(result.updatedSav);
+
+          if (options.callback) {
+            options.callback(result);
+          }
         } else if (result?.error) {
           setShowSaveSuccess(`⚠️ ${result.error}`);
           setTimeout(() => setShowSaveSuccess(null), 3500);
+          if (options.callback) {
+            options.callback(result);
+          }
         }
       } catch (err) {
         console.error('[GBA] Error inyectando Pokémon:', err);

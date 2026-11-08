@@ -4,6 +4,8 @@ import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
 import { useTrainerStore } from '@/store/useTrainerStore';
 import { triggerGbaItemInjection, triggerGbaPokemonInjection } from '@/lib/gba/PokemonMemoryBridge';
+import { GbaSaveManipulator } from '@/lib/gba/gbaSaveEngine';
+import { JOHTO_POKEDEX_CATALOG } from '@/lib/pokemonAssets';
 
 export interface VaultItem {
   id: string;
@@ -136,7 +138,18 @@ interface EconomyStore {
   buyPassiveAsset: (assetCode: string) => Promise<{ success: boolean; error?: string }>;
   harvestPassiveRents: () => Promise<{ success: boolean; error?: string; earned_rp?: number; bonguris?: number }>;
   claimEmergencyWork: () => Promise<{ success: boolean; error?: string; reward?: number }>;
-  dispatchVaultItem: (vaultId: string) => Promise<{ success: boolean; error?: string }>;
+  dispatchVaultItem: (
+    vaultId: string,
+    destination?: 'pc' | 'party' | 'auto'
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    inPcBox?: boolean;
+    destination?: 'pc' | 'party';
+    slot?: number;
+    nickname?: string;
+    level?: number;
+  }>;
   syncGameMoney: (amount: number) => Promise<void>;
   activateRescuePlan: () => Promise<{ success: boolean; error?: string }>;
   applyFine: (tier: 1 | 2 | 3, reason?: string) => Promise<{ success: boolean; error?: string }>;
@@ -340,47 +353,268 @@ export const useEconomyStore = create<EconomyStore>((set, get) => ({
     }
   },
 
-  dispatchVaultItem: async (vaultId) => {
+  dispatchVaultItem: async (vaultId, destination = 'pc') => {
+    const vaultItem = get().snapshot?.vault?.find((v) => v.id === vaultId);
+    const finalDest: 'pc' | 'party' = destination === 'party' ? 'party' : 'pc';
+
     const gbaReady =
       typeof window !== 'undefined' && (window as any).__SYNDEX_GBA_READY__ === true;
-    if (!gbaReady) {
-      return {
-        success: false,
-        error: 'Abre la pestaña Cartucho y espera a que cargue el emulador.',
-      };
+
+    // Helper interno para resolver detalles de especie de forma segura
+    const resolvePokemonDetails = (res: any, sourceVaultItem?: VaultItem) => {
+      const payload = (typeof res?.payload === 'object' && res.payload !== null)
+        ? res.payload
+        : (typeof sourceVaultItem?.payload_json === 'object' && sourceVaultItem?.payload_json !== null)
+        ? sourceVaultItem.payload_json
+        : {};
+
+      let speciesId = 0;
+      const pId = Number(payload.speciesId || payload.species_id);
+      if (!isNaN(pId) && pId > 0) {
+        speciesId = pId;
+      }
+
+      if (!speciesId) {
+        const rawId = String(res?.item_id || sourceVaultItem?.item_id_or_species || '').trim();
+        const parsed = parseInt(rawId, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          speciesId = parsed;
+        }
+      }
+
+      if (!speciesId) {
+        const key = String(res?.item_id || sourceVaultItem?.item_id_or_species || sourceVaultItem?.display_name || '').toUpperCase();
+        if (key.includes('DRATINI') || key.includes('DRAGONAIR') || key.includes('DRAGONITE')) speciesId = 147;
+        else if (key.includes('LARVITAR') || key.includes('PUPITAR') || key.includes('TYRANITAR')) speciesId = 246;
+        else if (key.includes('BELDUM') || key.includes('METANG') || key.includes('METAGROSS')) speciesId = 374;
+        else if (key.includes('BAGON') || key.includes('SHELGON') || key.includes('SALAMENCE')) speciesId = 371;
+        else if (key.includes('EEVEE')) speciesId = 133;
+        else if (key.includes('CHARMANDER') || key.includes('CHARMELEON') || key.includes('CHARIZARD')) speciesId = 4;
+        else if (key.includes('MUDKIP') || key.includes('MARSHTOMP') || key.includes('SWAMPERT')) speciesId = 258;
+        else if (key.includes('TREECKO') || key.includes('GROVYLE') || key.includes('SCEPTILE')) speciesId = 252;
+        else if (key.includes('TORCHIC') || key.includes('COMBUSKEN') || key.includes('BLAZIKEN')) speciesId = 255;
+        else if (key.includes('GASTLY') || key.includes('HAUNTER') || key.includes('GENGAR')) speciesId = 92;
+        else if (key.includes('RALTS') || key.includes('KIRLIA') || key.includes('GARDEVOIR')) speciesId = 280;
+        else if (key.includes('SCYTHER') || key.includes('SCIZOR')) speciesId = 123;
+        else if (key.includes('HERACROSS')) speciesId = 214;
+        else if (key.includes('MAGIKARP') || key.includes('GYARADOS')) speciesId = 130;
+        else if (key.includes('TOGEPI') || key.includes('TOGETIC')) speciesId = 175;
+        else if (key.includes('PORYGON')) speciesId = 137;
+        else if (key.includes('RIOLU') || key.includes('LUCARIO')) speciesId = 447;
+        else if (key.includes('GIBLE') || key.includes('GABITE') || key.includes('GARCHOMP')) speciesId = 443;
+        else if (key.includes('ELEKID') || key.includes('ELECTABUZZ')) speciesId = 239;
+        else if (key.includes('MAGBY') || key.includes('MAGMAR')) speciesId = 240;
+        else if (key.includes('SNORLAX') || key.includes('MUNCHLAX')) speciesId = 143;
+        else if (key.includes('HOUNDOUR') || key.includes('HOUNDOOM')) speciesId = 228;
+        else if (key.includes('AERODACTYL')) speciesId = 142;
+        else if (key.includes('LAPRAS')) speciesId = 131;
+        else if (key.includes('CHANSEY') || key.includes('BLISSEY')) speciesId = 113;
+        else if (key.includes('PIKACHU') || key.includes('RAICHU')) speciesId = 25;
+        else if (key.includes('TYROGUE') || key.includes('HITMON')) speciesId = 236;
+        else if (key.includes('STEELIX') || key.includes('ONIX')) speciesId = 208;
+        else if (key.includes('KINGDRA') || key.includes('HORSEA')) speciesId = 230;
+        else if (key.includes('SKARMORY')) speciesId = 227;
+        else if (key.includes('AMPHAROS') || key.includes('MAREEP')) speciesId = 181;
+        else if (key.includes('ALAKAZAM') || key.includes('ABRA')) speciesId = 65;
+        else if (key.includes('MACHAMP') || key.includes('MACHOP')) speciesId = 68;
+        else {
+          const match = JOHTO_POKEDEX_CATALOG.find((p) => key.includes(p.name.toUpperCase()));
+          if (match) speciesId = match.id;
+        }
+      }
+
+      if (!speciesId) speciesId = 147;
+
+      const level = Number(payload.level) > 0 ? Number(payload.level) : (res?.item_type === 'egg' ? 5 : 10);
+      const isShiny = Boolean(res?.is_shiny ?? sourceVaultItem?.is_shiny ?? payload.isShiny ?? payload.is_shiny);
+      const perfectIVs = Boolean(payload.perfectIVs ?? payload.perfect_ivs ?? true);
+      const fallbackMeta = JOHTO_POKEDEX_CATALOG.find((p) => p.id === speciesId);
+      const nickname = res?.item_type === 'egg'
+        ? 'HUEVO'
+        : (payload.nickname || fallbackMeta?.name || 'POKÉMON').toUpperCase();
+
+      return { speciesId, level, isShiny, perfectIVs, nickname };
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // CASO A: El emulador mGBA está corriendo activo en pantalla
+    // ─────────────────────────────────────────────────────────────
+    if (gbaReady) {
+      try {
+        const { data, error } = await supabase.rpc('rpc_valdr_dispatch_vault_item', {
+          p_vault_id: vaultId,
+        });
+        if (error) return { success: false, error: error.message };
+        const res = data as any;
+        if (!res?.success) return { success: false, error: res?.error || 'No se pudo despachar' };
+
+        const payload = res.payload || {};
+        if (res.item_type === 'pokemon' || res.item_type === 'egg') {
+          const details = resolvePokemonDetails(res, vaultItem);
+          triggerGbaPokemonInjection({
+            speciesId: details.speciesId,
+            level: details.level,
+            nickname: details.nickname,
+            isShiny: details.isShiny,
+            perfectIVs: details.perfectIVs,
+            targetDestination: finalDest,
+          });
+          await get().loadEconomy();
+          return {
+            success: true,
+            destination: finalDest,
+            inPcBox: finalDest === 'pc',
+            nickname: details.nickname,
+            level: details.level,
+          };
+        } else if (res.item_type === 'item') {
+          triggerGbaItemInjection(
+            Number(payload.gba_item_id || 0),
+            Number(res.quantity || 1),
+            payload.gba_pocket || 'ITEMS',
+            res.item_id
+          );
+          await get().loadEconomy();
+          return { success: true };
+        }
+
+        await get().loadEconomy();
+        return { success: true };
+      } catch (err: any) {
+        return { success: false, error: err?.message || 'Error de conexión' };
+      }
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // CASO B: El emulador está apagado/cerrado
+    // Inyección quirúrgica directa al archivo .sav en la nube
+    // ─────────────────────────────────────────────────────────────
     try {
-      const { data, error } = await supabase.rpc('rpc_valdr_dispatch_vault_item', {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        return { success: false, error: 'Debes iniciar sesión para transferir objetos.' };
+      }
+
+      // Descargar el slot principal del usuario desde la API segura
+      const fetchSav = await fetch(`/api/gba/save-sync?slot=slot_1.sav&t=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (!fetchSav.ok) {
+        return {
+          success: false,
+          error: 'No se encontró archivo de guardado en la nube. Abre el cartucho al menos una vez, habla con el Prof. Elm y guarda en el menú del juego (START -> GUARDAR) para habilitar la inyección directa.',
+        };
+      }
+
+      const savBytes = new Uint8Array(await fetchSav.arrayBuffer());
+      if (savBytes.byteLength < 0x1C000) {
+        return { success: false, error: 'La partida en la nube no contiene los 128 KB requeridos.' };
+      }
+
+      const manipulator = new GbaSaveManipulator(savBytes);
+      if (!manipulator.isValid()) {
+        return { success: false, error: 'La partida en la nube no superó la verificación de integridad.' };
+      }
+
+      const isPokemon = vaultItem ? (vaultItem.item_type === 'pokemon' || vaultItem.item_type === 'egg') : true;
+      let updatedSavBytes: Uint8Array;
+      let injectionResult: any = null;
+
+      if (isPokemon) {
+        const details = resolvePokemonDetails({
+          item_id: vaultItem?.item_id_or_species,
+          display_name: vaultItem?.display_name,
+          is_shiny: vaultItem?.is_shiny,
+          item_type: vaultItem?.item_type,
+          payload: vaultItem?.payload_json,
+        }, vaultItem);
+
+        injectionResult = manipulator.injectPokemonToParty({
+          speciesId: details.speciesId,
+          level: details.level,
+          nickname: details.nickname,
+          isShiny: details.isShiny,
+          perfectIVs: details.perfectIVs,
+          targetDestination: finalDest,
+        });
+
+        if (!injectionResult.success) {
+          return { success: false, error: injectionResult.error || 'No se pudo inyectar el Pokémon al guardado.' };
+        }
+
+        updatedSavBytes = injectionResult.updatedSav || manipulator.getBuffer();
+      } else {
+        const payload = vaultItem?.payload_json || {};
+        updatedSavBytes = manipulator.injectRewards({
+          itemsToInject: [{
+            itemId: Number(payload.gba_item_id || 0),
+            quantity: Number(vaultItem?.quantity || 1),
+            pocket: payload.gba_pocket || 'ITEMS',
+          }],
+        });
+      }
+
+      // Validada la inyección en memoria, despachar de la Bóveda en la BD
+      const { data: rpcData, error: rpcError } = await supabase.rpc('rpc_valdr_dispatch_vault_item', {
         p_vault_id: vaultId,
       });
-      if (error) return { success: false, error: error.message };
-      const res = data as any;
-      if (!res?.success) return { success: false, error: res?.error || 'No se pudo despachar' };
 
-      const payload = res.payload || {};
-      if (res.item_type === 'pokemon' || res.item_type === 'egg') {
-        triggerGbaPokemonInjection({
-          speciesId: Number(payload.speciesId || res.item_id || 147),
-          level: Number(payload.level || 5),
-          nickname: res.item_type === 'egg' ? 'HUEVO' : undefined,
-          isShiny: !!res.is_shiny,
-          perfectIVs: !!payload.perfectIVs,
-          targetDestination: 'auto',
-        });
-      } else if (res.item_type === 'item') {
-        triggerGbaItemInjection(
-          Number(payload.gba_item_id || 0),
-          Number(res.quantity || 1),
-          payload.gba_pocket || 'ITEMS',
-          res.item_id
-        );
+      if (rpcError) {
+        return { success: false, error: rpcError.message };
+      }
+      const res = rpcData as any;
+      if (!res?.success) {
+        return { success: false, error: res?.error || 'No se pudo registrar el despacho en la base de datos.' };
+      }
+
+      // Persistir el .sav con los nuevos checksums a Supabase Storage
+      const uploadRes = await fetch(`/api/gba/save-sync?slot=slot_1.sav`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: new Blob([updatedSavBytes.buffer as ArrayBuffer]),
+      });
+
+      if (!uploadRes.ok) {
+        console.warn('[/api/gba/save-sync] Error al sincronizar .sav actualizado a la nube');
+      }
+
+      // Actualizar localStorage como respaldo local offline
+      try {
+        let binaryString = '';
+        const len = updatedSavBytes.byteLength;
+        for (let i = 0; i < len; i += 8192) {
+          const chunk = updatedSavBytes.subarray(i, Math.min(i + 8192, len));
+          binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        localStorage.setItem('syndex_sav_slot_1.sav', btoa(binaryString));
+      } catch {}
+
+      // Si fue al equipo, actualizar el perfil web inmediatamente
+      if (injectionResult && !injectionResult.inPcBox) {
+        try {
+          const { party } = manipulator.extractPlayerProfileAndTeam();
+          useTrainerStore.getState().updateProfile({ gba_party_json: party as any });
+          await supabase.from('profiles').update({ gba_party_json: party }).eq('id', session.user.id);
+        } catch {}
       }
 
       await get().loadEconomy();
-      return { success: true };
+
+      return {
+        success: true,
+        destination: finalDest,
+        inPcBox: injectionResult?.inPcBox ?? (finalDest === 'pc'),
+        slot: injectionResult?.slot,
+        nickname: injectionResult?.nickname,
+        level: injectionResult?.level,
+      };
     } catch (err: any) {
-      return { success: false, error: err?.message || 'Error de conexión' };
+      console.error('[dispatchVaultItem offline] Error:', err);
+      return { success: false, error: err?.message || 'Error al inyectar en la partida.' };
     }
   },
 
