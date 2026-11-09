@@ -146,6 +146,7 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
 
   useEffect(() => {
     refreshPcBox();
+    useEconomyStore.getState().loadEconomy();
   }, []);
 
   const handleConfirmInjectionFromManager = async () => {
