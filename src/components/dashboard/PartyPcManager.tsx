@@ -81,7 +81,7 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
       hp: p.hp || 20,
       maxHp: p.maxHp || 20,
       isShiny: !!p.isShiny,
-      types: meta?.types || ['Fuego'],
+      types: meta?.types || ['Normal'],
     };
   });
 
@@ -180,9 +180,10 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Mover Pokémon de PC al Equipo
-  const handleDepositOrWithdraw = (from: 'party' | 'pc', index: number) => {
-    soundFx.playCoin();
+  // Mover Pokémon de PC al Equipo (sincronización real con el cartucho .sav)
+  const handleDepositOrWithdraw = async (from: 'party' | 'pc', index: number) => {
+    soundFx.playClick();
+
     if (from === 'pc') {
       const mon = pcBox[index];
       if (!mon) return;
@@ -191,32 +192,154 @@ export const PartyPcManager: React.FC<PartyPcManagerProps> = ({ onOpenStarterMod
         showToast('⚠️ Tu equipo ya tiene 6 Pokémon. Deposita uno primero.');
         return;
       }
-      const updatedParty = [...party, { ...mon, slot: party.length }];
-      const updatedPc = [...pcBox];
-      updatedPc[index] = null;
-      setPcBox(updatedPc);
-      updateProfile({ gba_party_json: updatedParty });
-      showToast(`¡${mon.name} transferido a tu equipo!`);
-      confetti({ particleCount: 20, spread: 40 });
+
+      // Caso A: Emulador mGBA en ejecución
+      const isEmulatorReady = typeof window !== 'undefined' && (window as any).__SYNDEX_GBA_READY__ === true;
+      if (isEmulatorReady) {
+        showToast(`Transfiriendo ${mon.name} al equipo en el cartucho...`);
+        window.dispatchEvent(
+          new CustomEvent('syndex:move-pokemon', {
+            detail: {
+              action: 'withdraw',
+              slotIndex: index,
+              callback: (res: any) => {
+                if (res?.success) {
+                  refreshPcBox();
+                  confetti({ particleCount: 30, spread: 50 });
+                } else {
+                  soundFx.playDamage();
+                  showToast(res?.error || 'Error al retirar de la PC');
+                }
+              },
+            },
+          })
+        );
+        return;
+      }
+
+      // Caso B: Emulador cerrado -> manipulación offline del .sav en la nube
+      try {
+        setLoadingPc(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('No hay sesión de usuario activa.');
+
+        const res = await fetch(`/api/gba/save-sync?slot=slot_1.sav&t=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) throw new Error('No se pudo descargar la partida del servidor.');
+
+        const savBytes = new Uint8Array(await res.arrayBuffer());
+        const manip = new GbaSaveManipulator(savBytes);
+        if (!manip.isValid()) throw new Error('Partida .sav no válida.');
+
+        const withdrawRes = manip.withdrawPcMonToParty(index);
+        if (!withdrawRes.success || !withdrawRes.updatedSav) {
+          throw new Error(withdrawRes.error || 'Fallo al retirar Pokémon');
+        }
+
+        const uploadRes = await fetch('/api/gba/save-sync?slot=slot_1.sav', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: new Blob([withdrawRes.updatedSav.buffer as ArrayBuffer]),
+        });
+        if (!uploadRes.ok) throw new Error('No se pudo guardar la partida modificada en la nube.');
+
+        // Actualizar perfil local y PC Box
+        const updatedProfile = manip.extractPlayerProfileAndTeam();
+        updateProfile({ gba_party_json: updatedProfile.party as any });
+        refreshPcBox();
+
+        soundFx.playLevelUp();
+        confetti({ particleCount: 35, spread: 55 });
+        showToast(`✨ ¡${mon.name} transferido a tu equipo de batalla!`);
+      } catch (err: any) {
+        console.error('[PartyPcManager] Error withdrawing pokemon:', err);
+        soundFx.playDamage();
+        showToast(`⚠️ ${err.message || 'Error al sincronizar con el cartucho'}`);
+      } finally {
+        setLoadingPc(false);
+      }
     } else {
+      // Depositar al PC Box 1
       if (party.length <= 1) {
         soundFx.playDamage();
         showToast('⚠️ Debes llevar al menos 1 Pokémon en tu equipo.');
         return;
       }
       const mon = party[index];
-      const emptyPcIndex = pcBox.findIndex((slot) => slot === null);
-      if (emptyPcIndex === -1) {
-        soundFx.playDamage();
-        showToast('⚠️ PC Box 1 está lleno (30/30).');
+      if (!mon) return;
+
+      // Caso A: Emulador mGBA en ejecución
+      const isEmulatorReady = typeof window !== 'undefined' && (window as any).__SYNDEX_GBA_READY__ === true;
+      if (isEmulatorReady) {
+        showToast(`Depositando ${mon.name} en PC Box 1 del cartucho...`);
+        window.dispatchEvent(
+          new CustomEvent('syndex:move-pokemon', {
+            detail: {
+              action: 'deposit',
+              slotIndex: index + 1, // slotNumber 1..6
+              callback: (res: any) => {
+                if (res?.success) {
+                  refreshPcBox();
+                  soundFx.playCoin();
+                } else {
+                  soundFx.playDamage();
+                  showToast(res?.error || 'Error al depositar en PC');
+                }
+              },
+            },
+          })
+        );
         return;
       }
-      const updatedParty = party.filter((_, i) => i !== index);
-      const updatedPc = [...pcBox];
-      updatedPc[emptyPcIndex] = { ...mon, slot: emptyPcIndex };
-      setPcBox(updatedPc);
-      updateProfile({ gba_party_json: updatedParty });
-      showToast(`¡${mon.name} depositado en PC Box 1!`);
+
+      // Caso B: Emulador cerrado -> manipulación offline del .sav en la nube
+      try {
+        setLoadingPc(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('No hay sesión de usuario activa.');
+
+        const res = await fetch(`/api/gba/save-sync?slot=slot_1.sav&t=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) throw new Error('No se pudo descargar la partida del servidor.');
+
+        const savBytes = new Uint8Array(await res.arrayBuffer());
+        const manip = new GbaSaveManipulator(savBytes);
+        if (!manip.isValid()) throw new Error('Partida .sav no válida.');
+
+        const depositRes = manip.depositPartyMonToPc(index + 1);
+        if (!depositRes.success || !depositRes.updatedSav) {
+          throw new Error(depositRes.error || 'Fallo al depositar en PC');
+        }
+
+        const uploadRes = await fetch('/api/gba/save-sync?slot=slot_1.sav', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/octet-stream',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: new Blob([depositRes.updatedSav.buffer as ArrayBuffer]),
+        });
+        if (!uploadRes.ok) throw new Error('No se pudo guardar la partida modificada en la nube.');
+
+        // Actualizar perfil local y PC Box
+        const updatedProfile = manip.extractPlayerProfileAndTeam();
+        updateProfile({ gba_party_json: updatedProfile.party as any });
+        refreshPcBox();
+
+        soundFx.playCoin();
+        showToast(`📥 ¡${mon.name} depositado en PC Box 1 del cartucho!`);
+      } catch (err: any) {
+        console.error('[PartyPcManager] Error depositing pokemon:', err);
+        soundFx.playDamage();
+        showToast(`⚠️ ${err.message || 'Error al sincronizar con el cartucho'}`);
+      } finally {
+        setLoadingPc(false);
+      }
     }
   };
 

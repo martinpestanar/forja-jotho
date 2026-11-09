@@ -405,6 +405,9 @@ export const REWARD_POKEMON_PRESETS: Record<number, {
   // Populares
   25:  { name: 'PIKACHU',   baseHp: 35, baseAtk: 55, baseDef: 40, baseSpd: 90, baseSpAtk: 50, baseSpDef: 50, moves: [84, 98, 104, 85], pps: [30, 30, 15, 15] },
   133: { name: 'EEVEE',     baseHp: 55, baseAtk: 55, baseDef: 50, baseSpd: 55, baseSpAtk: 45, baseSpDef: 65, moves: [33, 39, 98, 44], pps: [35, 30, 30, 25] },
+  179: { name: 'MAREEP',    baseHp: 55, baseAtk: 40, baseDef: 40, baseSpd: 35, baseSpAtk: 65, baseSpDef: 45, moves: [33, 45, 84, 86], pps: [35, 40, 30, 20] },
+  180: { name: 'FLAAFFY',   baseHp: 70, baseAtk: 55, baseDef: 55, baseSpd: 45, baseSpAtk: 80, baseSpDef: 60, moves: [33, 45, 84, 86], pps: [35, 40, 30, 20] },
+  181: { name: 'AMPHAROS',  baseHp: 90, baseAtk: 75, baseDef: 85, baseSpd: 55, baseSpAtk: 115, baseSpDef: 90, moves: [84, 85, 86, 9], pps: [30, 15, 20, 15] },
   143: { name: 'SNORLAX',   baseHp: 160, baseAtk: 110, baseDef: 65, baseSpd: 30, baseSpAtk: 65, baseSpDef: 110, moves: [34, 156, 173, 153], pps: [20, 10, 10, 15] },
   // Legendarios / Míticos de Evento Johto
   249: { name: 'LUGIA',     baseHp: 106, baseAtk: 90, baseDef: 130, baseSpd: 110, baseSpAtk: 90, baseSpDef: 154, moves: [177, 56, 105, 94], pps: [5, 5, 10, 10] },
@@ -1282,6 +1285,252 @@ export class GbaSaveManipulator {
       isShiny,
       raw100Bytes,
       remainingPartyCount: newPartyCount,
+      updatedSav: this.buffer,
+    };
+  }
+
+  /**
+   * Deposita un Pokémon del equipo (1-based slotNumber o 0-based partyIndex)
+   * directamente en el primer slot vacío de PC Box 1 (Section 5).
+   * Actualiza SaveBlock1 y Section 5, recalculando ambos checksums.
+   */
+  public depositPartyMonToPc(partySlotNumber: number): {
+    success: boolean;
+    pcSlot?: number;
+    speciesId?: number;
+    nickname?: string;
+    level?: number;
+    isShiny?: boolean;
+    updatedSav?: Uint8Array;
+    error?: string;
+  } {
+    const { sectorMap } = this.getActiveSlotMap();
+    const sec1Sector = sectorMap.get(1);
+    const sec5Sector = sectorMap.get(5);
+    if (sec1Sector === undefined || sec5Sector === undefined) {
+      return { success: false, error: 'Secciones 1 o 5 no encontradas en el slot activo.' };
+    }
+
+    const sec1Base = sec1Sector * SECTOR_SIZE;
+    const sec5Base = sec5Sector * SECTOR_SIZE;
+
+    const partyCountRaw = this.view.getUint8(sec1Base + this.activeOffsets.SB1_PARTY_COUNT);
+    const partyCount = Math.min(6, Math.max(0, partyCountRaw));
+
+    const slotNumber = partySlotNumber >= 0 && partySlotNumber < 6 && partySlotNumber < partyCount
+      ? partySlotNumber + 1
+      : partySlotNumber;
+
+    if (slotNumber < 1 || slotNumber > partyCount) {
+      return { success: false, error: `Ranura #${slotNumber} inválida. El equipo tiene ${partyCount} Pokémon.` };
+    }
+
+    if (partyCount <= 1) {
+      return { success: false, error: 'Debes mantener al menos 1 Pokémon en tu equipo.' };
+    }
+
+    // Buscar primer slot libre en PC Box 1 (30 slots de 80 bytes)
+    const BOX_MON_SIZE = 80;
+    const BOX_CAPACITY = 30;
+    const BOX0_DATA_OFFSET = 0x0004;
+    let targetPcSlot = -1;
+
+    for (let i = 0; i < BOX_CAPACITY; i++) {
+      const slotAddr = sec5Base + BOX0_DATA_OFFSET + i * BOX_MON_SIZE;
+      const pid = this.view.getUint32(slotAddr, true);
+      const ot = this.view.getUint32(slotAddr + 4, true);
+      if (pid === 0 && ot === 0) {
+        targetPcSlot = i;
+        break;
+      }
+    }
+
+    if (targetPcSlot === -1) {
+      return { success: false, error: 'PC Box 1 está lleno (30/30). Libera espacio en el juego.' };
+    }
+
+    const targetPartyIndex = slotNumber - 1;
+    const partyMonOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + targetPartyIndex * 100;
+
+    // Copiar los primeros 80 bytes (struct BoxPokemon) a PC Box 1
+    const boxMonBytes = this.buffer.subarray(partyMonOffset, partyMonOffset + 80);
+    const pcDestOffset = sec5Base + BOX0_DATA_OFFSET + targetPcSlot * BOX_MON_SIZE;
+    this.buffer.set(boxMonBytes, pcDestOffset);
+
+    // Metadata informativa
+    const personality = this.view.getUint32(partyMonOffset, true);
+    const otId = this.view.getUint32(partyMonOffset + 4, true);
+    const nickname = decodeGbaString(this.buffer.subarray(partyMonOffset + 0x08, partyMonOffset + 0x12));
+    const level = this.view.getUint8(partyMonOffset + 0x54);
+    const decKey = (personality ^ otId) >>> 0;
+    const growthBlockIndex = GROWTH_SUBSTRUCT_ORDER[personality % 24];
+    const growthOffset = partyMonOffset + 0x20 + growthBlockIndex * 12;
+    const word0 = (this.view.getUint32(growthOffset, true) ^ decKey) >>> 0;
+    const speciesId = word0 & 0xFFFF;
+    const pHigh = personality >>> 16;
+    const pLow = personality & 0xFFFF;
+    const otHigh = otId >>> 16;
+    const otLow = otId & 0xFFFF;
+    const naturalShiny = (pHigh ^ pLow ^ otHigh ^ otLow) < 8;
+    const u16_1E = this.view.getUint16(partyMonOffset + 0x1E, true);
+    const shinyModifierBit = (u16_1E >> 14) & 1;
+    const isShiny = naturalShiny ? shinyModifierBit === 0 : shinyModifierBit === 1;
+
+    // Compactar party mon restantes hacia la izquierda
+    for (let i = targetPartyIndex; i < partyCount - 1; i++) {
+      const srcOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + (i + 1) * 100;
+      const dstOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + i * 100;
+      this.buffer.set(this.buffer.subarray(srcOffset, srcOffset + 100), dstOffset);
+    }
+
+    // Limpiar último slot
+    const lastSlotOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + (partyCount - 1) * 100;
+    this.buffer.fill(0, lastSlotOffset, lastSlotOffset + 100);
+
+    // Decrementar party count
+    this.view.setUint8(sec1Base + this.activeOffsets.SB1_PARTY_COUNT, partyCount - 1);
+
+    // Recalcular checksums de Sec1 y Sec5
+    const newSec1Checksum = GbaSaveManipulator.calculateSectionChecksum(
+      this.view, sec1Base, this.activeSectionSizes[1]
+    );
+    this.view.setUint16(sec1Base + 0x0FF6, newSec1Checksum, true);
+
+    const newSec5Checksum = GbaSaveManipulator.calculateSectionChecksum(
+      this.view, sec5Base, this.activeSectionSizes[5]
+    );
+    this.view.setUint16(sec5Base + 0x0FF6, newSec5Checksum, true);
+
+    return {
+      success: true,
+      pcSlot: targetPcSlot,
+      speciesId,
+      nickname,
+      level,
+      isShiny,
+      updatedSav: this.buffer,
+    };
+  }
+
+  /**
+   * Saca un Pokémon de PC Box 1 (0..29) y lo añade al equipo del jugador (SaveBlock1),
+   * calculando sus battle stats para completar los 100 bytes del struct Pokemon.
+   */
+  public withdrawPcMonToParty(pcSlotIndex: number): {
+    success: boolean;
+    partySlot?: number;
+    speciesId?: number;
+    nickname?: string;
+    level?: number;
+    isShiny?: boolean;
+    updatedSav?: Uint8Array;
+    error?: string;
+  } {
+    const { sectorMap } = this.getActiveSlotMap();
+    const sec1Sector = sectorMap.get(1);
+    const sec5Sector = sectorMap.get(5);
+    if (sec1Sector === undefined || sec5Sector === undefined) {
+      return { success: false, error: 'Secciones 1 o 5 no encontradas en el slot activo.' };
+    }
+
+    const sec1Base = sec1Sector * SECTOR_SIZE;
+    const sec5Base = sec5Sector * SECTOR_SIZE;
+
+    const partyCountRaw = this.view.getUint8(sec1Base + this.activeOffsets.SB1_PARTY_COUNT);
+    const partyCount = Math.min(6, Math.max(0, partyCountRaw));
+    if (partyCount >= 6) {
+      return { success: false, error: 'El equipo ya tiene 6 Pokémon. Deposita uno antes de retirar.' };
+    }
+
+    if (pcSlotIndex < 0 || pcSlotIndex >= 30) {
+      return { success: false, error: `Índice de PC Box ${pcSlotIndex} inválido (0-29).` };
+    }
+
+    const BOX_MON_SIZE = 80;
+    const BOX0_DATA_OFFSET = 0x0004;
+    const pcSlotAddr = sec5Base + BOX0_DATA_OFFSET + pcSlotIndex * BOX_MON_SIZE;
+
+    const personality = this.view.getUint32(pcSlotAddr, true);
+    const otId = this.view.getUint32(pcSlotAddr + 4, true);
+    if (personality === 0 && otId === 0) {
+      return { success: false, error: 'La ranura seleccionada en PC Box 1 está vacía.' };
+    }
+
+    const decKey = (personality ^ otId) >>> 0;
+    const growthBlockIndex = GROWTH_SUBSTRUCT_ORDER[personality % 24];
+    const growthOffset = pcSlotAddr + 0x20 + growthBlockIndex * 12;
+    const word0 = (this.view.getUint32(growthOffset, true) ^ decKey) >>> 0;
+    const speciesId = word0 & 0xFFFF;
+    const exp = (this.view.getUint32(growthOffset + 4, true) ^ decKey) >>> 0;
+    const level = Math.max(1, Math.min(100, Math.floor(Math.cbrt(exp)) || 5));
+    const nickname = decodeGbaString(this.buffer.subarray(pcSlotAddr + 0x08, pcSlotAddr + 0x12));
+
+    const pHigh = personality >>> 16;
+    const pLow = personality & 0xFFFF;
+    const otHigh = otId >>> 16;
+    const otLow = otId & 0xFFFF;
+    const naturalShiny = (pHigh ^ pLow ^ otHigh ^ otLow) < 8;
+    const u16_1E = this.view.getUint16(pcSlotAddr + 0x1E, true);
+    const shinyModifierBit = (u16_1E >> 14) & 1;
+    const isShiny = naturalShiny ? shinyModifierBit === 0 : shinyModifierBit === 1;
+
+    // Crear struct Pokemon (100 bytes) copiando los 80 bytes de BoxPokemon
+    const pkmn100 = new Uint8Array(100);
+    pkmn100.set(this.buffer.subarray(pcSlotAddr, pcSlotAddr + 80), 0);
+
+    // Calcular battle stats
+    const preset = REWARD_POKEMON_PRESETS[speciesId] ?? {
+      name: nickname || 'POKEMON',
+      baseHp: 60, baseAtk: 60, baseDef: 60, baseSpd: 60, baseSpAtk: 60, baseSpDef: 60,
+      moves: [33, 45, 0, 0], pps: [35, 40, 0, 0],
+    };
+
+    const iv = 28;
+    const maxHp = Math.floor(((2 * preset.baseHp + iv) * level) / 100) + level + 10;
+    const atk = Math.floor(((2 * preset.baseAtk + iv) * level) / 100) + 5;
+    const def = Math.floor(((2 * preset.baseDef + iv) * level) / 100) + 5;
+    const spd = Math.floor(((2 * preset.baseSpd + iv) * level) / 100) + 5;
+    const spAtk = Math.floor(((2 * preset.baseSpAtk + iv) * level) / 100) + 5;
+    const spDef = Math.floor(((2 * preset.baseSpDef + iv) * level) / 100) + 5;
+
+    const pView = new DataView(pkmn100.buffer);
+    pView.setUint8(0x54, level);
+    pView.setUint16(0x56, maxHp, true);
+    pView.setUint16(0x58, maxHp, true);
+    pView.setUint16(0x5A, atk, true);
+    pView.setUint16(0x5C, def, true);
+    pView.setUint16(0x5E, spd, true);
+    pView.setUint16(0x60, spAtk, true);
+    pView.setUint16(0x62, spDef, true);
+
+    // Escribir en el nuevo slot de la party
+    const targetPartyOffset = sec1Base + this.activeOffsets.SB1_PARTY_DATA + partyCount * 100;
+    this.buffer.set(pkmn100, targetPartyOffset);
+
+    // Incrementar party count
+    this.view.setUint8(sec1Base + this.activeOffsets.SB1_PARTY_COUNT, partyCount + 1);
+
+    // Limpiar el slot de PC Box 1
+    this.buffer.fill(0, pcSlotAddr, pcSlotAddr + BOX_MON_SIZE);
+
+    // Recalcular checksums de Sec1 y Sec5
+    const newSec1Checksum = GbaSaveManipulator.calculateSectionChecksum(
+      this.view, sec1Base, this.activeSectionSizes[1]
+    );
+    this.view.setUint16(sec1Base + 0x0FF6, newSec1Checksum, true);
+
+    const newSec5Checksum = GbaSaveManipulator.calculateSectionChecksum(
+      this.view, sec5Base, this.activeSectionSizes[5]
+    );
+    this.view.setUint16(sec5Base + 0x0FF6, newSec5Checksum, true);
+
+    return {
+      success: true,
+      partySlot: partyCount + 1,
+      speciesId,
+      nickname,
+      level,
+      isShiny,
       updatedSav: this.buffer,
     };
   }

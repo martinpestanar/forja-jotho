@@ -1244,13 +1244,56 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       }
     };
 
+    const onMovePokemon = async (e: Event) => {
+      const customEvent = e as CustomEvent<{ action: 'deposit' | 'withdraw'; slotIndex: number; callback?: (result: any) => void }>;
+      const { action, slotIndex, callback } = customEvent.detail || {};
+      const bridge = bridgeRef.current;
+      const mod = moduleRef.current;
+      if (!bridge || !mod || typeof slotIndex !== 'number') return;
+
+      try {
+        soundFx.playClick();
+        const result = await bridge.movePokemonBetweenPartyAndPc(action, slotIndex, true);
+        if (result && result.success && result.updatedSav) {
+          soundFx.playCoin();
+          const msg = action === 'deposit'
+            ? `📥 ¡${result.nickname || 'Pokémon'} depositado en PC Box 1!`
+            : `⚔️ ¡${result.nickname || 'Pokémon'} retirado al Equipo!`;
+          setShowSaveSuccess(msg);
+          setTimeout(() => setShowSaveSuccess(null), 3500);
+
+          const updatedParty = bridge.readPartyFromEmulator();
+          if (updatedParty) {
+            updateProfile({ gba_party_json: updatedParty as any });
+          }
+
+          if (callback) {
+            callback(result);
+          }
+
+          // Reinicio limpio del emulador para refrescar la RAM activa con la nueva .sav
+          rebootEmulator(result.updatedSav);
+        } else if (result?.error) {
+          setShowSaveSuccess(`⚠️ ${result.error}`);
+          setTimeout(() => setShowSaveSuccess(null), 3500);
+          if (callback) {
+            callback(result);
+          }
+        }
+      } catch (err) {
+        console.error('[GBA] Error moviendo Pokémon entre equipo y PC:', err);
+      }
+    };
+
     window.addEventListener('syndex:inject-item', onInjectItem);
     window.addEventListener('syndex:inject-pokemon', onInjectPokemon);
     window.addEventListener('syndex:extract-pokemon', onExtractPokemon);
+    window.addEventListener('syndex:move-pokemon', onMovePokemon);
     return () => {
       window.removeEventListener('syndex:inject-item', onInjectItem);
       window.removeEventListener('syndex:inject-pokemon', onInjectPokemon);
       window.removeEventListener('syndex:extract-pokemon', onExtractPokemon);
+      window.removeEventListener('syndex:move-pokemon', onMovePokemon);
     };
   }, [updateProfile, rebootEmulator]);
 

@@ -573,6 +573,57 @@ export class PokemonMemoryBridge {
     }
   }
 
+  /**
+   * Mueve un Pokémon entre el Equipo y PC Box 1 en tiempo real dentro del emulador y .sav
+   */
+  public async movePokemonBetweenPartyAndPc(
+    action: 'deposit' | 'withdraw',
+    slotIndex: number,
+    syncAfter = true
+  ): Promise<{ success: boolean; error?: string; updatedSav?: Uint8Array; speciesId?: number; nickname?: string }> {
+    if (!this.emulator) {
+      console.warn('[MemoryBridge] No emulator bound.');
+      return { success: false, error: 'Emulador no iniciado.' };
+    }
+
+    try {
+      this.emulator.pause();
+      const rawSav = this.emulator.readSaveFile();
+      if (!rawSav || rawSav.byteLength < 0x1C000) {
+        this.emulator.resume();
+        return { success: false, error: 'No se pudo leer la partida .sav.' };
+      }
+
+      const manipulator = new GbaSaveManipulator(rawSav);
+      const result = action === 'deposit'
+        ? manipulator.depositPartyMonToPc(slotIndex)
+        : manipulator.withdrawPcMonToParty(slotIndex);
+
+      if (!result.success) {
+        this.emulator.resume();
+        return result;
+      }
+
+      this.emulator.writeSaveFile(manipulator.getBuffer());
+      this.emulator.resume();
+
+      if (syncAfter) {
+        await this.syncSaveToCloud();
+      }
+
+      return {
+        success: true,
+        updatedSav: manipulator.getBuffer(),
+        speciesId: result.speciesId,
+        nickname: result.nickname,
+      };
+    } catch (err: any) {
+      console.error('[MemoryBridge] Error moviendo Pokémon:', err);
+      this.emulator.resume();
+      return { success: false, error: err?.message || 'Error desconocido' };
+    }
+  }
+
   private resolveItemMapping(
     itemId: string
   ): { gbaItemId: number; quantity: number; pocket: BagPocketType } | null {

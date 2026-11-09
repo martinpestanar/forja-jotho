@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useTrainerStore } from '@/store/useTrainerStore';
@@ -335,6 +335,7 @@ export const ArcadeRoomTheater: React.FC = () => {
                         src={POKEMON_ASSETS.getBoxIcon(pkmn.speciesId || 155)}
                         alt={pkmn.name}
                         className="h-6 w-6 object-contain"
+                        onError={(e) => { const t = e.currentTarget; t.onerror = null; t.src = POKEMON_ASSETS.getStaticSprite(pkmn.speciesId || 155, !!pkmn.isShiny); }}
                       />
                       <span className="text-xs font-semibold uppercase tracking-wide">
                         {pkmn.name}
@@ -354,6 +355,7 @@ export const ArcadeRoomTheater: React.FC = () => {
                       )}
                       alt={pkmn.name}
                       className="h-14 w-14 object-contain drop-shadow-sm"
+                      onError={(e) => { const t = e.currentTarget; t.onerror = null; t.src = POKEMON_ASSETS.getStaticSprite(pkmn.speciesId || 155, !!pkmn.isShiny); }}
                     />
                   </div>
 
