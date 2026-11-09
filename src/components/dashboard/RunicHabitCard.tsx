@@ -16,6 +16,7 @@ import {
   Lock,
   FileCheck,
   RotateCcw,
+  MoreVertical,
   X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -190,6 +191,7 @@ export function RunicHabitCard({ habit, onSeal, onUndo, onEdit, onDelete }: Runi
   const theme = getHabitTheme(habit);
   const MainIcon = theme.icon;
   const [showUndoToast, setShowUndoToast] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const currentEdits = habit.edit_count || 0;
   const remainingEdits = Math.max(0, 2 - currentEdits);
@@ -284,8 +286,8 @@ export function RunicHabitCard({ habit, onSeal, onUndo, onEdit, onDelete }: Runi
                 </span>
               )}
 
-              {/* Indicador de Ediciones Restantes (Máximo 2) */}
-              {!habit.completed && (
+              {/* Indicador de Ediciones Restantes (Solo visible si ya se editó una vez o está bloqueado) */}
+              {!habit.completed && currentEdits > 0 && (
                 remainingEdits > 0 ? (
                   <span className="text-[8.5px] font-mono tracking-wider px-1.5 py-0.5 bg-[#FAF9F5] border border-[#E4E1D8] rounded-md text-[#706E66]">
                     {remainingEdits}✏
@@ -313,58 +315,81 @@ export function RunicHabitCard({ habit, onSeal, onUndo, onEdit, onDelete }: Runi
               </p>
             )}
 
-            {/* Píldoras de Recompensa + Botones CRUD */}
+            {/* Píldoras de Recompensa + Menú contextual discreto */}
             <div className="flex items-center justify-between gap-1.5 pt-0.5">
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {/* Monedas */}
-                <div className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-lg bg-[#C59B46]/10 text-[#9A7025] border border-[#C59B46]/25 flex items-center gap-0.5">
-                  <Coins className="w-3 h-3 text-[#C59B46]" />
-                  <span className="tabular-nums">+{habit.gold_reward}₽</span>
-                </div>
+                <span className="text-[10.5px] font-mono font-semibold text-[#9A7025]">
+                  +{habit.gold_reward}₽
+                </span>
+
+                <span className="text-[#C5C2BA] text-[10px]">·</span>
 
                 {/* Batería */}
                 {habit.game_battery_reward > 0 && (
-                  <div className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-lg bg-[#2D68C4]/8 text-[#2D68C4] border border-[#2D68C4]/20 flex items-center gap-0.5">
-                    <Battery className="w-3 h-3 stroke-[2.2]" />
-                    <span className="tabular-nums">+{habit.game_battery_reward}m</span>
-                  </div>
+                  <span className="text-[10.5px] font-mono font-semibold text-[#2D68C4]">
+                    +{habit.game_battery_reward}m
+                  </span>
                 )}
               </div>
 
-              {/* Acciones CRUD Discretas pero con Target Táctil Seguro (32x32px) */}
-              <div className="flex items-center gap-1">
-                {canEdit && onEdit && (
+              {/* Menú de opciones compacto (3 puntos) para no saturar la tarjeta */}
+              {!habit.completed && (canEdit || onDelete) && (
+                <div className="relative">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       soundFx.playClick();
-                      onEdit(habit);
+                      setShowMenu((prev) => !prev);
                     }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#706E66] hover:text-[#1C1B18] hover:bg-[#FAF9F5] active:scale-95 transition-all cursor-pointer"
-                    title={`Editar hábito (${remainingEdits} de 2 disponibles)`}
-                    aria-label="Editar hábito"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[#A09D94] hover:text-[#1C1B18] hover:bg-[#FAF9F5] active:scale-95 transition-all cursor-pointer"
+                    title="Opciones de hábito"
+                    aria-label="Opciones de hábito"
                   >
-                    <Edit2 className="w-3.5 h-3.5" />
+                    <MoreVertical className="w-3.5 h-3.5" />
                   </button>
-                )}
 
-                {onDelete && !habit.completed && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      soundFx.playWarning();
-                      onDelete(habit);
-                    }}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[#706E66] hover:text-[#D9383A] hover:bg-rose-50 active:scale-95 transition-all cursor-pointer"
-                    title="Eliminar hábito"
-                    aria-label="Eliminar hábito"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
+                  {/* Dropdown flotante */}
+                  {showMenu && (
+                    <div 
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-8 z-30 min-w-[130px] rounded-xl bg-white border border-[#E4E1D8] shadow-[0_4px_16px_rgba(26,25,21,0.08)] py-1 text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+                    >
+                      {canEdit && onEdit && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMenu(false);
+                            soundFx.playClick();
+                            onEdit(habit);
+                          }}
+                          className="w-full px-3 py-1.5 flex items-center gap-2 text-left text-[#1C1B18] hover:bg-[#FAF9F5] cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5 text-[#706E66]" />
+                          <span>Editar ({remainingEdits})</span>
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowMenu(false);
+                            soundFx.playWarning();
+                            onDelete(habit);
+                          }}
+                          className="w-full px-3 py-1.5 flex items-center gap-2 text-left text-[#D9383A] hover:bg-rose-50 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Eliminar</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

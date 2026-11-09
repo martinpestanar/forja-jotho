@@ -333,8 +333,8 @@ export function VigorHeaderSummary({
       )}
 
       {/* HERO COMPONENT COMPACTO: Display Mate Analogue Pocket */}
-      <div className="rounded-2xl bg-white border border-[#E4E1D8] p-3 sm:p-3.5 space-y-2.5 shadow-[0_2px_8px_rgba(26,25,21,0.04)]">
-        {/* Cabecera: Sprite + Diálogo e Indicador de Vínculo */}
+      <div className="rounded-2xl bg-white border border-[#E4E1D8] p-3 space-y-2.5 shadow-[0_2px_8px_rgba(26,25,21,0.04)]">
+        {/* Fila Principal: Sprite interactivo + Progreso + Botón Nuevo */}
         <div className="flex items-center gap-3">
           {/* Sprite con marco display mate interactivo (Tap & Press) */}
           <div className="relative shrink-0">
@@ -357,7 +357,7 @@ export function VigorHeaderSummary({
                 ease: 'easeInOut',
               }}
               title="Toca o mantén presionado para acariciar a tu compañero"
-              className="w-13 h-13 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] shadow-[0_1px_3px_rgba(26,25,21,0.03)] flex items-center justify-center cursor-pointer active:scale-95 transition-all relative overflow-hidden select-none"
+              className="w-12 h-12 rounded-xl bg-[#FAF9F5] border border-[#E4E1D8] shadow-[0_1px_3px_rgba(26,25,21,0.03)] flex items-center justify-center cursor-pointer active:scale-95 transition-all relative overflow-hidden select-none"
             >
               {/* 1. Placeholder estático instantáneo ultra-liviano */}
               {speciesId && !imgLoaded && (
@@ -375,7 +375,7 @@ export function VigorHeaderSummary({
                 alt="Compañero Pokémon"
                 style={{ imageRendering: 'pixelated' }}
                 onLoad={() => setImgLoaded(true)}
-                className={`max-h-10 max-w-10 object-contain select-none transition-opacity duration-200 ${
+                className={`max-h-9 max-w-9 object-contain select-none transition-opacity duration-200 ${
                   imgLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
                 onError={(e) => {
@@ -385,7 +385,7 @@ export function VigorHeaderSummary({
                   }
                 }}
               />
-              <span className="absolute bottom-0.5 right-0.5 text-[10px] select-none leading-none">
+              <span className="absolute bottom-0.5 right-0.5 text-[9px] select-none leading-none">
                 {companion.statusEmoji}
               </span>
             </motion.div>
@@ -406,89 +406,53 @@ export function VigorHeaderSummary({
             </AnimatePresence>
           </div>
 
-          {/* Diálogo conciso y badges sobrias */}
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center justify-between gap-1">
-              <span className={`text-[8.5px] font-mono font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md border ${companion.badgeColor}`}>
-                {companion.mood}
-              </span>
-              
-              <div className="flex items-center gap-1">
-                {/* Botón Alimentar Baya si tiene en el alijo */}
-                {berryItemInVault && (
-                  <button
-                    type="button"
-                    onClick={handleFeedBerry}
-                    disabled={isEating}
-                    title={`Ofrecer ${berryItemInVault.display_name} al compañero`}
-                    className="flex items-center gap-1 text-[8.5px] font-mono font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-[#2E8555]/10 text-[#2E8555] border border-[#2E8555]/25 hover:bg-[#2E8555]/20 active:scale-95 transition-all cursor-pointer"
-                  >
-                    <Apple className="w-2.5 h-2.5" />
-                    <span>Dar Baya</span>
-                  </button>
-                )}
-
-                <span className={`text-[8.5px] font-mono font-medium tracking-wider px-1.5 py-0.5 rounded-md border border-[#E4E1D8] ${companion.multiplierBg}`}>
-                  {companion.multiplier}
+          {/* Progreso del Día y Estado */}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            <div className="flex items-center justify-between gap-1 text-[11px]">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="font-semibold text-[#1C1B18] truncate">
+                  {completedCount}/{totalCount} hábitos
+                </span>
+                <span className={`text-[8.5px] font-mono font-semibold uppercase px-1.5 py-0.2 rounded border ${companion.badgeColor}`}>
+                  {companion.mood}
                 </span>
               </div>
+              <span className="font-mono text-[10px] font-bold text-[#706E66]">
+                {percent}%
+              </span>
             </div>
 
-            <div className="px-2 py-1.5 rounded-lg bg-[#FAF9F5] border border-[#E4E1D8] text-[11px] text-[#1C1B18] leading-tight font-medium truncate">
+            {/* Barra de progreso limpia */}
+            <div className="w-full h-1.5 rounded-full bg-[#FAF9F5] border border-[#E4E1D8] overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${percent}%` }}
+                transition={{ type: 'spring', stiffness: 120, damping: 16 }}
+                className={`h-full rounded-full transition-colors ${
+                  isAllDone
+                    ? 'bg-[#2E8555]'
+                    : percent >= 50
+                    ? 'bg-[#C59B46]'
+                    : 'bg-[#D9383A]'
+                }`}
+              />
+            </div>
+
+            {/* Micro mensaje sobrio */}
+            <p className="text-[10px] font-mono text-[#706E66] truncate">
               "{tamagotchiDialogue || companion.dialogue}"
-            </div>
-          </div>
-        </div>
-
-        {/* Barra Técnica de Vínculo & Disciplina Integrada */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-[10px] font-mono">
-            <span className="text-[#706E66] font-medium tracking-wider uppercase flex items-center gap-1">
-              <span>VÍNCULO POKÉWALKER</span>
-              <Heart className="w-2.5 h-2.5 text-[#D9383A] fill-[#D9383A]" />
-            </span>
-            <span className={`font-bold tabular-nums ${isAllDone ? 'text-[#2E8555]' : 'text-[#1C1B18]'}`}>
-              {completedCount}/{totalCount} tareas ({percent}%) · Lazo {totalBondPercent}%
-            </span>
+            </p>
           </div>
 
-          <div className="w-full h-1.5 rounded-full bg-[#FAF9F5] border border-[#E4E1D8] overflow-hidden">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${percent}%` }}
-              transition={{ type: 'spring', stiffness: 120, damping: 16 }}
-              className={`h-full rounded-full transition-colors ${
-                isAllDone
-                  ? 'bg-[#2E8555]'
-                  : percent >= 60
-                  ? 'bg-[#C59B46]'
-                  : 'bg-[#D9383A]'
-              }`}
-            />
-          </div>
-        </div>
-
-        {/* Recompensas de Hoy + Botón Nuevo Reto */}
-        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-[#E4E1D8]">
-          <div className="flex items-center gap-1.5 text-[11px] font-mono font-semibold">
-            <div className="px-2 py-0.5 rounded-lg bg-[#C59B46]/10 border border-[#C59B46]/25 text-[#9A7025] flex items-center gap-1">
-              <Coins className="w-3 h-3 text-[#C59B46]" />
-              <span className="tabular-nums">+{earnedGoldToday} ₽</span>
-            </div>
-            <div className="px-2 py-0.5 rounded-lg bg-[#2D68C4]/8 border border-[#2D68C4]/20 text-[#2D68C4] flex items-center gap-1">
-              <Battery className="w-3 h-3 stroke-[2.2]" />
-              <span className="tabular-nums">+{earnedBatteryToday}m</span>
-            </div>
-          </div>
-
+          {/* Botón rápido Añadir */}
           <button
             type="button"
             onClick={onOpenOracle}
-            className="bg-[#D9383A] text-white font-bold text-[10.5px] tracking-wider uppercase py-1.5 px-3 rounded-xl shadow-[0_2px_0px_#B32628] active:translate-y-[1px] active:shadow-none hover:bg-[#C92F31] transition-all flex items-center justify-center gap-1 cursor-pointer select-none"
-            title="Forjar un nuevo hábito o reto"
+            className="w-9 h-9 shrink-0 rounded-xl bg-[#FAF9F5] hover:bg-[#F2EFE9] border border-[#E4E1D8] text-[#1C1B18] flex items-center justify-center active:scale-95 transition-all cursor-pointer shadow-xs"
+            title="Añadir hábito"
+            aria-label="Añadir hábito"
           >
-            <Plus className="w-3 h-3 stroke-[2.5]" />
-            <span>Nuevo Reto</span>
+            <Plus className="w-4 h-4 stroke-[2.2]" />
           </button>
         </div>
       </div>

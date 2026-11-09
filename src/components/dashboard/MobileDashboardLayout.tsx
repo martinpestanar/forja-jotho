@@ -157,13 +157,7 @@ export function MobileDashboardLayout({
             {/* PESTAÑA 1: FRENTE DE VIGOR */}
             {activeTab === 'vigor' && (
               <div className="space-y-3">
-                {/* Banner de Pacto Inquebrantable de Templanza */}
-                <LockedPactBanner
-                  oaths={oaths}
-                  onOpenSanctuary={onOpenCreateOath}
-                />
-
-                {/* Altar de Resumen Visual de Batalla */}
+                {/* Cabecera Limpia y Compacta de Hábitos */}
                 <VigorHeaderSummary
                   totalCount={activeHabitsList.length}
                   completedCount={completedHabitsCount}
@@ -178,31 +172,18 @@ export function MobileDashboardLayout({
                   onOpenDatePicker={onOpenDatePicker}
                 />
 
-                {/* Barra de Alijo Diario */}
-                <DailyVaultBar
-                  pendingGold={activeHabitsList
-                    .filter((h) => h.completed)
-                    .reduce((acc, curr) => acc + (curr.gold_reward || 0), 0)}
-                  pendingBattery={activeHabitsList
-                    .filter((h) => h.completed)
-                    .reduce((acc, curr) => acc + (curr.game_battery_reward || 0), 0)}
-                  completedTasks={completedHabitsCount}
-                  totalTasks={activeHabitsList.length}
-                  timeUntilMidnight={timeUntilMidnight}
-                />
-
-                {/* Chips de Filtro por Pilar */}
-                {habits.filter((h) => h.front_type !== 'templanza').length > 0 && (
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                {/* Filtros sutiles tipo pastilla minimalista */}
+                {habits.filter((h) => h.front_type !== 'templanza').length > 4 && (
+                  <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
                     {(
                       [
-                        { key: 'todos', label: 'Todos', color: 'bg-[#1C1B18] text-white border-[#1C1B18]', inactive: 'bg-white text-[#706E66] border-[#E4E1D8] hover:border-[#C5C2BA]' },
-                        { key: 'vigor', label: '🏋 Vigor', color: 'bg-[#D9383A] text-white border-[#B22B2D]', inactive: 'bg-white text-[#D9383A] border-[#D9383A]/30 hover:border-[#D9383A]/60' },
-                        { key: 'oficio', label: '💼 Oficio', color: 'bg-[#2D68C4] text-white border-[#1F4E99]', inactive: 'bg-white text-[#2D68C4] border-[#2D68C4]/30 hover:border-[#2D68C4]/60' },
-                        { key: 'maestria', label: '📚 Maestría', color: 'bg-[#9A7025] text-white border-[#7A5A1E]', inactive: 'bg-white text-[#9A7025] border-[#C59B46]/30 hover:border-[#C59B46]/60' },
-                        { key: 'claridad', label: '🧠 Claridad', color: 'bg-[#2E8555] text-white border-[#226040]', inactive: 'bg-white text-[#2E8555] border-[#2E8555]/30 hover:border-[#2E8555]/60' },
+                        { key: 'todos', label: 'Todos' },
+                        { key: 'vigor', label: 'Vigor' },
+                        { key: 'oficio', label: 'Oficio' },
+                        { key: 'maestria', label: 'Maestría' },
+                        { key: 'claridad', label: 'Claridad' },
                       ] as const
-                    ).map(({ key, label, color, inactive }) => {
+                    ).map(({ key, label }) => {
                       const isActive = pillarFilter === key;
                       return (
                         <button
@@ -212,8 +193,10 @@ export function MobileDashboardLayout({
                             soundFx.playClick();
                             setPillarFilter(key);
                           }}
-                          className={`shrink-0 px-3 py-1 rounded-xl text-[10.5px] font-mono font-bold uppercase tracking-wider border transition-all cursor-pointer active:scale-95 ${
-                            isActive ? color : inactive
+                          className={`shrink-0 px-2.5 py-1 rounded-lg text-[10.5px] font-mono font-medium transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-[#1C1B18] text-white shadow-xs'
+                              : 'bg-white border border-[#E4E1D8] text-[#706E66] hover:text-[#1C1B18]'
                           }`}
                         >
                           {label}
