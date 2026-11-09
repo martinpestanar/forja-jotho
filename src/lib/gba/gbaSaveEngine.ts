@@ -405,6 +405,9 @@ export const REWARD_POKEMON_PRESETS: Record<number, {
   // Populares
   25:  { name: 'PIKACHU',   baseHp: 35, baseAtk: 55, baseDef: 40, baseSpd: 90, baseSpAtk: 50, baseSpDef: 50, moves: [84, 98, 104, 85], pps: [30, 30, 15, 15] },
   133: { name: 'EEVEE',     baseHp: 55, baseAtk: 55, baseDef: 50, baseSpd: 55, baseSpAtk: 45, baseSpDef: 65, moves: [33, 39, 98, 44], pps: [35, 30, 30, 25] },
+  92:  { name: 'GASTLY',    baseHp: 30, baseAtk: 35, baseDef: 30, baseSpd: 80, baseSpAtk: 100, baseSpDef: 35, moves: [95, 122, 101, 180], pps: [20, 30, 15, 15] },
+  93:  { name: 'HAUNTER',   baseHp: 45, baseAtk: 50, baseDef: 45, baseSpd: 95, baseSpAtk: 115, baseSpDef: 55, moves: [95, 122, 101, 180], pps: [20, 30, 15, 15] },
+  94:  { name: 'GENGAR',    baseHp: 60, baseAtk: 65, baseDef: 60, baseSpd: 110, baseSpAtk: 130, baseSpDef: 75, moves: [95, 85, 101, 138], pps: [20, 15, 15, 10] },
   179: { name: 'MAREEP',    baseHp: 55, baseAtk: 40, baseDef: 40, baseSpd: 35, baseSpAtk: 65, baseSpDef: 45, moves: [33, 45, 84, 86], pps: [35, 40, 30, 20] },
   180: { name: 'FLAAFFY',   baseHp: 70, baseAtk: 55, baseDef: 55, baseSpd: 45, baseSpAtk: 80, baseSpDef: 60, moves: [33, 45, 84, 86], pps: [35, 40, 30, 20] },
   181: { name: 'AMPHAROS',  baseHp: 90, baseAtk: 75, baseDef: 85, baseSpd: 55, baseSpAtk: 115, baseSpDef: 90, moves: [84, 85, 86, 9], pps: [30, 15, 20, 15] },
