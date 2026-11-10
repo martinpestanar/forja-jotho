@@ -22,18 +22,23 @@ const loraSerif = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Korat Flow HQ",
+  title: "SynDex · Johto Edition",
   description:
-    "Panel operativo del fundador: roles CEO, CTO y CMO, jornada, proyectos y recompensas.",
+    "Sistema de hábitos, gamificación de alto rendimiento y emulador GBA Pokémon Heart & Soul.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Korat Flow HQ",
+    title: "SynDex",
   },
   icons: {
-    icon: "/icon-192.svg",
-    apple: "/icon-192.svg",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 
