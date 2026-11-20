@@ -115,15 +115,16 @@ async function syncSavToCloud(slot: string, data: Uint8Array, keepalive = false)
 /**
  * Descarga el archivo .sav desde la nube a través del endpoint seguro /api/gba/save-sync
  */
-async function loadSavFromCloud(slot: string): Promise<Uint8Array | null> {
+async function loadSavFromCloud(slot: string, userId?: string): Promise<Uint8Array | null> {
+  if (userId === 'guest-trainer-id') return null;
   try {
     const { data: sessionData } = await supabase.auth.getSession();
     let token = sessionData.session?.access_token;
     
     // Si la página acaba de refrescar, la sesión puede tardar unos milisegundos en hidratarse
     if (!token) {
-      for (let i = 0; i < 6; i++) {
-        await new Promise((r) => setTimeout(r, 250));
+      for (let i = 0; i < 4; i++) {
+        await new Promise((r) => setTimeout(r, 200));
         const retry = await supabase.auth.getSession();
         token = retry.data.session?.access_token;
         if (token) break;
@@ -135,27 +136,136 @@ async function loadSavFromCloud(slot: string): Promise<Uint8Array | null> {
       return null;
     }
 
-    const resp = await fetch(`/api/gba/save-sync?slot=${encodeURIComponent(slot)}&t=${Date.now()}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      cache: 'no-store',
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-    if (resp.ok) {
-      const arrayBuffer = await resp.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      if (bytes.length >= 0x1C000) {
-        console.info(`[GBA Cloud Sync] ✅ Partida cargada desde la nube (${bytes.length} bytes).`);
-        return bytes;
+    try {
+      const resp = await fetch(`/api/gba/save-sync?slot=${encodeURIComponent(slot)}&t=${Date.now()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (resp.ok) {
+        const arrayBuffer = await resp.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        if (bytes.length >= 0x1C000) {
+          console.info(`[GBA Cloud Sync] ✅ Partida cargada desde la nube (${bytes.length} bytes).`);
+          return bytes;
+        }
       }
+    } catch {
+      clearTimeout(timeoutId);
     }
     return null;
   } catch (e) {
     console.warn('[GBA Cloud Sync] Error descargando partida desde la nube:', e);
     return null;
   }
+}
+
+// -------------------------------------------------------------
+// CACHÉ PERSISTENTE DE ROM GBA (IndexedDB 32MB)
+// Permite arranques instantáneos (15ms) sin re-descargar 33.5 MB
+// -------------------------------------------------------------
+const ROM_CACHE_DB = 'syndex_rom_store_v1';
+const ROM_CACHE_STORE = 'roms';
+const ROM_CACHE_KEY = 'pokemonHnS_v2_0_6';
+
+async function getCachedRom(): Promise<Uint8Array | null> {
+  if (typeof window === 'undefined' || !window.indexedDB) return null;
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(ROM_CACHE_DB, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(ROM_CACHE_STORE)) {
+          req.result.createObjectStore(ROM_CACHE_STORE);
+        }
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction(ROM_CACHE_STORE, 'readonly');
+        const getReq = tx.objectStore(ROM_CACHE_STORE).get(ROM_CACHE_KEY);
+        getReq.onsuccess = () => {
+          if (getReq.result instanceof Uint8Array && getReq.result.length >= 0x1000000) {
+            resolve(getReq.result);
+          } else {
+            resolve(null);
+          }
+        };
+        getReq.onerror = () => resolve(null);
+      };
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function setCachedRom(bytes: Uint8Array): Promise<void> {
+  if (typeof window === 'undefined' || !window.indexedDB) return;
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(ROM_CACHE_DB, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(ROM_CACHE_STORE)) {
+          req.result.createObjectStore(ROM_CACHE_STORE);
+        }
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction(ROM_CACHE_STORE, 'readwrite');
+        tx.objectStore(ROM_CACHE_STORE).put(bytes, ROM_CACHE_KEY);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => resolve();
+      };
+      req.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+async function fetchRomWithProgress(
+  url: string,
+  onProgress?: (loaded: number, total: number) => void,
+  signal?: AbortSignal
+): Promise<Uint8Array> {
+  const resp = await fetch(url, { cache: 'no-cache', signal });
+  if (!resp.ok) {
+    throw new Error(`HTTP ${resp.status} al descargar ROM`);
+  }
+
+  const contentLength = Number(resp.headers.get('content-length')) || 33554432;
+  const reader = resp.body?.getReader();
+  if (!reader) {
+    const ab = await resp.arrayBuffer();
+    return new Uint8Array(ab);
+  }
+
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      chunks.push(value);
+      loaded += value.length;
+      onProgress?.(loaded, contentLength);
+    }
+  }
+
+  const all = new Uint8Array(loaded);
+  let offset = 0;
+  for (const c of chunks) {
+    all.set(c, offset);
+    offset += c.length;
+  }
+  return all;
 }
 
 interface SaveSlotInfo {
@@ -223,6 +333,9 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
   const [fps, setFps] = useState<number>(60);
   const [emuState, setEmuState] = useState<'idle' | 'loading' | 'running' | 'paused' | 'drained'>('idle');
+  const [loadingProgress, setLoadingProgress] = useState<string>('Iniciando emulador...');
+  const [loadingPercent, setLoadingPercent] = useState<number | null>(null);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   // Bandera global para que la Bóveda sepa si el cartucho puede recibir inyecciones
   useEffect(() => {
@@ -876,13 +989,17 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
   // Arrancar mGBA nativo con WebAssembly (MONTAJE ÚNICO)
   // Usa bootAbortRef para cancelar si React StrictMode desmonta durante el await
-  const bootMgbaCore = useCallback(async (customRomBytes?: Uint8Array, customName?: string) => {
+  const bootMgbaCore = useCallback(async (customRomBytes?: Uint8Array, customName?: string, forceFreshDownload = false) => {
     if (!canvasRef.current || isBootedRef.current || moduleRef.current) return;
     isBootedRef.current = true;
     setEmuState('loading');
+    setLoadingError(null);
+    setLoadingProgress('Sintonizando cartucho WebAssembly...');
+    setLoadingPercent(null);
 
     // Crear token de cancelación para esta sesión de boot
-    const abortToken = { cancelled: false };
+    const abortController = new AbortController();
+    const abortToken = { cancelled: false, signal: abortController.signal };
     bootAbortRef.current = abortToken;
 
     try {
@@ -893,13 +1010,15 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         mGBAFactory = mod.default || mod;
       } catch (err) {
         console.error('Error importando @thenick775/mgba-wasm:', err);
-        setEmuState('idle');
+        setLoadingError('Error importando el núcleo WebAssembly de mGBA.');
+        setEmuState('loading');
         return;
       }
 
       if (abortToken.cancelled) return;
 
       // Inicializar mGBA
+      setLoadingProgress('Inicializando motor gráfico y de audio...');
       const Module = await mGBAFactory({
         canvas: canvasRef.current,
         locateFile: (path: string) => {
@@ -931,30 +1050,70 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
       bridge.bindEmulator(createAdapter(Module));
       bridgeRef.current = bridge;
 
-      // Obtener bytes de la ROM
+      // Obtener bytes de la ROM (con caché local instantánea)
       let romBytes: Uint8Array;
       if (customRomBytes) {
         romBytes = customRomBytes;
         if (customName) setRomTitle(customName.replace('.gba', '').toUpperCase());
       } else {
-        // Descargar la ROM oficial con cache-busting (?v=timestamp) para evitar caché del navegador o CDN
-        const bustUrl = (u: string) => u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now();
-        let resp: Response;
-        try {
-          resp = await fetch(bustUrl(romUrl), { cache: 'no-store' });
-          if (!resp.ok && romUrl !== '/roms/pokemonHnS.gba') {
-            resp = await fetch(bustUrl('/roms/pokemonHnS.gba'), { cache: 'no-store' });
+        setLoadingProgress('Buscando cartucho en almacenamiento local...');
+        let cached = forceFreshDownload ? null : await getCachedRom();
+        if (cached && cached.length >= 0x1000000) {
+          console.info(`[mGBA] ⚡ ROM cargada instantáneamente desde IndexedDB (${cached.length} bytes).`);
+          setLoadingProgress('¡Cartucho verificado en memoria local!');
+          setLoadingPercent(100);
+          romBytes = cached;
+        } else {
+          setLoadingProgress('Descargando Pokémon Heart & Soul...');
+          setLoadingPercent(0);
+
+          const handleProgress = (loaded: number, total: number) => {
+            const pct = Math.round((loaded / total) * 100);
+            const mbLoaded = (loaded / (1024 * 1024)).toFixed(1);
+            const mbTotal = (total / (1024 * 1024)).toFixed(1);
+            setLoadingProgress(`Descargando ROM (${mbLoaded}/${mbTotal} MB)...`);
+            setLoadingPercent(pct);
+          };
+
+          const bustUrl = (u: string) => u + (u.includes('?') ? '&' : '?') + 'v=' + Date.now();
+          let downloadedBytes: Uint8Array | null = null;
+
+          // Intento 1: romUrl configurada (Supabase Storage o CDN)
+          try {
+            downloadedBytes = await fetchRomWithProgress(bustUrl(romUrl), handleProgress, abortToken.signal);
+          } catch (err1) {
+            console.warn('[mGBA] Falló descarga primaria de ROM, probando /roms/pokemonHnS.gba...', err1);
           }
-        } catch {
-          resp = await fetch(bustUrl('/roms/pokemonHnS.gba'), { cache: 'no-store' });
+
+          // Intento 2: Fallback local /roms/pokemonHnS.gba
+          if (!downloadedBytes && romUrl !== '/roms/pokemonHnS.gba') {
+            try {
+              downloadedBytes = await fetchRomWithProgress(bustUrl('/roms/pokemonHnS.gba'), handleProgress, abortToken.signal);
+            } catch (err2) {
+              console.warn('[mGBA] Falló fallback 1 de ROM, probando pokemonHnS.clean.gba...', err2);
+            }
+          }
+
+          // Intento 3: Fallback limpio /roms/pokemonHnS.clean.gba
+          if (!downloadedBytes) {
+            try {
+              downloadedBytes = await fetchRomWithProgress(bustUrl('/roms/pokemonHnS.clean.gba'), handleProgress, abortToken.signal);
+            } catch (err3) {
+              console.error('[mGBA] Fallaron todas las fuentes de descarga de ROM:', err3);
+            }
+          }
+
+          if (!downloadedBytes || downloadedBytes.length < 0x1000000) {
+            throw new Error('No se pudo descargar la ROM del juego tras 3 intentos. Revisa tu conexión a internet.');
+          }
+
+          romBytes = downloadedBytes;
+          setLoadingProgress('Guardando en memoria para arranques instantáneos...');
+          setCachedRom(romBytes).catch(() => {});
         }
-        if (!resp.ok) {
-          throw new Error(`HTTP ${resp.status} al descargar ROM`);
-        }
-        romBytes = new Uint8Array(await resp.arrayBuffer());
       }
 
-      // La ROM pokemonHnS.gba ya cuenta con los precios calibrados de lujo (Medicinas ₽1,200 - ₽35,000, Poké Balls ₽200)
+      setLoadingProgress('Cargando partida y sintonizando reloj...');
       console.info('[mGBA] Precios calibrados de lujo activos en los Poké Marts.');
 
       if (abortToken.cancelled) {
@@ -983,7 +1142,7 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
 
         // 2. Descargar prioritariamente desde la Nube (API segura /api/gba/save-sync)
         try {
-          initialSavBytes = await loadSavFromCloud(activeSlot);
+          initialSavBytes = await loadSavFromCloud(activeSlot, userId);
         } catch (cloudErr) {
           console.warn('[mGBA] Error en descarga de nube, probando fuentes locales:', cloudErr);
         }
@@ -1040,8 +1199,23 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         });
       } catch {}
 
+      // Registrar callbacks centrales para detectar cuando el jugador guarda DENTRO del juego
+      try {
+        Module.addCoreCallbacks?.({
+          saveDataUpdatedCallback: () => {
+            console.info('[mGBA] 💾 In-game save detectado vía core callback.');
+            handleSaveDataUpdated();
+          },
+        });
+      } catch (cbErr) {
+        console.warn('[mGBA] Error registrando addCoreCallbacks:', cbErr);
+      }
+
       // Arrancar juego pasando SAV_PATH_VFS explícito para carga determinista del SaveBlock
-      Module.loadGame(ROM_PATH_VFS, SAV_PATH_VFS);
+      const loadSuccess = Module.loadGame(ROM_PATH_VFS, SAV_PATH_VFS);
+      if (loadSuccess === false) {
+        throw new Error('El núcleo mGBA no pudo inicializar la ROM en VFS.');
+      }
 
       // Aplicar multiplicador de velocidad si ya estaba configurado
       if (speedMultiplier > 1) {
@@ -1050,21 +1224,8 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         } catch {}
       }
 
-      // Registrar callbacks centrales para detectar cuando el jugador guarda DENTRO del juego
-      try {
-        Module.pauseGame?.();
-        Module.addCoreCallbacks?.({
-          saveDataUpdatedCallback: () => {
-            console.info('[mGBA] 💾 In-game save detectado vía core callback.');
-            handleSaveDataUpdated();
-          },
-        });
-        Module.resumeGame?.();
-      } catch (cbErr) {
-        console.warn('[mGBA] Error registrando addCoreCallbacks:', cbErr);
-      }
-
       setEmuState('running');
+      setLoadingError(null);
       refreshSlotsList();
 
       // Sincronizar el equipo y Pokédólares en vivo al store de Zustand
@@ -1072,16 +1233,17 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
         const liveData = bridge.readTrainerDataFromEmulator();
         if (liveData) {
           updateProfile({ gba_party_json: liveData.party as any, in_game_money: liveData.money });
-        useEconomyStore.getState().syncGameMoney(liveData.money);
+          useEconomyStore.getState().syncGameMoney(liveData.money);
         }
       } catch {}
     } catch (err: any) {
       console.error('[mGBA] Error en boot:', err);
       if (!abortToken.cancelled) {
-        setEmuState('idle');
+        setLoadingError(err.message || 'Error al iniciar Pokémon Heart & Soul');
+        setEmuState('loading');
       }
     }
-  }, [romUrl, createAdapter, refreshSlotsList, handleSaveDataUpdated]);
+  }, [romUrl, userId, createAdapter, refreshSlotsList, handleSaveDataUpdated, speedMultiplier, updateProfile]);
 
   // Boot inicial y reinicios limpios al cambiar bootCount
   useEffect(() => {
@@ -1588,11 +1750,52 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           {screenScaleMode === 'wide' ? 'Llenar' : 'Ajustar'}
         </button>
 
-        {/* Pantalla de Carga Inicial */}
+        {/* Pantalla de Carga Inicial con Progreso y Recuperación de Errores */}
         {emuState === 'loading' && (
-          <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center z-20">
-            <RefreshCw className="w-7 h-7 text-cyan-400 animate-spin mb-2" />
-            <p className="text-[11px] font-mono text-cyan-300 animate-pulse">Iniciando Pokémon Heart & Soul...</p>
+          <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 p-4 text-center select-none">
+            {loadingError ? (
+              <div className="max-w-xs space-y-2.5">
+                <div className="w-9 h-9 mx-auto rounded-full bg-rose-500/20 border border-rose-500/50 flex items-center justify-center text-rose-400 text-base">
+                  ⚠️
+                </div>
+                <p className="text-[11px] font-mono font-semibold text-rose-300 leading-snug">{loadingError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoadingError(null);
+                    rebootEmulator();
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#D9383A] text-white text-[11px] font-mono font-bold hover:bg-[#C92F31] transition-all cursor-pointer shadow-md active:scale-95"
+                >
+                  Reintentar Carga
+                </button>
+              </div>
+            ) : (
+              <div className="w-full max-w-[240px] space-y-2">
+                <div className="relative mx-auto w-7 h-7">
+                  <RefreshCw className="w-7 h-7 text-[#C59B46] animate-spin" />
+                </div>
+                <p className="text-[11px] font-mono font-bold text-white tracking-wide">
+                  Pokémon Heart & Soul
+                </p>
+                <p className="text-[10px] font-mono text-[#DCD8CD] leading-snug">
+                  {loadingProgress}
+                </p>
+                {loadingPercent !== null && (
+                  <div className="w-full space-y-1">
+                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden border border-white/20">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#C59B46] to-[#2E8555] transition-all duration-150"
+                        style={{ width: `${Math.min(100, Math.max(5, loadingPercent))}%` }}
+                      />
+                    </div>
+                    <span className="text-[9px] font-mono text-[#A8A498] block text-right">
+                      {loadingPercent}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -2045,11 +2248,52 @@ export const GbaConsoleWorker: React.FC<GbaConsoleWorkerProps> = ({ standaloneSc
           style={{ imageRendering: 'pixelated' }}
         />
 
-        {/* Pantalla de Carga Inicial */}
+        {/* Pantalla de Carga Inicial con Progreso y Recuperación de Errores */}
         {emuState === 'loading' && (
-          <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center z-20">
-            <RefreshCw className="w-8 h-8 text-cyan-400 animate-spin mb-2" />
-            <p className="text-xs font-mono text-cyan-300 animate-pulse">Iniciando Pokémon Heart & Soul...</p>
+          <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20 p-4 text-center select-none">
+            {loadingError ? (
+              <div className="max-w-xs space-y-3">
+                <div className="w-10 h-10 mx-auto rounded-full bg-rose-500/20 border border-rose-500/50 flex items-center justify-center text-rose-400 text-lg">
+                  ⚠️
+                </div>
+                <p className="text-xs font-mono font-semibold text-rose-300 leading-snug">{loadingError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoadingError(null);
+                    rebootEmulator();
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#D9383A] text-white text-xs font-mono font-bold hover:bg-[#C92F31] transition-all cursor-pointer shadow-md active:scale-95"
+                >
+                  Reintentar Carga
+                </button>
+              </div>
+            ) : (
+              <div className="w-full max-w-[260px] space-y-2.5">
+                <div className="relative mx-auto w-8 h-8">
+                  <RefreshCw className="w-8 h-8 text-[#C59B46] animate-spin" />
+                </div>
+                <p className="text-xs font-mono font-bold text-white tracking-wide">
+                  Pokémon Heart & Soul
+                </p>
+                <p className="text-[11px] font-mono text-[#DCD8CD] leading-snug">
+                  {loadingProgress}
+                </p>
+                {loadingPercent !== null && (
+                  <div className="w-full space-y-1">
+                    <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden border border-white/20">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#C59B46] to-[#2E8555] transition-all duration-150"
+                        style={{ width: `${Math.min(100, Math.max(5, loadingPercent))}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] font-mono text-[#A8A498] block text-right">
+                      {loadingPercent}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

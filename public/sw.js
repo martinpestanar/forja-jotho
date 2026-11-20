@@ -1,4 +1,4 @@
-const CACHE_NAME = 'syndex-pwa-v3';
+const CACHE_NAME = 'syndex-pwa-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/dashboard',
@@ -44,20 +44,31 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // No interceptar peticiones de API o Supabase ni streaming de audio/video
-  if (url.pathname.startsWith('/api/') || url.hostname.includes('supabase.co')) {
+  // NUNCA interceptar peticiones de API, Supabase, archivos ROM gigantes (.gba), WebAssembly (.wasm) ni partidas (.sav)
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/roms/') ||
+    url.pathname.endsWith('.gba') ||
+    url.pathname.endsWith('.wasm') ||
+    url.pathname.endsWith('.sav') ||
+    url.hostname.includes('supabase.co')
+  ) {
     return;
   }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Guardar copia fresca en cache si es respuesta exitosa
+        // Guardar copia fresca en cache solo para recursos estáticos estándar (NO binarios pesados)
         if (response && response.status === 200 && response.type === 'basic') {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          // No cachear recursos de más de 2MB en Cache Storage para no colapsar la cuota móvil
+          const contentLength = Number(response.headers.get('content-length')) || 0;
+          if (contentLength === 0 || contentLength < 2 * 1024 * 1024) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache).catch(() => {});
+            });
+          }
         }
         return response;
       })
